@@ -13,6 +13,9 @@
 // Used for basic math operatons.
 #include <cmath>
 
+// Used in QR algorithm to get double EPS.
+#include <limits>
+
 // Defined as a macro in Numeric Recipes in C.
 //  Determine sign of z based on sign of b.
 // Accepts:

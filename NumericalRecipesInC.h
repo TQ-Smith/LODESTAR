@@ -9,6 +9,10 @@
 #ifndef NUMERICAL_RECIPES_IN_C_H_  
 #define NUMERICAL_RECIPES_IN_C_H_
 
+#include <iostream>
+
+using namespace std;
+
 // Taken from Numeric Recipes in C.
 // Note: Out of respect, I left as much of this method 
 // unchanged as I could.
