@@ -19,9 +19,9 @@
 //  int n -> The dimension of n.
 //  int k -> The dimension of the reduced data.
 //      Assume 0 < k < n.
-// Return: void
-//      NOTE: X is replaced by a n x k matrix corresponding to the result of the MDS.
-void compute_classical_mds(double** X, double* d, double* e, int n, int k);
+// Return: double**, The reduced data set.
+//      NOTE: X's memory is freed in this method.
+double** compute_classical_mds(double** X, double* d, double* e, int n, int k);
 
 // Performs Classical MDS on a real, symmetric matrix.
 // This method handles all memory allocations.
@@ -31,7 +31,8 @@ void compute_classical_mds(double** X, double* d, double* e, int n, int k);
 //  int n -> The dimension of n.
 //  int k -> The dimension of the reduced data.
 //      Assume 0 < k < n.
-// Return: void
-void classical_mds(double** X, int n, int k);
+// Return: double**, The reduced data set.
+//      NOTE: X's memory is freed in this method.
+double** classical_mds(double** X, int n, int k);
 
 #endif

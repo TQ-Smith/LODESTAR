@@ -18,7 +18,7 @@
 #include <iostream>
 using namespace std;
 
-void compute_classical_mds(double** X, double* d, double* e, int n, int k) {
+double** compute_classical_mds(double** X, double* d, double* e, int n, int k) {
 
     // We double each element and keep track of each row's and
     //  each column's sum. Then, we double center.
@@ -35,27 +35,25 @@ void compute_classical_mds(double** X, double* d, double* e, int n, int k) {
     double grand_mean = 0;
 
     // Double each element and compute totals.
-    double twice;
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
-            twice = X[i][j] * X[i][j];
-            d[i] += twice;
-            e[j] += twice;
-            grand_mean += twice;
+            X[i][j] = X[i][j] * X[i][j];
+            d[i] += X[i][j];
+            e[j] += X[i][j];
+            grand_mean += X[i][j];
         }
     }
 
     // Double center X.
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
-            X[i][j] = X[i][j] - (d[i] / n) - (e[j] / n) + (grand_mean / (n * n));
+            // Scale by a constant of -0.5
+            X[i][j] = -0.5 * (X[i][j] - (d[i] / n) - (e[j] / n) + (grand_mean / (n * n)));
         }
     }
 
     // Now, calculate the eigenvetors and eigenvalues.
-    tred2(X, d, e, n, true);
-    tqli(X, d, e, n, true);
-    eigsrt(X, d, n);
+    compute_eigen_pairs(X, d, e, n, true, true);
 
     // Allocate the matrix to hold the reduced data.
     double** reduced_matrix = create_real_matrix(n, k);
@@ -64,32 +62,32 @@ void compute_classical_mds(double** X, double* d, double* e, int n, int k) {
     for (int a = 0; a < n; a++) {
         for (int b = 0; b < k; b++) {
             reduced_matrix[a][b] = 0;
-            for (int c = 0; c < n; c++) {
-                reduced_matrix[a][b] += X[c][b] * sqrt(d[c]);
-            }
+        }
+        for (int b = 0; b < k; b++) {
+            reduced_matrix[a][b] = sqrt(d[b]) * X[a][b];
         }
     }
 
-    // Reassign X to the reduced_matrix and free eigenvectors matrix.
-    double*** temp = &X;
-    X = reduced_matrix;
-    reduced_matrix = *temp;
-    destroy_real_matrix(reduced_matrix, n, n);
+    // Destroy X and return the reduced dataset.
+    destroy_real_matrix(X, n, n);
+    return reduced_matrix;
     
 }
 
-void classical_mds(double** X, int n, int k) {
+double** classical_mds(double** X, int n, int k) {
 
     // Allocate extra memory.
     double* d = new double[n];
     double* e = new double[n];
 
     // Compute classical MDS.
-    compute_classical_mds(X, d, e, n, k);
+    double** reduced = compute_classical_mds(X, d, e, n, k);
 
     // Free temporary memory.
     delete [] d;
     delete [] e;
+
+    return reduced;
 
 }
 
@@ -103,13 +101,12 @@ int main() {
         for(int j = 0; j < n; j++) {
             if (i == j)
                 X[i][j] = 1;
-            X[i][j] = (i + 1) * (j + 1);
+            else
+                X[i][j] = (i + 1) * (j + 1);
         }
     }
 
-    print_real_matrix(X, n, n);
-
-    classical_mds(X, n, k);
+    X = classical_mds(X, n, k);
 
     print_real_matrix(X, n, k);
 
