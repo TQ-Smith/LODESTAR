@@ -6,6 +6,8 @@
 // Purpose: Contains functions to perform various forms of MDS.
 //
 
+#include "MultidimensionalScaling.h"
+
 // Used for basic matrix operations.
 #include "MatrixOperations.h"
 
@@ -14,9 +16,6 @@
 
 // Used for the square-root function.
 #include <cmath>
-
-#include <iostream>
-using namespace std;
 
 double** compute_classical_mds(double** X, double* d, double* e, int n, int k) {
 
@@ -88,26 +87,5 @@ double** classical_mds(double** X, int n, int k) {
     delete [] e;
 
     return reduced;
-
-}
-
-int main() {
-
-    int n = 7;
-    int k = 2;
-
-    double** X = create_real_matrix(n, n);
-    for(int i = 0; i < n; i++) {
-        for(int j = 0; j < n; j++) {
-            if (i == j)
-                X[i][j] = 1;
-            else
-                X[i][j] = (i + 1) * (j + 1);
-        }
-    }
-
-    X = classical_mds(X, n, k);
-
-    print_real_matrix(X, n, k);
 
 }
