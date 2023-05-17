@@ -3,6 +3,6 @@
 
 #include "MatrixOperations.h"
 
-#include "MultidimensionalScaling"
+#include "MultidimensionalScaling.h"
 
 #include "Procrustes.h"

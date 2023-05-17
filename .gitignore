@@ -2,6 +2,7 @@
 *.[ao]
 mds.py
 dingo.vcf.gz
+dingo.vcf
 # but do track lib.a
 !lib.a
 *~
