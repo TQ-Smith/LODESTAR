@@ -6,6 +6,8 @@
 // Purpose: Parses command line arguments and acts as the main program.
 //
 
+#include "ArgumentParser.h"
+
 #include "Engine.h"
 
 int main() {

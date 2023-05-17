@@ -4,11 +4,14 @@ LFLAGS = -g -o lodestar
 
 all: lodestar clean
 
-lodestar: lodestar.o Engine.o
+lodestar: lodestar.o ArgumentParser.o Engine.o
 	g++ lodestar.o Engine.o $(LFLAGS)
 
 lodestar.o: lodestar.cpp Engine.h
 	g++ $(CFLAGS) lodestar.cpp
+
+ArgumentParser.o: ArgumentPaser.cpp ArgumentParser.h
+	g++ $(CFLAGS) ArgumentParser.cpp
 
 Engine.o: Engine.cpp MatrixOperations.h MultidimensionalScaling.h Procrustes.h
 	g++ $(CFLAGS) Engine.cpp
