@@ -1,6 +1,7 @@
 # no .a or .o files
 *.[ao]
 mds.py
+dingo_18samples_gatk_merged_chraut_variants_biallelic_snps_filtered_nomono_het_stripped.vcf.gz
 # but do track lib.a
 !lib.a
 *~
