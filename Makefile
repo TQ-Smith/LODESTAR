@@ -2,15 +2,18 @@
 CFLAGS = -c -Wall -g
 LFLAGS = -g -o lodestar
 
-all: lodestar
+all: lodestar clean
 
-loadstar: lodestar.o Procrustes.o MultidimensionalScaling.o
-	g++ lodestar.o Procrustes.o MultidimensionalScaling.o $(LFLAGS)
+loadstar: lodestar.o Engine.o
+	g++ lodestar.o Engine.o $(LFLAGS)
 
-loadstar.o: lodestar.cpp Procrustes.h MultidimensionalScaling.h
+loadstar.o: lodestar.cpp Engine.h
 	g++ $(CFLAGS) lodestar.cpp
 
-Procrustes.o: Procrustes.cpp Procrustes.h MultidimensionalScaling.h NumericalRecipesInC.h
+Engine.o: Engine.cpp MatrixOperations.h MultidimensionalScaling.h Procrustes.h
+	g++ $(CFLAGS) Engine.cpp
+
+Procrustes.o: Procrustes.cpp Procrustes.h MatrixOperations.h NumericalRecipesInC.h
 	g++ $(CFLAGS) Procrustes.cpp
 
 MultidimensionalScaling.o: MultidimensionalScaling.cpp MultidimensionalScaling.h NumericalRecipesInC.h MatrixOperations.h
@@ -23,4 +26,4 @@ MatrixOperations.o: MatrixOperations.cpp MatrixOperations.h
 	g++ $(CFLAGS) MatrixOperations.cpp
 
 clean:
-	rm -f lodestar *.o *~ *#
+	rm -f *.o *~ *#

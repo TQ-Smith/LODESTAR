@@ -15,6 +15,8 @@
 
 #include "Procrustes.h"
 
+#include "MatrixOperations.h"
+
 #include "NumericalRecipesInC.h"
 
 double procrustes_statistic(double** Xc, double** Yc, double** temp1, double** temp2, int n, int k) {
@@ -193,7 +195,7 @@ double procrustes_analysis(double** X, double** Y, int n, int k) {
             X[i][j] += x_0[j];
             Y[i][j] += y_0[j];
         }
-    }
+    }MultidimensionalScaling.h 
 
     // Deallocate our temp matrices and center points.
     destroy_real_matrix(temp1, k, k);
