@@ -1,13 +1,13 @@
 //
-// File: MatrixOperations.h
+// File: MatrixOperations.hpp
 // Started: 15 May 2023
 // Author: TQ Smith
 // Principle Investigator: Dr. Zachary Szpiech
 // Purpose: Header file for MatrixOperations.cpp
 //
 
-#ifndef MATRIX_OPERATIONS_H_  
-#define MATRIX_OPERATIONS_H_
+#ifndef MATRIX_OPERATIONS_HPP_  
+#define MATRIX_OPERATIONS_HPP_
 
 // Create a matrix of doubles.
 // Accepts:

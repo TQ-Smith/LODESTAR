@@ -7,10 +7,17 @@
 //          Also handles threading.
 //
 
-#include "Engine.h"
+// Used to define main function operations.
+#include "Engine.hpp"
 
-#include "MatrixOperations.h"
+// Used for allocating new matrices and deep-copies.
+#include "MatrixOperations.hpp"
 
-#include "MultidimensionalScaling.h"
+// Used to preform the MDS operation.
+#include "MultidimensionalScaling.hpp"
 
-#include "Procrustes.h"
+// Used to preform procurstes analysis and permutation tests.
+#include "Procrustes.hpp"
+
+// Used to parse genotype data file.
+#include "GenotypeFileParser.hpp"

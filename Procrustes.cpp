@@ -7,17 +7,17 @@
 //              matrices in dimension k.
 //
 
+#include "Procrustes.hpp"
+
+#include "MatrixOperations.hpp"
+
+#include "NumericalRecipesInC.hpp"
+
 // Used for basic math operatons.
 #include <cmath>
 
 // Used in QR algorithm to get double EPS.
 #include <limits>
-
-#include "Procrustes.h"
-
-#include "MatrixOperations.h"
-
-#include "NumericalRecipesInC.h"
 
 double procrustes_statistic(double** Xc, double** Yc, double** temp1, double** temp2, int n, int k) {
 

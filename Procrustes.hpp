@@ -1,13 +1,13 @@
 //
-// File: Procrustes.h
+// File: Procrustes.hpp
 // Started: 16 May 2023
 // Author: TQ Smith
 // Principle Investigator: Dr. Zachary Szpiech
 // Purpose: Header file for Procrustes.cpp
 //
 
-#ifndef PROCRUSTES_H_  
-#define PROCRUSTES_H_
+#ifndef PROCRUSTES_HPP_  
+#define PROCRUSTES_HPP_
 
 // Perform Procrustes Analysis on two sets of points.
 // Each set of points are stored in a n x k matrix where

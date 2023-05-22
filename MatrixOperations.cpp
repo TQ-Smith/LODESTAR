@@ -6,7 +6,7 @@
 // Purpose: Contains basic operations for manipulating matrices.
 //
 
-#include "MatrixOperations.h"
+#include "MatrixOperations.hpp"
 
 // Used for input and output.
 #include <iostream>

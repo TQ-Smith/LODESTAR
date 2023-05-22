@@ -8,7 +8,7 @@
 //  are included.
 //
 
-#include "NumericalRecipesInC.h"
+#include "NumericalRecipesInC.hpp"
 
 // Used for basic math operatons.
 #include <cmath>

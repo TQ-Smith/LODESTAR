@@ -6,13 +6,13 @@
 // Purpose: Contains functions to perform various forms of MDS.
 //
 
-#include "MultidimensionalScaling.h"
+#include "MultidimensionalScaling.hpp"
 
 // Used for basic matrix operations.
-#include "MatrixOperations.h"
+#include "MatrixOperations.hpp"
 
 // Used to calculate eigenvectors.
-#include "NumericalRecipesInC.h"
+#include "NumericalRecipesInC.hpp"
 
 // Used for the square-root function.
 #include <cmath>

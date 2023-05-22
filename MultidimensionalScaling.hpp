@@ -1,13 +1,13 @@
 //
-// File: MultidimensionalScaling.h
+// File: MultidimensionalScaling.hpp
 // Started: 15 May 2023
 // Author: TQ Smith
 // Principle Investigator: Dr. Zachary Szpiech
 // Purpose: Header file for MultidimensionalScaling.cpp
 //
 
-#ifndef MULTIDIMENSIONAL_SCALING_H_  
-#define MULTIDIMENSIONAL_SCALING_H_
+#ifndef MULTIDIMENSIONAL_SCALING_HPP_  
+#define MULTIDIMENSIONAL_SCALING_HPP_
 
 // Performs Classical MDS on a real, symmetric matrix.
 //  In this application, this is a dissimilarity matrix.
