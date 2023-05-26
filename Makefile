@@ -10,8 +10,8 @@ lodestar: lodestar.o ArgumentParser.o Engine.o
 lodestar.o: lodestar.cpp Engine.hpp
 	g++ $(CFLAGS) lodestar.cpp
 
-ArgumentParser.o: ArgumentParser.cpp ArgumentParser.hpp
-	g++ $(CFLAGS) ArgumentParser.cpp
+CommandLineArgumentParser.o: CommandLineArgumentParser.cpp CommandLineArgumentParser.hpp
+	g++ $(CFLAGS) CommandLineArgumentParser.cpp
 
 Engine.o: Engine.cpp GenotypeFileParser.hpp MatrixOperations.hpp MultidimensionalScaling.hpp Procrustes.hpp
 	g++ $(CFLAGS) Engine.cpp

@@ -1,5 +1,5 @@
 //
-// File: ArgumentParser.hpp
+// File: CommandLineArgumentParser.hpp
 // Started: 17 May 2023
 // Author: TQ Smith
 // Principle Investigator: Dr. Zachary Szpiech
