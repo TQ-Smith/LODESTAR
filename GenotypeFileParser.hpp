@@ -12,13 +12,13 @@
 // I try to keep other includes out of the header, but here, it is necessary.
 
 // Used to read in a file.
-// #include <fstream>
+#include <fstream>
 
 // We treat the lines of a file as a string.
-// #include <string>
+#include <string>
 
 // Our string operations lie in the std namespace.
-// using namespace std;
+using namespace std;
 
 // Structure to represent the genotype of an individual at a locus.
 //  Each genotype corresponds to an integer.
@@ -61,6 +61,6 @@ void get_sample_names(ifstream& in_file, string*& sample_names, int& n);
 //  bool& isComplete -> Sets if every sample's genotype was complete.
 //  bool& isEOF -> Sets if the next line in the stream was end of the file.
 //  int n -> The number of sample.
-void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* genotypes, bool& isComplete, bool& isEOF, int n)
+void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* genotypes, bool& isComplete, bool& isEOF, int n);
 
 #endif
