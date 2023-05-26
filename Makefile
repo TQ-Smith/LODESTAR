@@ -4,7 +4,7 @@ LFLAGS = -g -o lodestar
 
 all: lodestar clean
 
-lodestar: lodestar.o ArgumentParser.o Engine.o
+lodestar: lodestar.o CommandLineArgumentParser.o Engine.o
 	g++ lodestar.o Engine.o $(LFLAGS)
 
 lodestar.o: lodestar.cpp Engine.hpp
