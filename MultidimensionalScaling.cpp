@@ -17,7 +17,7 @@
 // Used for the square-root function.
 #include <cmath>
 
-double** compute_classical_mds(double** X, double* d, double* e, int n, int k) {
+void compute_classical_mds(double** X, double* d, double* e, int n, int k) {
 
     // We double each element and keep track of each row's and
     //  each column's sum. Then, we double center.
@@ -67,9 +67,13 @@ double** compute_classical_mds(double** X, double* d, double* e, int n, int k) {
         }
     }
 
-    // Destroy X and return the reduced dataset.
-    destroy_real_matrix(X, n, n);
-    return reduced_matrix;
+    // Destroy X and set to the reduced dataset.
+    double** temp = X;
+    X = reduced_matrix;
+    reduced_matrix = temp;
+
+    // Destroy the old distance points.
+    destroy_real_matrix(reduced_matrix, n, n);
     
 }
 

@@ -27,6 +27,43 @@ double** create_real_matrix(int m, int n) {
 
 }
 
+double** create_and_fill_real_matrix(int value, int m, int n) {
+
+    double** matrix = new double*[m];
+
+    for (int i = 0; i < m; i++) {
+        matrix[i] = new double[n];
+        // Fill each row.
+        for (int j = 0; j < n; j++) {
+            matrix[i][j] = value;
+        }
+    }
+
+    return matrix;
+
+}
+
+void add_matrices(double** a, double** b, double** c, int m, int n) {
+
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            // Add elements.
+            a[i][j] = b[i][j] + c[i][j];
+        }
+    }
+
+}
+
+void subtract_matrices(double** a, double** b, double** c, int m, int n) {
+    
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            // Subtract elements.
+            a[i][j] = b[i][j] - c[i][j];
+        }
+    }
+
+}
 
 void shuffle_real_matrix(double** matrix, int m) {
 

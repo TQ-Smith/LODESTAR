@@ -13,8 +13,36 @@
 // Accepts:
 //  int m -> The length of the matrix.
 //  int n -> The width of the matrix.
-// Returns: double**, n x m matrix filled with 0s.
+// Returns: double**, The allocated matrix.
 double** create_real_matrix(int m, int n);
+
+// Create a matrix of doubles.
+// Accepts:
+//  int value -> The value that fills the matrix.
+//  int m -> The length of the matrix.
+//  int n -> The width of the matrix.
+// Returns: double**, The allocated matrix.
+double** create_and_fill_real_matrix(int value, int m, int n);
+
+// Adds matrices b and c and stores in a.
+// Accepts:
+//  double** a -> The resulting matrix.
+//  double** b -> The first operand.
+//  double** c -> The second operand.
+//  int m -> The length of the matrix.
+//  int n -> The width of the matrix.
+// Returns: void.
+void add_matrices(double** a, double** b, double** c, int m, int n);
+
+// Subtracts matrix c from b and stores in a.
+// Accepts:
+//  double** a -> The resulting matrix.
+//  double** b -> The first operand.
+//  double** c -> The second operand.
+//  int m -> The length of the matrix.
+//  int n -> The width of the matrix.
+// Returns: void.
+void subtract_matrices(double** a, double** b, double** c, int m, int n);
 
 // Shuffles the rows of a matrix.
 //  Used for permutation testing.
