@@ -8,6 +8,10 @@
 
 #include "GenotypeFileParser.hpp"
 
+
+#include <iostream>
+using namespace std;
+
 // We use lists read in the sample names.
 #include <list>
 
@@ -43,7 +47,7 @@ void get_sample_names(ifstream& in_file, string*& sample_names, int& n) {
     int prev = -1;
     for(int i = 0; i < length; i++) {
         if (line.at(i) == '\t') {
-            if (count > 9) {
+            if (count > 8) {
                 samples.push_back(line.substr(prev + 1, i - prev));
             }
             prev = i;
@@ -116,20 +120,10 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
 
     // Read in the chromosome name.
     //  If EOF, set flag and exit method.
-    if (!getline(in_file, line, '\t')) {
+    if (!getline(in_file, line)) {
         isEOF = true;
         return;
     }
-
-    // Set chromosome name.
-    chrom = line;
-
-    // Next, read in the position.
-    getline(in_file, line, '\t');
-    position = stoi(line);
-
-    // Now, we read in the rest of the line.
-    getline(in_file, line, '\n');
 
     // Get the length of the rest of the line.
     int length = line.length();
@@ -144,8 +138,14 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
     int count = 0;
     for (int i = 0; i < length; i++) {
         if (line.at(i) == '\t') {
-            // Nine fields and greater are the sample's genotypes.
-            if (count > 7) {
+            // First field is the chromosome.
+            if (count == 1) {
+                chrom = line.substr(prev + 1, i - prev);
+            // Second field is the position.
+            } else if (count == 2) {
+                position = stoi(line.substr(prev + 1, i - prev));
+            // Eight fields and greater are the sample's genotypes.
+            } else if (count > 7) {
 
                 // Get the genotype.
                 //  NOTE: We are assuming the genotypes are first in the entry.
@@ -175,7 +175,7 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
         isComplete = false;
         return;
     }
-    parse_genotype(sample, genotypes[count - 8]);
+    parse_genotype(sample, genotypes[count - 7]);
 
     // If we go through the whole file, then the record was complete.
     isComplete = true;

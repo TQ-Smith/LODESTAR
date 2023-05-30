@@ -70,8 +70,17 @@ void destroy_window(Window* window, int n, int k) {
     delete window;
 }
 
-void window_genome(ifstream& in_file, list<Window*> windows, string unit, int window_width, int window_offset, int n, int k) {
+void print_window(Window* window, int n) {
+    cout << "Chromosome: " << window -> chromosome << endl;
+    cout << "Start Position: " << window -> start_position << endl;
+    cout << "End Position: " << window -> end_position << endl;
+    cout << "Number of Loci: " << window -> num_loci << endl;
+    cout << "Dissimilarity Matrix:" << endl;
+    print_real_matrix(window -> points, n, n);  
+}
 
+void window_genome(ifstream& in_file, list<Window*> windows, string unit, int window_width, int window_offset, int n, int k) {
+    
     // Create global window.
     //  Initialize to empty count matrix and no loci.
     Window* global = new Window;
@@ -277,16 +286,25 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
         cout << names[i] << endl;
     }
     cout << endl;
-
+    
     list<Window*> windows;
 
     cout << "Now, we window the genome." << endl;
     window_genome(in_file, windows, unit, window_width, window_offset, n, k);
     cout << "We finished windowing the genome." << endl;
 
+    Window* temp;
+    for (int i = 0; i < windows.size(); i++) {
+        temp = windows.front();
+        print_window(temp, n);
+        destroy_window(temp, n, k);
+        windows.pop_front();
+    }
+
     cout << "Closing input file." << endl;
     close_file(in_file);
     cout << "Closed input file." << endl;
     cout << endl;
+    
 
 }

@@ -2,7 +2,7 @@
 CFLAGS = -c -Wall -g
 LFLAGS = -g -o lodestar
 
-all: lodestar clean
+all: lodestar
 
 lodestar: lodestar.o CommandLineArgumentParser.o Engine.o GenotypeFileParser.o Procrustes.o MultidimensionalScaling.o NumericalRecipesInC.o MatrixOperations.o
 	g++ lodestar.o CommandLineArgumentParser.o Engine.o GenotypeFileParser.o Procrustes.o MultidimensionalScaling.o NumericalRecipesInC.o MatrixOperations.o $(LFLAGS)

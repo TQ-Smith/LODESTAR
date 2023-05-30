@@ -34,8 +34,8 @@ double** create_and_fill_real_matrix(int value, int m, int n) {
     for (int i = 0; i < m; i++) {
         matrix[i] = new double[n];
         // Fill each row.
-        for (int j = i; j < n; j++) {
-            matrix[i][j] = matrix[j][i] = value;
+        for (int j = 0; j < n; j++) {
+            matrix[i][j] = value;
         }
     }
 
