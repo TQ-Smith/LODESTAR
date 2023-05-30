@@ -108,6 +108,9 @@ void parse_genotype(string sample, Genotype& locus) {
 //  If we used a buffer instead of getline, this would be faster.
 void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* genotypes, bool& isComplete, bool& isEOF, int n) {
 
+    // When we start, it isn't EOF;
+    isEOF = false;
+    
     // Buffer to read in a line of the file.
     string line;
 

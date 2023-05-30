@@ -17,7 +17,7 @@
 // Used for the square-root function.
 #include <cmath>
 
-void compute_classical_mds(double** X, double* d, double* e, int n, int k) {
+void compute_classical_mds(double**& X, double* d, double* e, int n, int k) {
 
     // We double each element and keep track of each row's and
     //  each column's sum. Then, we double center.
@@ -77,19 +77,17 @@ void compute_classical_mds(double** X, double* d, double* e, int n, int k) {
     
 }
 
-double** classical_mds(double** X, int n, int k) {
+void classical_mds(double** X, int n, int k) {
 
     // Allocate extra memory.
     double* d = new double[n];
     double* e = new double[n];
 
     // Compute classical MDS.
-    double** reduced = compute_classical_mds(X, d, e, n, k);
+    compute_classical_mds(X, d, e, n, k);
 
     // Free temporary memory.
     delete [] d;
     delete [] e;
-
-    return reduced;
 
 }

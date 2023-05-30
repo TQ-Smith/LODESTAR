@@ -13,25 +13,25 @@
 //  In this application, this is a dissimilarity matrix.
 // Accepts:
 //  double** X -> Our n x n distance matrix with 1s on the diagonal.
-//                  Is set to the set of reduced points.
+//                  Is set to the mtrix of reduced points.
 //  double* d -> Used to hold eigen values.
 //  double* e -> Used as temp for eigen computations.
 //  int n -> The dimension of n.
 //  int k -> The dimension of the reduced data.
 //      Assume 0 < k < n.
 // Return: void.
-double** compute_classical_mds(double**& X, double* d, double* e, int n, int k);
+void compute_classical_mds(double**& X, double* d, double* e, int n, int k);
 
 // Performs Classical MDS on a real, symmetric matrix.
 // This method handles all memory allocations.
 //  In this application, this is a dissimilarity matrix.
 // Accepts:
 //  double** X -> Our n x n distance matrix with 1s on the diagonal.
+//                  Is set to the matrix of reduced points.
 //  int n -> The dimension of n.
 //  int k -> The dimension of the reduced data.
 //      Assume 0 < k < n.
-// Return: double**, The reduced data set.
-//      NOTE: X's memory is freed in this method.
-double** classical_mds(double** X, int n, int k);
+// Return: void.
+void classical_mds(double** X, int n, int k);
 
 #endif
