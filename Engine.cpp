@@ -122,8 +122,8 @@ void window_genome(ifstream& in_file, list<Window*> windows, string unit, int wi
     // A temporary varaible used to calculate the distances between individuals.
     int similarity;
 
-    // A counter for the number of windows.
-    int num_windows = 0;
+    // A counter for the number of windows. Used to keep track of window boundds for bp.
+    int num_windows = -1;
 
     // The unit changes two things. How we determine if a locus is in the overlap
     //  and if a locus is in the window's width. We create a variable for each test.
@@ -151,8 +151,8 @@ void window_genome(ifstream& in_file, list<Window*> windows, string unit, int wi
         //  Default is always bp.
         //  Add in centimorgans later.
         if (unit == "snp") {
-            isInOverlap = previous_chromosome == chromosome && (overlap_window -> num_loci < window_offset);
-            isInWindow = previous_chromosome == chromosome && (width_window -> num_loci < window_width);
+            isInOverlap = previous_chromosome == chromosome && ((overlap_window -> num_loci) < window_offset);
+            isInWindow = previous_chromosome == chromosome && ((width_window -> num_loci) < window_width);
         } else {
             isInOverlap = previous_chromosome == chromosome && (position < (window_offset * (num_windows + 1)));
             isInWindow = previous_chromosome == chromosome && (position < (window_offset * num_windows + window_width));
@@ -163,8 +163,7 @@ void window_genome(ifstream& in_file, list<Window*> windows, string unit, int wi
             // Consider the event of an empty window.
             //  If the window is empty, then so will the offset,
             //  since the offset is smaller than the window width.
-            if (width_window -> num_loci == 0) {
-                cout << "Here!!" << endl;
+            if ((width_window -> num_loci) == 0) {
                 // We zero out the counts of the overlap and width counts.
                 for (int i = 0; i < n; i++) {
                     for (int j = i; j < n; j++) {
@@ -172,14 +171,12 @@ void window_genome(ifstream& in_file, list<Window*> windows, string unit, int wi
                         overlap_window -> points[i][j] = overlap_window -> points[j][i] = 0;
                     }
                 }
-                cout << "Here!!" << endl;
+
                 // Set the chromosome and starting position.
                 width_window -> chromosome = chromosome;
                 width_window -> start_position = position;
-
-                cout << "Here!!" << endl;
             
-            // If the window is none empty, then we must process it and start a new window.
+            // If the window is not empty, then we must process it and start a new window.
             } else {
 
                 // Set the ending position.
@@ -214,6 +211,9 @@ void window_genome(ifstream& in_file, list<Window*> windows, string unit, int wi
                 overlap_window -> num_loci = 0;
 
             }
+
+            // We created a new window.
+            num_windows++;
 
         }
 

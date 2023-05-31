@@ -158,7 +158,7 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
                     return;
                 }
 
-                parse_genotype(sample, genotypes[count - 7]);
+                parse_genotype(sample, genotypes[count - 9]);
                 
             }
             prev = i;
@@ -175,7 +175,7 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
         isComplete = false;
         return;
     }
-    parse_genotype(sample, genotypes[count - 8]);
+    parse_genotype(sample, genotypes[count - 9]);
 
     // If we go through the whole file, then the record was complete.
     isComplete = true;
