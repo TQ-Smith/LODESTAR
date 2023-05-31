@@ -148,33 +148,36 @@ void window_genome(ifstream& in_file, list<Window*> windows, string unit, int wi
 
         // Determine if the locus was in the overlap and/or in the window.
         //  We account for the chromosomes not being equal too.
+        //  Default is always bp.
         //  Add in centimorgans later.
         if (unit == "snp") {
-            isInOverlap = previous_chromosome != chromosome || (overlap_window -> num_loci < window_offset);
-            isInWindow = previous_chromosome != chromosome || (width_window -> num_loci < window_width);
+            isInOverlap = previous_chromosome == chromosome && (overlap_window -> num_loci < window_offset);
+            isInWindow = previous_chromosome == chromosome && (width_window -> num_loci < window_width);
         } else {
-            isInOverlap = previous_chromosome != chromosome || (position < (window_offset * (num_windows + 1)));
-            isInWindow = previous_chromosome != chromosome || (position < (window_offset * num_windows + window_width));
+            isInOverlap = previous_chromosome == chromosome && (position < (window_offset * (num_windows + 1)));
+            isInWindow = previous_chromosome == chromosome && (position < (window_offset * num_windows + window_width));
         }
 
         // Next, we determine if the loci starts in a new window.
         if (!isInWindow) {
-
             // Consider the event of an empty window.
             //  If the window is empty, then so will the offset,
             //  since the offset is smaller than the window width.
             if (width_window -> num_loci == 0) {
+                cout << "Here!!" << endl;
                 // We zero out the counts of the overlap and width counts.
                 for (int i = 0; i < n; i++) {
                     for (int j = i; j < n; j++) {
-                        overlap_window -> points[i][j] = overlap_window -> points[j][i] = 0;
                         width_window -> points[i][j] = width_window -> points[j][i] = 0;
+                        overlap_window -> points[i][j] = overlap_window -> points[j][i] = 0;
                     }
                 }
+                cout << "Here!!" << endl;
                 // Set the chromosome and starting position.
                 width_window -> chromosome = chromosome;
-                width_window -> num_loci = 1;
                 width_window -> start_position = position;
+
+                cout << "Here!!" << endl;
             
             // If the window is none empty, then we must process it and start a new window.
             } else {

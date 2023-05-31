@@ -139,13 +139,13 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
     for (int i = 0; i < length; i++) {
         if (line.at(i) == '\t') {
             // First field is the chromosome.
-            if (count == 1) {
+            if (count == 0) {
                 chrom = line.substr(prev + 1, i - prev);
             // Second field is the position.
-            } else if (count == 2) {
+            } else if (count == 1) {
                 position = stoi(line.substr(prev + 1, i - prev));
             // Eight fields and greater are the sample's genotypes.
-            } else if (count > 7) {
+            } else if (count > 8) {
 
                 // Get the genotype.
                 //  NOTE: We are assuming the genotypes are first in the entry.
@@ -175,7 +175,7 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
         isComplete = false;
         return;
     }
-    parse_genotype(sample, genotypes[count - 7]);
+    parse_genotype(sample, genotypes[count - 8]);
 
     // If we go through the whole file, then the record was complete.
     isComplete = true;
@@ -187,38 +187,3 @@ void close_file(ifstream& in_file) {
     //  Later, add error handeling.
     in_file.close();
 }
-/*
-int main() {
-    ifstream in_file;
-    open_file(in_file, "dingo.vcf");
-
-    string* samples = NULL;
-    int n;
-
-    get_sample_names(in_file, samples, n);
-
-    Genotype* sample_genotypes = new Genotype[n];
-
-    string chrom;
-    int position;
-    bool isComplete;
-    bool isEOF;
-
-    for (int i = 0; i < 100; i++) {
-        get_next_loci(in_file, chrom, position, sample_genotypes, isComplete, isEOF, n);
-        cout << "Locus " << (i + 1) << ": ";
-        if (isComplete) {
-            for (int j = 0; j < n; j++) {
-                cout << sample_genotypes[j].chr1 << "/" << sample_genotypes[j].chr2 << " ";
-            }
-            cout << endl;
-        } else {
-            cout << "Incomplete." << endl;
-        }
-    }
-
-    delete [] sample_genotypes;
-
-    close_file(in_file);
-}
-*/

@@ -104,7 +104,7 @@ void fill_real_matrix(double** matrix, int value, int m, int n) {
     // Iterate through the elements and set value.
     for (int i = 0; i < m; i++) {
         for (int j = i; j < n; j++) {
-            matrix[i][j] = matrix[j][j] = value;
+            matrix[i][j] = matrix[j][i] = value;
         }
     }
 }
