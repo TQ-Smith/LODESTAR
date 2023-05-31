@@ -35,9 +35,10 @@
 // Returns: void.
 void convert_to_dissimilarity(Window* window, int n) {
     for (int i = 0; i < n; i++) {
+        window -> points[i][i] = 1;
         for (int j = i + 1; j < n; j++) {
             // Note, we are only working with diploid individuals.
-            window -> points[i][j] = 1 - (window -> points[i][j]) / (2 * (window -> num_loci));
+            window -> points[i][j] = window -> points[j][i] = 1 - (window -> points[i][j]) / (2 * (window -> num_loci));
         }
     }
 }
@@ -49,14 +50,22 @@ void convert_to_dissimilarity(Window* window, int n) {
 //  Genotype& sample2 -> The genotype of the second sample.
 // Returns: int, The number of similar alleles. Either 0, 1, or 2.
 int calculate_ads(Genotype& sample1, Genotype& sample2) {
-    int asd = 0;
-    if (sample1.chr1 == sample2.chr1 || sample1.chr1 == sample2.chr2) {
-        asd++;
+    if (sample1.chr1 == sample2.chr1) {
+        if (sample1.chr2 == sample2.chr2) {
+            return 2;
+        } 
+        if (sample1.chr1 == sample2.chr2) {
+            return 1;
+        }
+    } else {
+        if (sample1.chr2 == sample2.chr2) {
+            return 1;
+        } 
+        if (sample1.chr1 == sample2.chr2) {
+            return 1;
+        }
     }
-    if (sample1.chr2 == sample2.chr1 || sample1.chr2 == sample2.chr2) {
-        asd++;
-    }
-    return asd;
+    return 0;
 }
 
 // A private method to deallocate a window's memory.
@@ -79,7 +88,7 @@ void print_window(Window* window, int n) {
     print_real_matrix(window -> points, n, n);  
 }
 
-void window_genome(ifstream& in_file, list<Window*> windows, string unit, int window_width, int window_offset, int n, int k) {
+void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int window_width, int window_offset, int n, int k) {
     
     // Create global window.
     //  Initialize to empty count matrix and no loci.
@@ -246,6 +255,7 @@ void window_genome(ifstream& in_file, list<Window*> windows, string unit, int wi
         //  Increment the number of loci and
         //  update the previous chromosome.
         width_window -> num_loci++;
+        global -> num_loci++;
         previous_chromosome = chromosome;
 
     };
@@ -296,13 +306,21 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
     window_genome(in_file, windows, unit, window_width, window_offset, n, k);
     cout << "We finished windowing the genome." << endl;
 
+    cout << endl;
     Window* temp;
     for (int i = 0; i < windows.size(); i++) {
         temp = windows.front();
         print_window(temp, n);
         destroy_window(temp, n, k);
         windows.pop_front();
+        cout << endl;
     }
+
+    cout << "Global:" << endl;
+    temp = windows.front();
+    print_window(temp, n);
+    destroy_window(temp, n, k);
+    windows.pop_front();
 
     cout << "Closing input file." << endl;
     close_file(in_file);
