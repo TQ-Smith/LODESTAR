@@ -103,7 +103,8 @@ void parse_genotype(string sample, Genotype& locus) {
     locus.chr1 = stoi(haploid);
 
     // Get the second haploid and store it in the sample's genotype.
-    locus.chr2 = stoi(sample.substr(delim_index + 1, sample.length() - delim_index));
+    locus.chr2 = stoi(sample.substr(delim_index + 1, sample.length() - delim_index)); 
+
 }
 
 // I really don't love how I wrote this method.
@@ -120,7 +121,8 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
 
     // Read in the chromosome name.
     //  If EOF, set flag and exit method.
-    if (!getline(in_file, line)) {
+    getline(in_file, line, '\n');
+    if (in_file.eof()) {
         isEOF = true;
         return;
     }
@@ -144,7 +146,7 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
             // Second field is the position.
             } else if (count == 1) {
                 position = stoi(line.substr(prev + 1, i - prev));
-            // Eight fields and greater are the sample's genotypes.
+            // Other sample's genotypes.
             } else if (count > 8) {
 
                 // Get the genotype.
@@ -187,3 +189,21 @@ void close_file(ifstream& in_file) {
     //  Later, add error handeling.
     in_file.close();
 }
+
+/*
+int main () {
+    string chromosome = "";
+    int position;
+    bool isComplete;
+    bool isEOF = false;
+    string* names;
+    int n;
+    ifstream in_file;
+    open_file(in_file, "test.vcf");
+    get_sample_names(in_file, names, n);
+    Genotype* genotypes = new Genotype[n];
+    while(!isEOF) {
+        get_next_loci(in_file, chromosome, position, genotypes, isComplete, isEOF, n);
+    } 
+}
+*/

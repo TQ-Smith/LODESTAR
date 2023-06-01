@@ -2,6 +2,7 @@
 *.[ao]
 test
 test.cpp
+test_dingo.vcf
 test.vcf
 CaboVerde.vcf
 mds.py

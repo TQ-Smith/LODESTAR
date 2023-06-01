@@ -50,22 +50,7 @@ void convert_to_dissimilarity(Window* window, int n) {
 //  Genotype& sample2 -> The genotype of the second sample.
 // Returns: int, The number of similar alleles. Either 0, 1, or 2.
 int calculate_ads(Genotype& sample1, Genotype& sample2) {
-    if (sample1.chr1 == sample2.chr1) {
-        if (sample1.chr2 == sample2.chr2) {
-            return 2;
-        } 
-        if (sample1.chr1 == sample2.chr2) {
-            return 1;
-        }
-    } else {
-        if (sample1.chr2 == sample2.chr2) {
-            return 1;
-        } 
-        if (sample1.chr1 == sample2.chr2) {
-            return 1;
-        }
-    }
-    return 0;
+    
 }
 
 // A private method to deallocate a window's memory.
@@ -102,6 +87,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     //  The position of the locus.
     //  Our flag variable to indicate end of file.
     //  Our flag variable to indiciate incomplete genotypes.
+    //  Our flag varaible to indicate that all genotypes were not homogenous.
     //  Our array of geneotypes for each individual.
     string chromosome = "";
     int position;
@@ -124,9 +110,10 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     overlap_window -> points = create_real_matrix(n, n);
     overlap_window -> num_loci = 0;
 
-    // We keep track of the previous chromosome. If a new chromosome is encountered,
+    // We keep track of the previous chromosome and position. If a new chromosome is encountered,
     //  then we have to create a new window.
     string previous_chromosome = "";
+    int previous_position;
 
     // A temporary varaible used to calculate the distances between individuals.
     int similarity;
@@ -155,15 +142,13 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
             continue;
         }
 
-        // Determine if the locus was in the overlap and/or in the window.
+        // Determine if the locus was in in the window.
         //  We account for the chromosomes not being equal too.
         //  Default is always bp.
         //  Add in centimorgans later.
         if (unit == "snp") {
-            isInOverlap = previous_chromosome == chromosome && ((overlap_window -> num_loci) < window_offset);
             isInWindow = previous_chromosome == chromosome && ((width_window -> num_loci) < window_width);
         } else {
-            isInOverlap = previous_chromosome == chromosome && (position < (window_offset * (num_windows + 1)));
             isInWindow = previous_chromosome == chromosome && (position < (window_offset * num_windows + window_width));
         }
 
@@ -173,6 +158,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
             //  If the window is empty, then so will the offset,
             //  since the offset is smaller than the window width.
             if ((width_window -> num_loci) == 0) {
+                
                 // We zero out the counts of the overlap and width counts.
                 for (int i = 0; i < n; i++) {
                     for (int j = i; j < n; j++) {
@@ -182,15 +168,15 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
                 }
 
                 // Set the chromosome and starting position.
-                width_window -> chromosome = chromosome;
                 width_window -> start_position = position;
+                width_window -> num_loci = 0;
             
             // If the window is not empty, then we must process it and start a new window.
             } else {
 
                 // Set the ending position.
                 //  Corresponds to the last locus in the window.
-                width_window -> end_position = position;
+                width_window -> end_position = previous_position;
 
                 // NOTE: If the windows are non-overlapping, then we could
                 //  have just created a new matrix, but just like subtraction
@@ -200,41 +186,59 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
                 // We now subtract the overlap from the width_window.
                 //  This prevents us from preforming double computations
                 //  and having to save loci in memory.
-                subtract_matrices(overlap_window -> points, width_window -> points, width_window -> points, n, n);
+                subtract_matrices(overlap_window -> points, width_window -> points, overlap_window -> points, n, n);
 
+                 // Adjust number of loci in the window but not the overlap.
+                overlap_window -> num_loci = width_window -> num_loci - overlap_window -> num_loci;
+                
                 // Convert the width_window to dissimilarity and save to list.
                 convert_to_dissimilarity(width_window, n);
 
                 windows.push_back(width_window);
-
-                // Adjust number of loci in the window but not the overlap.
-                width_window -> num_loci -= overlap_window -> num_loci;
 
                 // We advance the sliding window by setting the new width_window to
                 //  the old overlap window. We then allocate a new window for the
                 //  width_window.
                 width_window = overlap_window;
                 overlap_window = new Window;
-                
+
+                // Reset the start position to the new window.
+                width_window -> start_position = position;
+
                 // There are no loci in the overlap window yet.
                 overlap_window -> num_loci = 0;
+
+                // Lastly, we create the new matrix for the new window overlap window.
+                overlap_window -> points = create_real_matrix(n ,n);
 
             }
 
             // We created a new window.
             num_windows++;
 
+            // Declare chromsome of window.
+            width_window -> chromosome = chromosome;
         }
 
         // The window is setup. We process the locus.
+
+        // Determine if locus is in the overlap.
+        //  Default bp.
+        //  Add centimorgans later.
+        if (unit == "snp") {
+            isInOverlap = (overlap_window -> num_loci) < window_offset;
+        } else {
+            isInOverlap = position < (window_offset * (num_windows + 1));
+        }
 
         // If the locus was in the overlap, then we add the distances to the count matrix.
         //  Otherwise, we do not add it to the overlap count.
         if (isInOverlap) {
             for (int i = 0; i < n; i++) {
                 for (int j = i + 1; j < n; j++) {
-                    // Calculate allele similaarity.
+                    // Calculate allele similarity.
                     similarity = calculate_ads(genotypes[i], genotypes[j]);
+                    cout << genotypes[i].chr1 << "," << genotypes[i].chr2 << " " << genotypes[j].chr1 << "," << genotypes[j].chr2 << ": " << similarity << endl;
                     overlap_window -> points[i][j] = width_window -> points[i][j] = global -> points[i][j] = similarity;
                     overlap_window -> points[j][i] = width_window -> points[j][i] = global -> points[j][i] = similarity;
                 }
@@ -243,7 +247,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
         } else {
             for (int i = 0; i < n; i++) {
                 for (int j = i + 1; j < n; j++) {
-                    // Calculate allele similaarity.
+                    // Calculate allele similarity.
                     similarity = calculate_ads(genotypes[i], genotypes[j]);
                     width_window -> points[i][j] = global -> points[i][j] = similarity;
                     width_window -> points[j][i] = global -> points[j][i] = similarity;
@@ -257,8 +261,8 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
         width_window -> num_loci++;
         global -> num_loci++;
         previous_chromosome = chromosome;
-
-    };
+        previous_position = position;
+    }
 
     // If the end of the file was reached with an unfinished window.
     //  Do the same as above, but no need to advance the slider.
@@ -270,6 +274,9 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
 
     // Global counts matrix is converted to dissimilarity 
     //  and pushed onto the end of the list.
+    //  We set the first and last starting position here.
+    global -> start_position = windows.front() -> start_position;
+    global -> end_position = windows.back() -> end_position;
     convert_to_dissimilarity(global, n);
     windows.push_back(global);
 
@@ -308,19 +315,14 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
 
     cout << endl;
     Window* temp;
-    for (int i = 0; i < windows.size(); i++) {
+    int size = windows.size();
+    for (int i = 0; i < size; i++) {
         temp = windows.front();
         print_window(temp, n);
         destroy_window(temp, n, k);
         windows.pop_front();
         cout << endl;
     }
-
-    cout << "Global:" << endl;
-    temp = windows.front();
-    print_window(temp, n);
-    destroy_window(temp, n, k);
-    windows.pop_front();
 
     cout << "Closing input file." << endl;
     close_file(in_file);
