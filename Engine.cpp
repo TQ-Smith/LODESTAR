@@ -50,7 +50,25 @@ void convert_to_dissimilarity(Window* window, int n) {
 //  Genotype& sample2 -> The genotype of the second sample.
 // Returns: int, The number of similar alleles. Either 0, 1, or 2.
 int calculate_ads(Genotype& sample1, Genotype& sample2) {
-    
+    if (sample1.chr1 == sample2.chr1) {
+        if (sample1.chr2 == sample2.chr2) {
+            return 2;
+        }
+        return 1;
+    }
+    if (sample1.chr1 == sample2.chr2) {
+        if (sample1.chr2 == sample2.chr1) {
+            return 2;
+        }
+        return 1;
+    }
+    if (sample1.chr2 == sample2.chr2) {
+        if (sample1.chr1 == sample2.chr2) {
+            return 2;
+        }
+        return 1;
+    }
+    return 0;
 }
 
 // A private method to deallocate a window's memory.
@@ -64,13 +82,13 @@ void destroy_window(Window* window, int n, int k) {
     delete window;
 }
 
-void print_window(Window* window, int n) {
+void print_window(Window* window, int n, int k) {
     cout << "Chromosome: " << window -> chromosome << endl;
     cout << "Start Position: " << window -> start_position << endl;
     cout << "End Position: " << window -> end_position << endl;
     cout << "Number of Loci: " << window -> num_loci << endl;
     cout << "Dissimilarity Matrix:" << endl;
-    print_real_matrix(window -> points, n, n);  
+    print_real_matrix(window -> points, n, k);  
 }
 
 void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int window_width, int window_offset, int n, int k) {
@@ -118,13 +136,14 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     // A temporary varaible used to calculate the distances between individuals.
     int similarity;
 
-    // A counter for the number of windows. Used to keep track of window boundds for bp.
-    int num_windows = -1;
-
     // The unit changes two things. How we determine if a locus is in the overlap
     //  and if a locus is in the window's width. We create a variable for each test.
     bool isInOverlap;
     bool isInWindow;
+
+    // Used for MDS.
+    double* d = new double[n];
+    double* e = new double[n];
 
     // Our loop to read in each locus.
     while(true) {
@@ -147,9 +166,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
         //  Default is always bp.
         //  Add in centimorgans later.
         if (unit == "snp") {
-            isInWindow = previous_chromosome == chromosome && ((width_window -> num_loci) < window_width);
-        } else {
-            isInWindow = previous_chromosome == chromosome && (position < (window_offset * num_windows + window_width));
+            
         }
 
         // Next, we determine if the loci starts in a new window.
@@ -157,64 +174,16 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
             // Consider the event of an empty window.
             //  If the window is empty, then so will the offset,
             //  since the offset is smaller than the window width.
-            if ((width_window -> num_loci) == 0) {
+            if () {
                 
-                // We zero out the counts of the overlap and width counts.
-                for (int i = 0; i < n; i++) {
-                    for (int j = i; j < n; j++) {
-                        width_window -> points[i][j] = width_window -> points[j][i] = 0;
-                        overlap_window -> points[i][j] = overlap_window -> points[j][i] = 0;
-                    }
-                }
 
-                // Set the chromosome and starting position.
-                width_window -> start_position = position;
-                width_window -> num_loci = 0;
             
             // If the window is not empty, then we must process it and start a new window.
             } else {
 
-                // Set the ending position.
-                //  Corresponds to the last locus in the window.
-                width_window -> end_position = previous_position;
-
-                // NOTE: If the windows are non-overlapping, then we could
-                //  have just created a new matrix, but just like subtraction
-                //  that is a quadratic operation. Thus, we do not consider
-                //  this case.
-
-                // We now subtract the overlap from the width_window.
-                //  This prevents us from preforming double computations
-                //  and having to save loci in memory.
-                subtract_matrices(overlap_window -> points, width_window -> points, overlap_window -> points, n, n);
-
-                 // Adjust number of loci in the window but not the overlap.
-                overlap_window -> num_loci = width_window -> num_loci - overlap_window -> num_loci;
                 
-                // Convert the width_window to dissimilarity and save to list.
-                convert_to_dissimilarity(width_window, n);
-
-                windows.push_back(width_window);
-
-                // We advance the sliding window by setting the new width_window to
-                //  the old overlap window. We then allocate a new window for the
-                //  width_window.
-                width_window = overlap_window;
-                overlap_window = new Window;
-
-                // Reset the start position to the new window.
-                width_window -> start_position = position;
-
-                // There are no loci in the overlap window yet.
-                overlap_window -> num_loci = 0;
-
-                // Lastly, we create the new matrix for the new window overlap window.
-                overlap_window -> points = create_real_matrix(n ,n);
 
             }
-
-            // We created a new window.
-            num_windows++;
 
             // Declare chromsome of window.
             width_window -> chromosome = chromosome;
@@ -227,8 +196,6 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
         //  Add centimorgans later.
         if (unit == "snp") {
             isInOverlap = (overlap_window -> num_loci) < window_offset;
-        } else {
-            isInOverlap = position < (window_offset * (num_windows + 1));
         }
 
         // If the locus was in the overlap, then we add the distances to the count matrix.
@@ -238,12 +205,12 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
                 for (int j = i + 1; j < n; j++) {
                     // Calculate allele similarity.
                     similarity = calculate_ads(genotypes[i], genotypes[j]);
-                    cout << genotypes[i].chr1 << "," << genotypes[i].chr2 << " " << genotypes[j].chr1 << "," << genotypes[j].chr2 << ": " << similarity << endl;
                     overlap_window -> points[i][j] = width_window -> points[i][j] = global -> points[i][j] = similarity;
                     overlap_window -> points[j][i] = width_window -> points[j][i] = global -> points[j][i] = similarity;
                 }
             }
             overlap_window -> num_loci++;
+            overlap_window -> end_position = position;
         } else {
             for (int i = 0; i < n; i++) {
                 for (int j = i + 1; j < n; j++) {
@@ -255,13 +222,6 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
             }
         }
 
-        // We processed the window.
-        //  Increment the number of loci and
-        //  update the previous chromosome.
-        width_window -> num_loci++;
-        global -> num_loci++;
-        previous_chromosome = chromosome;
-        previous_position = position;
     }
 
     // If the end of the file was reached with an unfinished window.
@@ -283,6 +243,8 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     // Destroy overlap window and geneotypes array.
     destroy_window(overlap_window, n, k);
     delete[] genotypes;
+    delete[] d;
+    delete[] e;
 
 }
 
@@ -318,7 +280,7 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
     int size = windows.size();
     for (int i = 0; i < size; i++) {
         temp = windows.front();
-        print_window(temp, n);
+        print_window(temp, n, k);
         destroy_window(temp, n, k);
         windows.pop_front();
         cout << endl;
