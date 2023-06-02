@@ -216,9 +216,6 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
             overlap_window -> num_loci++;
             overlap_window -> end_position = position;
         } else {
-            if (width_window -> num_loci == (window_width - window_offset) - 1 ) {
-                next_start = position;
-            }
             for (int i = 0; i < n; i++) {
                 for (int j = i + 1; j < n; j++) {
                     // Calculate allele similarity.
@@ -235,6 +232,10 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
         previous_position = position;
         width_window -> num_loci++;
         global -> num_loci++;
+
+        if (width_window -> num_loci == window_offset + 1) {
+             next_start = position;
+        }
     }
 
     // If the end of the file was reached with an unfinished window.
@@ -298,15 +299,48 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
     cout << "We finished windowing the genome." << endl;
 
     cout << endl;
+    cout << "Now we preform our permutation tests." << endl;
+    cout << endl;
+
+    // Create our temp matrices.
+    double** temp1 = create_real_matrix(k, k);
+    double** temp2 = create_real_matrix(k, k);
+
+    // Create our arrays to hold the point centers.
+    double* x_0 = new double[k];
+    double* y_0 = new double[k];
+
+    int NUM_PERMUTATIONS = 100;
+    double t;
+    double p;
+
+    Window* global = windows.back();
+    windows.pop_back();
+
     Window* temp;
     int size = windows.size();
     for (int i = 0; i < size; i++) {
         temp = windows.front();
-        print_window(temp, n, k);
+        // print_window(temp, n, k);
+        permutation_test(
+            NUM_PERMUTATIONS, temp -> points, global -> points, 
+            temp1, temp2, x_0, y_0, n, k, 
+            &t, &p
+        );
+        cout << "Tested Window " << temp -> chromosome << " from " << temp -> start_position << " to " << temp -> end_position << " ";
+        cout << "with t = " << t << " and " << "p = " << p << endl;
         destroy_window(temp, n, k);
         windows.pop_front();
-        cout << endl;
     }
+    destroy_window(global, n, k);
+    destroy_real_matrix(temp1, k, k);
+    destroy_real_matrix(temp2, k, k);
+    delete [] x_0;
+    delete [] y_0;
+
+    cout << endl;
+    cout << "Finished our permutation tests." << endl;
+    cout << endl;
 
     cout << "Closing input file." << endl;
     close_file(in_file);

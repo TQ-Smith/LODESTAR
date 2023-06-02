@@ -292,3 +292,75 @@ void permutation_test(int NUM_PERMUTATIONS, double** X, double** Y, int n, int k
     *p_value = (count + 1.0) / (NUM_PERMUTATIONS + 1);
 
 }
+
+void permutation_test(int NUM_PERMUTATIONS, double** X, double** Y, double** temp1, double** temp2, double* x_0, double* y_0, int n, int k, double* t, double* p_value) {
+
+    // First, we allocate all of the necessary memory and variables.
+
+    // Set each element equal to 0.
+    for (int i = 0; i < k; i++) {
+        x_0[i] = 0;
+        y_0[i] = 0;
+    }
+    // Now, calculate the center.
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            x_0[j] += (X[i][j] / n);
+            y_0[j] += (Y[i][j] / n);
+        }
+    }
+    // Center the sets of points.
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            X[i][j] -= x_0[j];
+            Y[i][j] -= y_0[j];
+        }
+    }
+
+    // We need a copy of X to permute.
+    double** permuteX = deep_copy_real_matrix(X, n, k);
+
+    // Calculate our initial t value.
+    double D = procrustes_statistic(X, Y, temp1, temp2, n, k);
+
+    // Set our initial t.
+    double t_0 = sqrt(1 - D);
+
+    // Keep the count of observations with a value >= t_0.
+    int count = 0;
+
+    // Now do the permutation test.
+    for (int i = 0; i < NUM_PERMUTATIONS; i++) {
+
+        // Shuffle permuteX.
+        shuffle_real_matrix(permuteX, n);
+        
+        // Do the analysis.
+        D = procrustes_statistic(permuteX, Y, temp1, temp2, n, k);
+
+        // See if it was significant.
+        if ( t_0 <= sqrt(1 - D) ) {
+            count++;
+        }
+
+    }
+
+    // Uncenter the points.
+    //  This is only needed if we want X and Y unchanged.
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            X[i][j] += x_0[j];
+            Y[i][j] += y_0[j];
+        }
+    }
+
+    // Free all the used memory.
+    destroy_real_matrix(permuteX, n, k);
+
+    // Set our initial t value.
+    *t = t_0;
+
+    // Finally, we set our p_value.
+    *p_value = (count + 1.0) / (NUM_PERMUTATIONS + 1);
+
+}

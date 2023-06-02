@@ -12,6 +12,6 @@
 
 int main() {
 
-    lodestar_pipeline("CaboVerde.vcf", "snp", 1000, 1000, 2);
+    lodestar_pipeline("CaboVerde.vcf", "snp", 100000, 100000, 2);
 
 }

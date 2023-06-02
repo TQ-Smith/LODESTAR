@@ -49,4 +49,7 @@ double procrustes_analysis(double** X, double** Y, int n, int k);
 // Returns: void.
 void permutation_test(int NUM_PERMUTATIONS, double** X, double** Y, int n, int k, double* t, double* p_value);
 
+
+void permutation_test(int NUM_PERMUTATIONS, double** X, double** Y, double** temp1, double** temp2, double* x_0, double* y_0, int n, int k, double* t, double* p_value);
+
 #endif
