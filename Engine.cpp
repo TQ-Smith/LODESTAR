@@ -136,14 +136,11 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     // A temporary varaible used to calculate the distances between individuals.
     int similarity;
 
-    // The unit changes two things. How we determine if a locus is in the overlap
-    //  and if a locus is in the window's width. We create a variable for each test.
-    bool isInOverlap;
-    bool isInWindow;
-
     // Used for MDS.
     double* d = new double[n];
     double* e = new double[n];
+
+    int next_start = 0;
 
     // Our loop to read in each locus.
     while(true) {
@@ -161,74 +158,86 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
             continue;
         }
 
-        // Determine if the locus was in in the window.
-        //  We account for the chromosomes not being equal too.
-        //  Default is always bp.
-        //  Add in centimorgans later.
-        if (unit == "snp") {
-            
-        }
+        if (previous_chromosome != chromosome || width_window -> num_loci == window_width) {
 
-        // Next, we determine if the loci starts in a new window.
-        if (!isInWindow) {
-            // Consider the event of an empty window.
-            //  If the window is empty, then so will the offset,
-            //  since the offset is smaller than the window width.
-            if () {
-                
-
-            
-            // If the window is not empty, then we must process it and start a new window.
-            } else {
-
-                
-
+            if (width_window -> num_loci != 0) {
+                width_window -> end_position = previous_position;
+                width_window -> chromosome = previous_chromosome;
+                subtract_matrices(overlap_window -> points, width_window -> points, overlap_window -> points, n, n);
+                overlap_window -> num_loci = width_window -> num_loci - overlap_window -> num_loci;
+                convert_to_dissimilarity(width_window, n);
+                // print_real_matrix(width_window -> points, n, n);
+                compute_classical_mds(width_window -> points, d, e, n, k);
+                windows.push_back(width_window);
+                width_window = overlap_window;
+                width_window -> start_position = next_start;
+                overlap_window = new Window;
+                overlap_window -> num_loci = 0;
+                overlap_window -> start_position = position;
+                overlap_window -> points = create_and_fill_real_matrix(0, n, n);
             }
 
-            // Declare chromsome of window.
-            width_window -> chromosome = chromosome;
+            if (previous_chromosome != chromosome) {
+                width_window -> start_position = position;
+                width_window -> num_loci = 0;
+                overlap_window -> start_position = position;
+                overlap_window -> num_loci = 0;
+                for (int i = 0; i < n; i++) {
+                    for (int j = i; j < n; j++) {
+                        width_window -> points[i][j] = width_window -> points[j][i] = overlap_window -> points[i][j] = overlap_window -> points[j][i] = 0;
+                    }
+                }
+            }
+
         }
-
-        // The window is setup. We process the locus.
-
-        // Determine if locus is in the overlap.
-        //  Default bp.
-        //  Add centimorgans later.
-        if (unit == "snp") {
-            isInOverlap = (overlap_window -> num_loci) < window_offset;
-        }
-
+        
         // If the locus was in the overlap, then we add the distances to the count matrix.
         //  Otherwise, we do not add it to the overlap count.
-        if (isInOverlap) {
+        if (overlap_window -> num_loci < window_offset) {
             for (int i = 0; i < n; i++) {
                 for (int j = i + 1; j < n; j++) {
                     // Calculate allele similarity.
                     similarity = calculate_ads(genotypes[i], genotypes[j]);
-                    overlap_window -> points[i][j] = width_window -> points[i][j] = global -> points[i][j] = similarity;
-                    overlap_window -> points[j][i] = width_window -> points[j][i] = global -> points[j][i] = similarity;
+                    overlap_window -> points[i][j] += similarity;
+                    width_window -> points[i][j] += similarity;
+                    global -> points[i][j] += similarity;
+                    overlap_window -> points[j][i] += similarity;
+                    width_window -> points[j][i] += similarity;
+                    global -> points[j][i] += similarity;
                 }
             }
             overlap_window -> num_loci++;
             overlap_window -> end_position = position;
         } else {
+            if (width_window -> num_loci == (window_width - window_offset) - 1 ) {
+                next_start = position;
+            }
             for (int i = 0; i < n; i++) {
                 for (int j = i + 1; j < n; j++) {
                     // Calculate allele similarity.
                     similarity = calculate_ads(genotypes[i], genotypes[j]);
-                    width_window -> points[i][j] = global -> points[i][j] = similarity;
-                    width_window -> points[j][i] = global -> points[j][i] = similarity;
+                    width_window -> points[i][j] += similarity;
+                    global -> points[i][j] += similarity;
+                    width_window -> points[j][i] += similarity;
+                    global -> points[j][i] += similarity;
                 }
             }
         }
 
+        previous_chromosome = chromosome;
+        previous_position = position;
+        width_window -> num_loci++;
+        global -> num_loci++;
     }
 
     // If the end of the file was reached with an unfinished window.
     //  Do the same as above, but no need to advance the slider.
     if (width_window -> num_loci != 0) {
+        width_window -> chromosome = chromosome;
         width_window -> end_position = position;
         convert_to_dissimilarity(width_window, n);
+        // print_real_matrix(width_window -> points, n, n);
+        compute_classical_mds(width_window -> points, d, e, n, k);
         windows.push_back(width_window);
     }
 
@@ -238,6 +247,8 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     global -> start_position = windows.front() -> start_position;
     global -> end_position = windows.back() -> end_position;
     convert_to_dissimilarity(global, n);
+    // print_real_matrix(global -> points, n, n);
+    compute_classical_mds(global -> points, d, e, n, k);
     windows.push_back(global);
 
     // Destroy overlap window and geneotypes array.
@@ -281,7 +292,7 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
     for (int i = 0; i < size; i++) {
         temp = windows.front();
         print_window(temp, n, k);
-        destroy_window(temp, n, k);
+        destroy_window(temp, n, n);
         windows.pop_front();
         cout << endl;
     }

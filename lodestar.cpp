@@ -12,6 +12,6 @@
 
 int main() {
 
-    lodestar_pipeline("test.vcf", "snp", 2, 1, 2);
+    lodestar_pipeline("test.vcf", "snp", 3, 1, 2);
 
 }
