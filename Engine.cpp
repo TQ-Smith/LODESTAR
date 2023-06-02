@@ -35,10 +35,10 @@
 // Returns: void.
 void convert_to_dissimilarity(Window* window, int n) {
     for (int i = 0; i < n; i++) {
-        window -> points[i][i] = 1;
+        window -> points[i][i] = 0;
         for (int j = i + 1; j < n; j++) {
             // Note, we are only working with diploid individuals.
-            window -> points[i][j] = window -> points[j][i] = 1 - (window -> points[i][j]) / (2 * (window -> num_loci));
+            window -> points[i][j] = window -> points[j][i] = (1 - (window -> points[i][j]) / (2 * (window -> num_loci)));
         }
     }
 }
@@ -166,11 +166,17 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
                 subtract_matrices(overlap_window -> points, width_window -> points, overlap_window -> points, n, n);
                 overlap_window -> num_loci = width_window -> num_loci - overlap_window -> num_loci;
                 convert_to_dissimilarity(width_window, n);
+                cout << "Processed Window on chromosome " << previous_chromosome << " from " << width_window -> start_position << " to " << width_window -> end_position << "." << endl;
                 // print_real_matrix(width_window -> points, n, n);
+                // cout << endl;
                 compute_classical_mds(width_window -> points, d, e, n, k);
                 windows.push_back(width_window);
                 width_window = overlap_window;
-                width_window -> start_position = next_start;
+                if (window_width == window_offset) {
+                    width_window -> start_position = position;
+                } else {
+                    width_window -> start_position = next_start;
+                }
                 overlap_window = new Window;
                 overlap_window -> num_loci = 0;
                 overlap_window -> start_position = position;
@@ -198,6 +204,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
                 for (int j = i + 1; j < n; j++) {
                     // Calculate allele similarity.
                     similarity = calculate_ads(genotypes[i], genotypes[j]);
+                    // cout << genotypes[i].chr1 << "/" << genotypes[i].chr2 << " " << genotypes[j].chr1 << "/" << genotypes[j].chr2 << " " << similarity << endl;
                     overlap_window -> points[i][j] += similarity;
                     width_window -> points[i][j] += similarity;
                     global -> points[i][j] += similarity;
@@ -236,7 +243,9 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
         width_window -> chromosome = chromosome;
         width_window -> end_position = position;
         convert_to_dissimilarity(width_window, n);
+        cout << "Processed Window on chromosome " << previous_chromosome << " from " << width_window -> start_position << " to " << width_window -> end_position << "." << endl;
         // print_real_matrix(width_window -> points, n, n);
+        // cout << endl;
         compute_classical_mds(width_window -> points, d, e, n, k);
         windows.push_back(width_window);
     }
@@ -283,7 +292,9 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
     list<Window*> windows;
 
     cout << "Now, we window the genome." << endl;
+    cout << endl;
     window_genome(in_file, windows, unit, window_width, window_offset, n, k);
+    cout << endl;
     cout << "We finished windowing the genome." << endl;
 
     cout << endl;
@@ -292,7 +303,7 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
     for (int i = 0; i < size; i++) {
         temp = windows.front();
         print_window(temp, n, k);
-        destroy_window(temp, n, n);
+        destroy_window(temp, n, k);
         windows.pop_front();
         cout << endl;
     }
