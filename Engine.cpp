@@ -50,25 +50,7 @@ void convert_to_dissimilarity(Window* window, int n) {
 //  Genotype& sample2 -> The genotype of the second sample.
 // Returns: int, The number of similar alleles. Either 0, 1, or 2.
 int calculate_ads(Genotype& sample1, Genotype& sample2) {
-    if (sample1.chr1 == sample2.chr1) {
-        if (sample1.chr2 == sample2.chr2) {
-            return 2;
-        }
-        return 1;
-    }
-    if (sample1.chr1 == sample2.chr2) {
-        if (sample1.chr2 == sample2.chr1) {
-            return 2;
-        }
-        return 1;
-    }
-    if (sample1.chr2 == sample2.chr2) {
-        if (sample1.chr1 == sample2.chr2) {
-            return 2;
-        }
-        return 1;
-    }
-    return 0;
+    return (int) abs(sample1.allele - sample2.allele);
 }
 
 // A private method to deallocate a window's memory.
@@ -111,6 +93,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     int position;
     bool isComplete;
     bool isEOF;
+    bool isMonomorphic;
     Genotype* genotypes = new Genotype[n];
 
     // We create a window to keep track of the allele similarity counts
@@ -146,7 +129,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     while(true) {
         
         // First, we read in the locus.
-        get_next_loci(in_file, chromosome, position, genotypes, isComplete, isEOF, n);
+        get_next_loci(in_file, chromosome, position, genotypes, isComplete, isMonomorphic, isEOF, n);
 
         // If the EOF flag was set, break out of the loop.
         if (isEOF) {
@@ -154,7 +137,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
         }
 
         // If there is an incomplete genotype for an individual, then continue to the next locus.
-        if (!isComplete) {
+        if (!isComplete || isMonomorphic) {
             continue;
         }
 
@@ -242,7 +225,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     //  Do the same as above, but no need to advance the slider.
     if (width_window -> num_loci != 0) {
         width_window -> chromosome = chromosome;
-        width_window -> end_position = position;
+        width_window -> end_position = previous_position;
         convert_to_dissimilarity(width_window, n);
         cout << "Processed Window on chromosome " << previous_chromosome << " from " << width_window -> start_position << " to " << width_window -> end_position << "." << endl;
         // print_real_matrix(width_window -> points, n, n);

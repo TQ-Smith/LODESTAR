@@ -20,12 +20,8 @@
 // Our string operations lie in the std namespace.
 using namespace std;
 
-// Structure to represent the genotype of an individual at a locus.
-//  Each genotype corresponds to an integer.
-//  We are restricting ourselves to the case of diploids.
 struct Genotype {
-    int chr1;
-    int chr2;
+    int allele;
 };
 
 // Opens a file.
@@ -61,6 +57,6 @@ void get_sample_names(ifstream& in_file, string*& sample_names, int& n);
 //  bool& isComplete -> Sets if every sample's genotype was complete.
 //  bool& isEOF -> Sets if the next line in the stream was end of the file.
 //  int n -> The number of sample.
-void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* genotypes, bool& isComplete, bool& isEOF, int n);
+void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* genotypes, bool& isComplete, bool& isMonomorphic, bool& isEOF, int n);
 
 #endif

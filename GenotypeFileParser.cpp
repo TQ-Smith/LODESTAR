@@ -79,8 +79,6 @@ void get_sample_names(ifstream& in_file, string*& sample_names, int& n) {
 //  Genotype& locus -> Set the genotype.
 // Returns: void.
 void parse_genotype(string sample, Genotype& locus) {
-    // A string to hold one of the haploid values.
-    string haploid;
 
     // Used to remove ':'s in the VCF genotype field and used
     //  to split genotypes into integers.
@@ -96,14 +94,7 @@ void parse_genotype(string sample, Genotype& locus) {
         delim_index = sample.find('|');
     }
 
-    // Get the first haploid.
-    haploid = sample.substr(0, delim_index);
-
-    // Store it in the sample's genotype.
-    locus.chr1 = stoi(haploid);
-
-    // Get the second haploid and store it in the sample's genotype.
-    locus.chr2 = stoi(sample.substr(delim_index + 1, sample.length() - delim_index)); 
+    locus.allele = stoi(sample.substr(0, delim_index)) + stoi(sample.substr(delim_index + 1, sample.length() - delim_index));
 
 }
 
@@ -111,10 +102,15 @@ void parse_genotype(string sample, Genotype& locus) {
 //  Keep back in mind to fix later.
 //  This also needs to be fast.
 //  If we used a buffer instead of getline, this would be faster.
-void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* genotypes, bool& isComplete, bool& isEOF, int n) {
+void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* genotypes, bool& isComplete, bool& isMonomorphic, bool& isEOF, int n) {
 
     // When we start, it isn't EOF;
     isEOF = false;
+
+    // If we go through the whole file, then the record was complete.
+    isComplete = true;
+
+    isMonomorphic = true;
     
     // Buffer to read in a line of the file.
     string line;
@@ -132,6 +128,8 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
 
     // A string to hold a sample's genotype.
     string sample;
+
+    int previous_genotype;
 
     // We split the line on '\t', but throw away the fields that
     //  do not correspond to sample.
@@ -161,6 +159,14 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
                 }
 
                 parse_genotype(sample, genotypes[count - 9]);
+
+                if (count > 9 && genotypes[count - 9].allele != previous_genotype ) {
+                    isMonomorphic = false;
+                }
+
+                previous_genotype = genotypes[count - 9].allele;
+
+                // cout << genotypes[count - 9].allele << " " << previous_genotype << ": " << isMonomorphic << endl;
                 
             }
             prev = i;
@@ -177,10 +183,14 @@ void get_next_loci(ifstream& in_file, string& chrom, int& position, Genotype* ge
         isComplete = false;
         return;
     }
+
     parse_genotype(sample, genotypes[count - 9]);
 
-    // If we go through the whole file, then the record was complete.
-    isComplete = true;
+    if ( genotypes[count - 9].allele != previous_genotype ) {
+        isMonomorphic = false;
+    }
+
+    // cout << genotypes[count - 9].allele << " " << previous_genotype << ": " << isMonomorphic << endl;
 
 }
 
