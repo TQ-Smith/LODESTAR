@@ -293,7 +293,7 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
     double* x_0 = new double[k];
     double* y_0 = new double[k];
 
-    int NUM_PERMUTATIONS = 100;
+    int NUM_PERMUTATIONS = 10000;
     double t;
     double p;
 

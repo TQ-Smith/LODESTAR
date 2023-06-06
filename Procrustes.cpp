@@ -362,6 +362,6 @@ void permutation_test(int NUM_PERMUTATIONS, double** X, double** Y, double** tem
 
     // Finally, we set our p_value.
     // CHANGED TO DISSIMILARITY.
-    *p_value = 1 - (count + 1.0) / (NUM_PERMUTATIONS + 1);
+    *p_value = 1.0 - ((count + 1.0) / (NUM_PERMUTATIONS + 1));
 
 }

@@ -12,6 +12,6 @@
 
 int main() {
 
-    lodestar_pipeline("test.vcf", "snp", 1, 1, 2);
+    lodestar_pipeline("/home/tqs5778/Documents/Data/50_of_CEU_CHB_YRI_chr2.vcf", "snp", 50, 50, 2);
 
 }

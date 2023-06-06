@@ -1,6 +1,8 @@
 # no .a or .o files
 *.[ao]
 test
+chr6_output.txt
+chr2_output.txt
 test.cpp
 test_dingo.vcf
 test.vcf
