@@ -326,8 +326,6 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
     cout << "Chromosome: " << global -> chromosome << endl;
     cout << "Start Position: " << global -> start_position << endl;
     cout << "End Position: " << global -> end_position << endl;
-    cout << "t-statistic: " << t << endl;
-    cout << "p-value: " << p << endl;
     cout << "Points:" << endl;
     print_real_matrix(global -> points, n, k);
     cout << endl;
