@@ -50,7 +50,7 @@ void convert_to_dissimilarity(Window* window, int n) {
 //  Genotype& sample2 -> The genotype of the second sample.
 // Returns: int, The number of similar alleles. Either 0, 1, or 2.
 int calculate_ads(Genotype& sample1, Genotype& sample2) {
-    return (int) abs(sample1.allele - sample2.allele);
+    return 2 - (int) abs(sample1.allele - sample2.allele);
 }
 
 // A private method to deallocate a window's memory.
