@@ -216,8 +216,8 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
         width_window -> num_loci++;
         global -> num_loci++;
 
-        if (width_window -> num_loci == window_offset + 1) {
-             next_start = position;
+        if (width_window -> num_loci == window_offset) {
+            next_start = position;
         }
     }
 

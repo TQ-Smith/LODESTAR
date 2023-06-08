@@ -12,6 +12,6 @@
 
 int main() {
 
-    lodestar_pipeline("test.vcf", "snp", 1, 1, 2);
+    lodestar_pipeline("chr2_subset.vcf", "snp", 400, 400, 2);
 
 }
