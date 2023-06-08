@@ -1,5 +1,5 @@
 
-CFLAGS = -c -Wall -g
+CFLAGS = -std=c++11 -c -Wall -g
 LFLAGS = -g -o lodestar
 
 all: lodestar
