@@ -322,6 +322,15 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
         destroy_window(temp, n, k);
         windows.pop_front();
     }
+    cout << "Window: Global" << endl;
+    cout << "Chromosome: " << global -> chromosome << endl;
+    cout << "Start Position: " << global -> start_position << endl;
+    cout << "End Position: " << global -> end_position << endl;
+    cout << "t-statistic: " << t << endl;
+    cout << "p-value: " << p << endl;
+    cout << "Points:" << endl;
+    print_real_matrix(global -> points, n, k);
+    cout << endl;
     destroy_window(global, n, k);
     destroy_real_matrix(temp1, k, k);
     destroy_real_matrix(temp2, k, k);
