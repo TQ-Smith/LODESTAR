@@ -310,8 +310,15 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
             temp1, temp2, x_0, y_0, n, k, 
             &t, &p
         );
-        cout << "Tested Window " << temp -> chromosome << " from " << temp -> start_position << " to " << temp -> end_position << " ";
-        cout << "with t = " << t << " and " << "p = " << p << endl;
+        cout << "Window: " << (i + 1) << endl;
+        cout << "Chromosome: " << temp -> chromosome << endl;
+        cout << "Start Position: " << temp -> start_position << endl;
+        cout << "End Position: " << temp -> end_position << endl;
+        cout << "t-statistic: " << t << endl;
+        cout << "p-value: " << p << endl;
+        cout << "Points:" << endl;
+        print_real_matrix(temp -> points, n, k);
+        cout << endl;
         destroy_window(temp, n, k);
         windows.pop_front();
     }
@@ -321,7 +328,6 @@ void lodestar_pipeline(string input_file_name, string unit, int window_width, in
     delete [] x_0;
     delete [] y_0;
 
-    cout << endl;
     cout << "Finished our permutation tests." << endl;
     cout << endl;
 

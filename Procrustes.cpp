@@ -339,7 +339,8 @@ void permutation_test(int NUM_PERMUTATIONS, double** X, double** Y, double** tem
         D = procrustes_statistic(permuteX, Y, temp1, temp2, n, k);
 
         // See if it was significant.
-        if ( t_0 <= sqrt(1 - D) ) {
+        // CHANGED TO DISSIMILARITY.
+        if ( t_0 > sqrt(1 - D) ) {
             count++;
         }
 
@@ -361,7 +362,6 @@ void permutation_test(int NUM_PERMUTATIONS, double** X, double** Y, double** tem
     *t = t_0;
 
     // Finally, we set our p_value.
-    // CHANGED TO DISSIMILARITY.
-    *p_value = 1.0 - ((count + 1.0) / (NUM_PERMUTATIONS + 1));
+    *p_value = (count + 1.0) / (NUM_PERMUTATIONS + 1);
 
 }
