@@ -141,6 +141,8 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
             continue;
         }
 
+        cout << "Processing Position: " << position << endl;
+
         if (previous_chromosome != chromosome || width_window -> num_loci == window_width) {
 
             if (width_window -> num_loci != 0) {
@@ -225,7 +227,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     //  Do the same as above, but no need to advance the slider.
     if (width_window -> num_loci != 0) {
         width_window -> chromosome = chromosome;
-        width_window -> end_position = previous_position;
+        width_window -> end_position = position;
         convert_to_dissimilarity(width_window, n);
         cout << "Processed Window on chromosome " << previous_chromosome << " from " << width_window -> start_position << " to " << width_window -> end_position << "." << endl;
         // print_real_matrix(width_window -> points, n, n);
@@ -240,6 +242,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     global -> start_position = windows.front() -> start_position;
     global -> end_position = windows.back() -> end_position;
     convert_to_dissimilarity(global, n);
+    cout << "Global Dissimilarity:" << endl;
     // print_real_matrix(global -> points, n, n);
     compute_classical_mds(global -> points, d, e, n, k);
     windows.push_back(global);
