@@ -141,8 +141,6 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
             continue;
         }
 
-        cout << "Processing Position: " << position << endl;
-
         if (previous_chromosome != chromosome || width_window -> num_loci == window_width) {
 
             if (width_window -> num_loci != 0) {
