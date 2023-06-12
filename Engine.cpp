@@ -240,7 +240,7 @@ void window_genome(ifstream& in_file, list<Window*>& windows, string unit, int w
     global -> start_position = windows.front() -> start_position;
     global -> end_position = windows.back() -> end_position;
     convert_to_dissimilarity(global, n);
-    cout << "Global Dissimilarity:" << endl;
+    // cout << "Global Dissimilarity:" << endl;
     // print_real_matrix(global -> points, n, n);
     compute_classical_mds(global -> points, d, e, n, k);
     windows.push_back(global);
