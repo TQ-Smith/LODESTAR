@@ -1,17 +1,5 @@
 # no .a or .o files
 *.[ao]
-test
-chr2_subset.txt
-chr6_output.txt
-chr2_output.txt
-test.cpp
-test_dingo.vcf
-test.vcf
-CaboVerde.vcf
-mds.py
-lodestar
-dingo.vcf.gz
-dingo.vcf
 # but do track lib.a
 !lib.a
 *~
