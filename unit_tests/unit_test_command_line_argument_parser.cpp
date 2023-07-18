@@ -1,5 +1,5 @@
 
-#include "CommandLineArgumentParser.hpp"
+#include "../utils/CommandLineArgumentParser.hpp"
 
 int main() {
 
@@ -44,6 +44,7 @@ int main() {
     int num_arguments;
     int* int_args = NULL;
     double* double_args = NULL;
+    string* string_args = NULL;
 
     cout << "Second, we test successful parsing and move to testing the getOptionArguments procedure." << endl;
     CommandLineArgumentParser parser2;
@@ -67,7 +68,21 @@ int main() {
     for (int i = 0; i < num_arguments; i++) {
         cout << int_args[i] << endl;
     }
-    delete int_args;
+    delete [] int_args;
+    double_args = parser2.getOptionArguments<double>("--test1", &num_arguments, &successfulOperation);
+    assert(successfulOperation && int_args != NULL && num_arguments == 2);
+    cout << "The arguments:" << endl;
+    for (int i = 0; i < num_arguments; i++) {
+        cout << double_args[i] << endl;
+    }
+    delete [] double_args;
+    string_args = parser2.getOptionArguments<string>("--t2", &num_arguments, &successfulOperation);
+    assert(successfulOperation && int_args != NULL && num_arguments == 2);
+    cout << "The arguments:" << endl;
+    for (int i = 0; i < num_arguments; i++) {
+        cout << string_args[i] << endl;
+    }
+    delete [] string_args;
 
     return 0;
 
