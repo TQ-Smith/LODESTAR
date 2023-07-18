@@ -1,9 +1,5 @@
 
-#include "../utils/CommandLineArgumentParser.hpp"
-
-#include <iostream>
-
-using namespace std;
+#include "CommandLineArgumentParser.hpp"
 
 int main() {
 
@@ -33,6 +29,7 @@ int main() {
     cout << endl << endl;
 
     cout << "Now, we parse the commandline arguments..." << endl;
+    cout << "First, we throw errors." << endl;
     char *argv1[2] = {"test", "--dne"};
     parser.parseCommandLine(2,  argv1, &successfulOperation);
     assert(!successfulOperation);
@@ -42,10 +39,26 @@ int main() {
     char *argv3[2] = {"test", "dne"};
     parser.parseCommandLine(2,  argv3, &successfulOperation);
     assert(!successfulOperation);
-    parser.resetParser();
+    cout << endl;
+    
+    int num_arguments;
+    int* int_args;
+    double* double_args;
+
+    cout << "Second, we test successful parsing and move to testing the getOptionArguments procedure." << endl;
+    parser = CommandLineArgumentParser();
+    parser.addOption("test1", "Just a test option 1.", &successfulOperation);
+    parser.addOption("t2", "Just a test option 2.", &successfulOperation);
+    parser.addOption("t3", "Just a test option 3.", &successfulOperation);
     char *argv4[8] = {"test", "--test1", "1", "2", "--help", "--t2", "0.01", "0.5"};
     parser.parseCommandLine(8,  argv4, &successfulOperation);
     assert(successfulOperation);
+    int_args = parser.getOptionArguments<int>("--dne", &num_arguments, &successfulOperation);
+    assert(!successfulOperation);
+    //assert(parser.getOptionArguments<int>("--t3", &num_arguments, &successfulOperation) == NULL);
+    //parser.getOptionArguments<int>("--help", &num_arguments, &successfulOperation);
+    assert(num_arguments == 0);
+
     cout << endl;
 
     return 0;
