@@ -1,21 +1,55 @@
 
-#include "CommandLineArgumentParser.hpp"
+#ifndef _COMMAND_LINE_ARGUMENT_PARSER_HPP_
+#define _COMMAND_LINE_ARGUMENT_PARSER_HPP_
 
+#include <string>
+#include <sstream>
+#include <list>
+#include <map>
 #include <iostream>
 
-CommandLineArgumentParser::CommandLineArgumentParser() {
-    Option* help = new Option;
-    help -> isSet = false;
-    help -> num_arguments = -1;
-    help -> description = "Prints the preamble and options list for the program.";
-    arguments["--help"] = help;
-}
+using namespace std;
+
+class CommandLineArgumentParser {
+
+    public:
+
+        CommandLineArgumentParser();
+
+        void addOption(string option, string description, bool* successfulOperation);
+
+        template <typename T>
+        T* getOptionArguments(string option, int* num_arguments, bool* successfulOperation);
+
+        void parseCommandLine(int argc, char *argv[], bool* successfulOperation);
+
+        void printOptionDescriptions();
+
+        ~CommandLineArgumentParser();
+
+    private:
+
+        struct Option {
+            bool isSet;
+            int num_arguments;
+            string description;
+            list<string> option_arguments;
+        };
+
+        map<string, Option*> arguments;
+
+};
 
 string form_option(string option) {
     if (option.length() == 1) {
         return "-" + option;
     }
     return "--" + option;
+}
+
+CommandLineArgumentParser::CommandLineArgumentParser() {
+    bool successfulOperation;
+    addOption("help",  "Prints the preamble and options list for the program.", &successfulOperation);
 }
 
 void CommandLineArgumentParser::addOption(string option, string description, bool* successfulOperation) {
@@ -93,38 +127,35 @@ void CommandLineArgumentParser::parseCommandLine(int argc, char *argv[], bool* s
 
 }
 
-template <class T>
+template <typename T>
 T* CommandLineArgumentParser::getOptionArguments(string option, int* num_arguments, bool* successfulOperation) {
-
-    option = form_option(option);
 
     if (!arguments.count(option)) {
         cerr << "Option " << option << " does not exists!" << endl;
         *successfulOperation = false;
-        return;
+        return NULL;
     }
 
     Option* opt = arguments[option];
 
     if (!opt -> isSet || opt -> num_arguments == 0) {
+        *num_arguments = opt -> num_arguments;
         *successfulOperation = true;
         return NULL;
     }
 
     T* args = new T[opt -> num_arguments];
-
-    string temp;
-
-    for (int i = 0; i < opt -> num_arguments; i++) {
-        try {
-            temp = opt -> option_arguments.front();
-            opt -> option_arguments.pop_front();
-            temp >> args[i];
-            opt -> option_arguments.push_back(temp);
-        } catch (...) {
-            cerr << "Invalid type cast when getting arguments for " << option << " option." << endl;
+    
+    int index = 0;
+    for (list<string>::iterator it = opt -> option_arguments.begin(); it != opt -> option_arguments.end(); it++) {
+        istringstream strstream_arg(*it);
+        if (!(strstream_arg >> args[index])) {
+            cerr << "Cannot perform type cast of argument for option " << option << "!" << endl;
+            delete [] args;
             *successfulOperation = false;
+            return NULL;
         }
+        index++;
     }
 
     *num_arguments = opt -> num_arguments;
@@ -143,22 +174,12 @@ void CommandLineArgumentParser::printOptionDescriptions() {
 
 }
 
-void CommandLineArgumentParser::resetParser() {
-
-    for (map<string, Option*>::iterator it = arguments.begin(); it != arguments.end(); it++) {
-        it -> second -> isSet = false;
-        for (int i = 0; i < it -> second -> num_arguments; i++) {
-            it -> second -> option_arguments.pop_front();
-        }
-        it -> second -> num_arguments = -1;
-    }
-    
-}
-
 CommandLineArgumentParser::~CommandLineArgumentParser() {
 
     for (map<string, Option*>::iterator it = arguments.begin(); it != arguments.end(); it++) {
-        delete it -> second;
+        delete (it -> second);
     }
 
 }
+
+#endif
