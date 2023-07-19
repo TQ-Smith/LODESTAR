@@ -122,7 +122,6 @@ void multiply_matrices(double** a, double** b, double** c, int m, int n, int o) 
 }
 
 // Shuffles the rows of a matrix.
-// NOTE: Random seed must be set first!
 //  Used for permutation testing.
 // Note: Assumes random number generator has been seeded. 
 // Accepts:
@@ -136,6 +135,7 @@ void shuffle_real_matrix(double** matrix, int m) {
     int j;
     // Use the Fischer-Yates shuffle algorithm.
     for (int i = m - 1; i > 0; i--) {
+        // NOTE: Random seed must be set first!
         j = (rand() % (i + 1));
         temp = matrix[j];
         matrix[j] = matrix[i];
