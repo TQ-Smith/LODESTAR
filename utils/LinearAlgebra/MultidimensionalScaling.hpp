@@ -16,6 +16,7 @@
 #define _MULTIDIMENSIONAL_SCALING_HPP_
 
 // Performs Classical MDS on a real, symmetric matrix.
+// NOTE: D will be clobbered at the end of this routine.
 // Accepts:
 //  double** D -> Our n x n distance matrix.
 //  double** X -> An n x k matrix to hold the points in dimension k.
@@ -27,5 +28,16 @@
 //      Assume 0 < k < n.
 // Return: void.
 void compute_classical_mds(double** D, double** X, double* d, double* e, bool* doesConverge, int n, int k);
+
+// Perfroms FastMap using a distance matrix.
+// Accepts:
+//  double** D -> Our n x n distance matrix.
+//  double** X -> An n x k matrix to hold the points in dimension k.
+//  int* maxDimReached -> Sets the maximum number of projections achieved.
+//  int n -> The dimension of the data.
+//  int k -> The dimension of the reduced data.
+//      Assume 0 < k < n.
+// Return: void.
+void compute_fastmap(double** D, double** X, int* maxDimReached, int n, int k);
 
 #endif

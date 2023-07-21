@@ -46,6 +46,7 @@ int main() {
     //  Verifying the results are not always as straight-forward
     //  as in this example, since not every MDS implementation
     //  chooses the signs of the eigenvectors in the same way.
+    cout << "Classical MDS" << endl;
     cout << "X =" << endl;
     print_real_matrix(X, n, k, 1, 1);
     cout << endl;
