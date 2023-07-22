@@ -56,4 +56,24 @@ int main() {
     delete [] d;
     delete [] e;
 
+    // We now test our FastMap algorithm.
+    //  The example is taken from tst.small from 
+    //  https://www.cs.cmu.edu/~christos/software.html#:~:text=Dimensionality%20reduction-,FastMap%20tar%20file,-In%20C.%20Paper
+
+    cout << "From FastMap Paper:"
+    cout << "*********original matrix" << endl;
+    cout << "10	20	30	40" << endl;
+    cout << "20	25	30	40" << endl;
+    cout << "10	20	30	50" << endl;
+    cout << "1	2	3	4" << endl;
+    cout << endl;
+    cout << "*******FASTMAP" << endl;
+    cout << "8.06893	4.25942" << endl;
+    cout << "4.91152	14.1731" << endl;
+    cout << "0	0" << endl;
+    cout << "57.0088	1.00266e-15" << endl;
+    cout << endl;
+
+    cout << "";
+
 }
