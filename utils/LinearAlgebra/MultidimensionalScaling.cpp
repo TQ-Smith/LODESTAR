@@ -18,6 +18,9 @@
 // Used for the square-root function.
 #include <cmath>
 
+#include <iostream>
+using namespace std;
+
 void compute_classical_mds(double** D, double** X, double* d, double* e, bool* doesConverge, int n, int k) {
 
     // We double each element and keep track of each row's and
@@ -130,7 +133,7 @@ void compute_fastmap(double** D, double** X, int* maxDimReached, int n, int k) {
     int object_b;
 
     // Values for distances between objects.
-    double distsq_objects_ab, distsq_objects_ja, distsq_objects_jb;
+    double distsq_objects_ab, distsq_objects_aj, distsq_objects_bj;
 
     // For each projection dimension.
     for (int i = 0; i < k; i++) {
@@ -146,15 +149,15 @@ void compute_fastmap(double** D, double** X, int* maxDimReached, int n, int k) {
         //  projections reached, and we exit the routine.
         distsq_objects_ab = projection_distance(D, X, object_a, object_b, i);
         if (distsq_objects_ab == 0) {
-            *maxDimReached = i;
+            *maxDimReached = i + 1;
             return;
         }
 
         // Project the objects on the line.
         for (int j = 0; j < n; j++) {
-            distsq_objects_ja = projection_distance(D, X, j, object_a, i);
-            distsq_objects_jb = projection_distance(D, X, j, object_b, i);
-            X[j][i] = (distsq_objects_ja + distsq_objects_ab - distsq_objects_jb) / (2.0 * sqrt((double) distsq_objects_ab));
+            distsq_objects_aj = projection_distance(D, X, object_a, j, i);
+            distsq_objects_bj = projection_distance(D, X, object_b, j, i);
+            X[j][i] = (distsq_objects_aj + distsq_objects_ab - distsq_objects_bj) / (2.0 * sqrt((double) distsq_objects_ab));
         }
     }
 
