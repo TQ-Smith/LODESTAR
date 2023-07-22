@@ -6,7 +6,7 @@
 // Purpose: Unit tests the matrix operations.
 //
 
-#include "../utils/LinearAlgebra/MatrixOperations.hpp"
+#include "../LinearAlgebra/MatrixOperations.hpp"
 
 #include <iostream>
 

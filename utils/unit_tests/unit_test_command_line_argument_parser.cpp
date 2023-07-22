@@ -6,7 +6,7 @@
 // Purpose: Unit test the command line argument parser.
 //
 
-#include "../utils/CommandLineArgumentParser.hpp"
+#include "../CommandLineArgumentParser.hpp"
 
 int main() {
 

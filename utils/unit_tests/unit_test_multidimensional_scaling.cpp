@@ -7,9 +7,9 @@
 //              heuristic.
 //
 
-#include "../utils/LinearAlgebra/MatrixOperations.hpp"
+#include "../LinearAlgebra/MatrixOperations.hpp"
 
-#include "../utils/LinearAlgebra/MultidimensionalScaling.hpp"
+#include "../LinearAlgebra/MultidimensionalScaling.hpp"
 
 #include <iostream>
 
@@ -41,6 +41,12 @@ int main() {
     compute_classical_mds(D, X, d, e, &doesConverge, n, k);
 
     assert(doesConverge);
+
+    cout << "Classical MDS given by cmdscale" << endl;
+    cout << "2.449490e+00  0.4714045" << endl;
+    cout << "-3.845925e-16 -0.9428090" << endl;
+    cout << "-2.449490e+00  0.4714045" << endl;
+    cout << endl;
 
     // Classical MDS was tested using the cmdscale R function.
     //  Verifying the results are not always as straight-forward
