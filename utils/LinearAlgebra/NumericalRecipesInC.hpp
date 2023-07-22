@@ -12,7 +12,7 @@
 #define _NUMERICAL_RECIPES_IN_C_HPP_
 
 // Wrapper function to compute eigenvalues and eigenvectors as described
-//  in Numerical Recipes in C. 
+//  in Numerical Recipes in C, Third Edition. 
 // Accepts:
 //  double** z -> Column matrix to hold eigenvectors.
 //  double* d -> The diagonal elements of the matrix.

@@ -5,7 +5,8 @@
 // Principle Investigator: Dr. Zachary Szpiech
 // Purpose: Contains operations from Numerical Recipes in C, Third Edition.
 //              Functions used to compute the eigenvalues and eigenvectors 
-//              of real symmetric matrices are included.
+//              of real symmetric matrices are included. I do not unit test 
+//				these functions because I made minimal changes.
 //
 
 #include "NumericalRecipesInC.hpp"
