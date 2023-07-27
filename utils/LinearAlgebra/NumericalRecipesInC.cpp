@@ -1,6 +1,6 @@
 //
 // File: NumericalRecipesInC.cpp
-// Started: 20 July 2023
+// Date: 20 July 2023
 // Author: TQ Smith
 // Principle Investigator: Dr. Zachary Szpiech
 // Purpose: Contains operations from Numerical Recipes in C, Third Edition.

@@ -1,6 +1,6 @@
 //
 // File: Procrustes.hpp
-// Started: 24 July 2023
+// Date: 27 July 2023
 // Author: TQ Smith
 // Principle Investigator: Dr. Zachary Szpiech
 // Purpose: Perform Procrustes analysis and permutation test as described in 
@@ -10,3 +10,8 @@
 //                  Statistical Applications in Genetics and Molecular Biology, vol. 9, no. 1, 2010. 
 //                  https://doi.org/10.2202/1544-6115.1493
 //
+
+#ifndef _PROCRUSTES_HPP_
+#define _PROCRUSTES_HPP_
+
+#endif

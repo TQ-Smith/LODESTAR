@@ -1,6 +1,6 @@
 #
 # File: Makefile
-# Started: 22 July 2023
+# Date: 22 July 2023
 # Author: TQ Smith
 # Principle Investigator: Dr. Zachary Szpiech
 # Purpose: Make and run all unit tests for the 'utils' library.

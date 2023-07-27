@@ -1,6 +1,6 @@
 //
 // File: unit_test_matrix_operations.cpp
-// Started: 19 July 2023
+// Date: 19 July 2023
 // Author: TQ Smith
 // Principle Investigator: Dr. Zachary Szpiech
 // Purpose: Unit tests the matrix operations.

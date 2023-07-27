@@ -1,6 +1,6 @@
 //
 // File: MultidimensionalScaling.hpp
-// Started: 21 July 2023
+// Date: 21 July 2023
 // Author: TQ Smith
 // Principle Investigator: Dr. Zachary Szpiech
 // Purpose: Contains methods for classic multidimensional scaling
