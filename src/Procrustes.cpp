@@ -22,7 +22,10 @@
 // Used for the basic math operatons sqrt, cos, and acos.
 #include <cmath>
 
-double procrustes(double** Xc, double** Yc, double** C, double** CT_C, int n, int k) {
+#include <iostream>
+using namespace std;
+
+double procrustes_analysis(double** Xc, double** Yc, double** C, double** CT_C, int n, int k) {
 
     // Next, we calculate the trace of XTc_Xc and YTc_Yc
     //  We are taking the dot-product of each column
@@ -86,28 +89,32 @@ double procrustes(double** Xc, double** Yc, double** C, double** CT_C, int n, in
             break;
         }
         case 3: {
+            // Our cubic is in the form of ax^3+bx^2+cx+d.
+            //  Here, a = 1.
+
             // Calculate our coefficients.
-            double a = -(CT_C[0][0] + CT_C[1][1] + CT_C[2][2]);
+            double b = -(CT_C[0][0] + CT_C[1][1] + CT_C[2][2]);
 
             // Sum of minors along the diagonal.
-            double b = ((CT_C[1][1] * CT_C[2][2]) - (CT_C[1][2] * CT_C[2][1]))
+            double c = ((CT_C[1][1] * CT_C[2][2]) - (CT_C[1][2] * CT_C[2][1]))
                         + ((CT_C[0][0] * CT_C[2][2]) - (CT_C[0][2] * CT_C[2][0]))
                         + ((CT_C[0][0] * CT_C[1][1]) - (CT_C[0][1] * CT_C[1][0]));
 
             // -detA
-            double c = -(CT_C[0][0] * ((CT_C[1][1] * CT_C[2][2]) - (CT_C[2][1] * CT_C[1][2])) 
+            double d = -(CT_C[0][0] * ((CT_C[1][1] * CT_C[2][2]) - (CT_C[2][1] * CT_C[1][2])) 
                         - CT_C[0][1] * ((CT_C[1][0] * CT_C[2][2]) - (CT_C[1][2] * CT_C[2][0])) 
                         + CT_C[0][2] * ((CT_C[1][0] * CT_C[2][1]) - (CT_C[1][1] * CT_C[2][0])));
 
             // Now, we solve the cubic.
-            double Q = (a * a - 3 * b) / 9;
-            double R = (2 * a * a * a - 9 * a * b + 27 * c) / 54;
-            double theta = acos(R / sqrt(Q * Q * Q));
-
-            // Now calculate the sume of the roots.
-            trLambda += sqrt(-2 * sqrt(Q) * cos(theta / 3) - (a/3));
-            trLambda += sqrt(-2 * sqrt(Q) * cos((theta + 2 * M_PI) / 3) - (a/3));
-            trLambda += sqrt(-2 * sqrt(Q) * cos((theta - 2 * M_PI) / 3) - (a/3));
+            double Q = (3 * c - b * b) / 9.0;
+            double R = (9 * b * c - 27 * d - 2 * b * b * b) / 54.0;
+            double theta = acos(R / sqrt(-Q * Q * Q));
+            cout << sqrt(2 * sqrt(-Q) * cos(theta / 3) - (b / 3)) << endl;
+            cout << sqrt(2 * sqrt(-Q) * cos((theta / 3) + ((2 * M_PI) / 3)) - (b / 3)) << endl;
+            cout << sqrt(2 * sqrt(-Q) * cos((theta / 3) + ((4 * M_PI) / 3)) - (b / 3)) << endl;
+            trLambda += sqrt(2 * sqrt(-Q) * cos(theta / 3) - (b / 3));
+            trLambda += sqrt(2 * sqrt(-Q) * cos((theta / 3) + ((2 * M_PI) / 3)) - (b / 3));
+            trLambda += sqrt(2 * sqrt(-Q) * cos((theta / 3) + ((4 * M_PI) / 3)) - (b / 3));
             break;
         }
         default:
@@ -164,7 +171,7 @@ void center_matrix(double** X, double* x_0, int n, int k) {
     for (int i = 0; i < k; i++) {
         x_0[i] = 0;
         for (int j = 0; j < n; j++) {
-            x_0[i] += (X[i][j] / n);
+            x_0[i] += (X[j][i] / n);
         }
     }
 
