@@ -89,32 +89,31 @@ double procrustes_analysis(double** Xc, double** Yc, double** C, double** CT_C, 
             break;
         }
         case 3: {
-            // Our cubic is in the form of ax^3+bx^2+cx+d.
-            //  Here, a = 1.
+            // Our cubic is in the form of x^3+a2x^2+a1x+a0.
 
             // Calculate our coefficients.
-            double b = -(CT_C[0][0] + CT_C[1][1] + CT_C[2][2]);
+            double a2 = -(CT_C[0][0] + CT_C[1][1] + CT_C[2][2]);
 
             // Sum of minors along the diagonal.
-            double c = ((CT_C[1][1] * CT_C[2][2]) - (CT_C[1][2] * CT_C[2][1]))
+            double a1 = ((CT_C[1][1] * CT_C[2][2]) - (CT_C[1][2] * CT_C[2][1]))
                         + ((CT_C[0][0] * CT_C[2][2]) - (CT_C[0][2] * CT_C[2][0]))
                         + ((CT_C[0][0] * CT_C[1][1]) - (CT_C[0][1] * CT_C[1][0]));
 
             // -detA
-            double d = -(CT_C[0][0] * ((CT_C[1][1] * CT_C[2][2]) - (CT_C[2][1] * CT_C[1][2])) 
+            double a0 = -(CT_C[0][0] * ((CT_C[1][1] * CT_C[2][2]) - (CT_C[2][1] * CT_C[1][2])) 
                         - CT_C[0][1] * ((CT_C[1][0] * CT_C[2][2]) - (CT_C[1][2] * CT_C[2][0])) 
                         + CT_C[0][2] * ((CT_C[1][0] * CT_C[2][1]) - (CT_C[1][1] * CT_C[2][0])));
 
             // Now, we solve the cubic.
-            double Q = (3 * c - b * b) / 9.0;
-            double R = (9 * b * c - 27 * d - 2 * b * b * b) / 54.0;
-            double theta = acos(R / sqrt(-Q * Q * Q));
-            cout << sqrt(2 * sqrt(-Q) * cos(theta / 3) - (b / 3)) << endl;
-            cout << sqrt(2 * sqrt(-Q) * cos((theta / 3) + ((2 * M_PI) / 3)) - (b / 3)) << endl;
-            cout << sqrt(2 * sqrt(-Q) * cos((theta / 3) + ((4 * M_PI) / 3)) - (b / 3)) << endl;
-            trLambda += sqrt(2 * sqrt(-Q) * cos(theta / 3) - (b / 3));
-            trLambda += sqrt(2 * sqrt(-Q) * cos((theta / 3) + ((2 * M_PI) / 3)) - (b / 3));
-            trLambda += sqrt(2 * sqrt(-Q) * cos((theta / 3) + ((4 * M_PI) / 3)) - (b / 3));
+            double q = a1 / 3 - (a2 * a2) / 9;
+            double r = (a1 * a2 - 3 * a0) / 6 - (a2 * a2 * a2) / 27;
+            double theta = (q == 0) ? 0 : acos(r / sqrt(-q * -q * -q));
+            double root1 = 2 * sqrt(-q) * cos(theta / 3) - (a2 / 3);
+            double root2 = 2 * sqrt(-q) * cos((theta / 3) - (2 * M_PI / 3)) - (a2 / 3);
+            double root3 = 2 * sqrt(-q) * cos((theta / 3) + (2 * M_PI / 3)) - (a2 / 3);
+            // There is a chance that roots close to 0 will have the wrong sign.
+            //  All values should be positive, so we force the sign.
+            trLambda += sqrt((double) ((long) root1 & 0x8FFFFFFFFFFFFFFF)) + sqrt((double) ((long) root2 & 0x8FFFFFFFFFFFFFFF)) + sqrt((double) ((long) root3 & 0x8FFFFFFFFFFFFFFF));
             break;
         }
         default:
