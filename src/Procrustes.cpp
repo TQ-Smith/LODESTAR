@@ -14,8 +14,10 @@
 
 #include "Procrustes.hpp"
 
-// Used for creating, destroying, deep copying, and shuffling matrices.
-#include "MatrixOperations.hpp"
+// Used for shuffling the rows of a matrix.
+//  This does not even need to be imported if we
+//  just copy over the one method.
+#include "../utils/LinearAlgebra/MatrixOperations.hpp"
 
 // Used for the basic math operatons sqrt, cos, and acos.
 #include <cmath>
@@ -27,7 +29,7 @@ double procrustes(double** Xc, double** Yc, double** C, double** CT_C, int n, in
     //  with itself for each matrix. This corresponds
     //  to the diagonal elements.
     double trXTc_Xc = 0;
-    double trY = 0;
+    double trYTc_Yc = 0;
 
     for (int i = 0; i < k; i++) {
         for (int j = 0; j < n; j++) {
@@ -65,15 +67,15 @@ double procrustes(double** Xc, double** Yc, double** C, double** CT_C, int n, in
     //  and cubic formulas for the roots. Code taken from Numerical Recipes
     //  in C, Third Edition.
     switch (k) {
-        case 1:
+        case 1: {
             trLambda = sqrt(CT_C[0][0]);
             break;
-
-        case 2:
+        }
+        case 2: {
             // Create the coefficients of the quadratic and the determinant.
             // Our quadratic is in the form of x^2+bx+c.
-            double b = -(temp2[0][0] + temp2[1][1]);
-            double c = (temp2[0][0] * temp2[1][1]) - (temp2[0][1] * temp2[1][0]);
+            double b = -(CT_C[0][0] + CT_C[1][1]);
+            double c = (CT_C[0][0] * CT_C[1][1]) - (CT_C[0][1] * CT_C[1][0]);
             double det = sqrt(b * b - 4 * c);
 
             // Calculate q.
@@ -82,20 +84,20 @@ double procrustes(double** Xc, double** Yc, double** C, double** CT_C, int n, in
             // Calculate trace.
             trLambda += sqrt(q) + sqrt(c / q);
             break;
-
-        case 3:
+        }
+        case 3: {
             // Calculate our coefficients.
-            double a = -(temp2[0][0] + temp2[1][1] + temp2[2][2]);
+            double a = -(CT_C[0][0] + CT_C[1][1] + CT_C[2][2]);
 
             // Sum of minors along the diagonal.
-            double b = ((temp2[1][1] * temp2[2][2]) - (temp2[1][2] * temp2[2][1]))
-                        + ((temp2[0][0] * temp2[2][2]) - (temp2[0][2] * temp2[2][0]))
-                        + ((temp2[0][0] * temp2[1][1]) - (temp2[0][1] * temp2[1][0]));
+            double b = ((CT_C[1][1] * CT_C[2][2]) - (CT_C[1][2] * CT_C[2][1]))
+                        + ((CT_C[0][0] * CT_C[2][2]) - (CT_C[0][2] * CT_C[2][0]))
+                        + ((CT_C[0][0] * CT_C[1][1]) - (CT_C[0][1] * CT_C[1][0]));
 
             // -detA
-            double c = -(temp2[0][0] * ((temp2[1][1] * temp2[2][2]) - (temp2[2][1] * temp2[1][2])) 
-                        - temp2[0][1] * ((temp2[1][0] * temp2[2][2]) - (temp2[1][2] * temp2[2][0])) 
-                        + temp2[0][2] * ((temp2[1][0] * temp2[2][1]) - (temp2[1][1] * temp2[2][0])));
+            double c = -(CT_C[0][0] * ((CT_C[1][1] * CT_C[2][2]) - (CT_C[2][1] * CT_C[1][2])) 
+                        - CT_C[0][1] * ((CT_C[1][0] * CT_C[2][2]) - (CT_C[1][2] * CT_C[2][0])) 
+                        + CT_C[0][2] * ((CT_C[1][0] * CT_C[2][1]) - (CT_C[1][1] * CT_C[2][0])));
 
             // Now, we solve the cubic.
             double Q = (a * a - 3 * b) / 9;
@@ -107,7 +109,7 @@ double procrustes(double** Xc, double** Yc, double** C, double** CT_C, int n, in
             trLambda += sqrt(-2 * sqrt(Q) * cos((theta + 2 * M_PI) / 3) - (a/3));
             trLambda += sqrt(-2 * sqrt(Q) * cos((theta - 2 * M_PI) / 3) - (a/3));
             break;
-
+        }
         default:
             // Note: Our default case would use the eigenvalue computations from 
             //          NumericalRecipesInC.hpp.
@@ -122,8 +124,55 @@ double procrustes(double** Xc, double** Yc, double** C, double** CT_C, int n, in
 
 double permutation_test(int NUM_PERMUTATIONS, double** Xc, double** Yc, double** shuffleXc, double** C, double** CT_C, int n, int k, double t_0) {
 
+    // Copy contents of Xc to shuffleXc.
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            shuffleXc[i][j] = Xc[i][j];
+        }
+    }
+
+    // The Procrustes statistic for each permutation.
+    double D;
+
+    // Keep the count of observations with a value >= t_0.
+    int count = 0;
+
+    // Now do the permutation test.
+    for (int i = 0; i < NUM_PERMUTATIONS; i++) {
+
+        // Shuffle shuffleXc.
+        shuffle_real_matrix(shuffleXc, n);
+        
+        // Perfrom Procrustes.
+        D = procrustes_analysis(shuffleXc, Yc, C, CT_C, n, k);
+
+        // Increment if it was significant.
+        if ( t_0 <= sqrt(1 - D) ) {
+            count++;
+        }
+
+    }
+
+    // Calculate and return p-value.
+    return (count + 1.0) / (NUM_PERMUTATIONS + 1);
+
 }
 
 void center_matrix(double** X, double* x_0, int n, int k) {
-    
+
+    // Calculate the center.
+    for (int i = 0; i < k; i++) {
+        x_0[i] = 0;
+        for (int j = 0; j < n; j++) {
+            x_0[i] += (X[i][j] / n);
+        }
+    }
+
+    // Center the set of points.
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            X[i][j] -= x_0[j];
+        }
+    }
+
 }
