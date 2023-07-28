@@ -20,15 +20,6 @@
 // Used for the basic math operatons sqrt, cos, and acos.
 #include <cmath>
 
-// Our helper function for Procrustes analysis.
-// Accepts:
-//  double** Xc -> The first centered set of points.
-//  double** Yc -> The second centered set of points.
-//  double** C -> A k x k matrix used to hold the value of YcT_Xc.
-//  double** CT_C -> A k x k matrix used to hold the value of CT_C.
-//  int n -> The number of points.
-//  int k -> The dimension of each point. Assume k = 1, 2, 3.
-// Returns: double, The Procrustes statistic.
 double procrustes(double** Xc, double** Yc, double** C, double** CT_C, int n, int k) {
 
     // Next, we calculate the trace of XTc_Xc and YTc_Yc
@@ -123,7 +114,16 @@ double procrustes(double** Xc, double** Yc, double** C, double** CT_C, int n, in
             break;
     }
 
-    // Return the Procrustes statisitc.
+    // Return the Procrustes statistic. 
+    //  Measures dissimilarity in current state.
     return (trLambda * trLambda) / (trXTc_Xc * trYTc_Yc);
 
+}
+
+double permutation_test(int NUM_PERMUTATIONS, double** Xc, double** Yc, double** shuffleXc, double** C, double** CT_C, int n, int k, double t_0) {
+
+}
+
+void center_matrix(double** X, double* x_0, int n, int k) {
+    
 }
