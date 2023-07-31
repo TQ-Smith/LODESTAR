@@ -25,6 +25,11 @@
 #include <iostream>
 using namespace std;
 
+// Note, since k is small, we could use stack memory to
+//  create C and CT_C, which would be faster. But, this
+//  method will be run alot (millons of times). Also, 
+//  if we ever want to use k >> 3, then dynamic allocation
+//  is a necessity.
 double procrustes_analysis(double** Xc, double** Yc, double** C, double** CT_C, int n, int k) {
 
     // Next, we calculate the trace of XTc_Xc and YTc_Yc
