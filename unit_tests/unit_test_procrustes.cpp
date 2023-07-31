@@ -14,6 +14,9 @@
 // Used for absolute value.
 #include <cmath>
 
+// Used for testing results.
+#include <cassert>
+
 #include <iostream>
 using namespace std;
 
@@ -158,10 +161,42 @@ int main() {
     cout << endl;
 
     D = procrustes_analysis(X, Y, C, CT_C, n, k);
+    assert(abs(0.936014 - D) < 0.00001);
     cout << "Procrustes Statistic = " << D << endl;
+
+    uncenter(X, x_0, n, k);
+    uncenter(Y, y_0, n, k);
+
+    cout << endl;
+
+    cout << "Lastly, we check the Permutation test procedure." << endl;
+    cout << "We use the case when k = 3 and its corresponding statistic." << endl;
+    cout << endl;
+
+    // Seed the random number generator with a constant value
+    //  to ensure the same sequence each time.
+    srand(0);
+
+    // Note, uncomment the print statistic line in Procrustes.cpp
+    //  That way, you can see the statistic for each permutation.
+
+    // Create the memory for the copied matrix.
+    double** shuffleX = create_real_matrix(n, n);
+
+    center_matrix(X, x_0, n, k);
+    center_matrix(Y, y_0, n, k);
+
+    // Execute permutation test.
+    double p = permutation_test(3, X, Y, shuffleX, C, CT_C, n, k, D);
+
+    cout << "The p-value using 3 permutations is " << p << endl;
+    assert(p == 0.25);
+
+    cout << endl;
 
     // Destroy all used memory.
     destroy_real_matrix(X, n);
+    destroy_real_matrix(shuffleX, n);
     destroy_real_matrix(Y, n);
     destroy_real_matrix(C, k);
     destroy_real_matrix(CT_C, k);

@@ -8,6 +8,8 @@
 
 #include "../CommandLineArgumentParser.hpp"
 
+#include <cassert>
+
 int main() {
 
     cout << endl;

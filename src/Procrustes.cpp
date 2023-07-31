@@ -22,8 +22,8 @@
 // Used for the basic math operatons sqrt, cos, and acos.
 #include <cmath>
 
-#include <iostream>
-using namespace std;
+// #include <iostream>
+// using namespace std;
 
 // Note, since k is small, we could use stack memory to
 //  create C and CT_C, which would be faster. But, this
@@ -156,6 +156,8 @@ double permutation_test(int NUM_PERMUTATIONS, double** Xc, double** Yc, double**
         
         // Perfrom Procrustes.
         D = procrustes_analysis(shuffleXc, Yc, C, CT_C, n, k);
+
+        // cout << "Current Statistic for Permutation " << (i + 1) << ": " << D << endl;
 
         // Increment if it was significant.
         if ( t_0 <= sqrt(1 - D) ) {
