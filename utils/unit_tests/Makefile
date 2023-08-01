@@ -13,9 +13,11 @@ CFLAGS = -std=c++11 -c -Wall -g
 LFLAGS = -g -o
 
 # Compile all tests, run tests, and then clean up object files and temporary .dSYM files.
+.PHONY: all
 all: unit_tests run_tests clean
 
 # Compile all of the unit tests.
+.PHONY: unit_tests
 unit_tests: unit_test_command_line_argument_parser unit_test_matrix_operations unit_test_multidimensional_scaling
 
 # Compile the command line argument parser unit tests.
@@ -43,9 +45,11 @@ unit_test_multidimensional_scaling: ../LinearAlgebra/MatrixOperations.o ../Linea
 	g++ $(CFLAGS) ../LinearAlgebra/NumericalRecipesInC.cpp -o ../LinearAlgebra/NumericalRecipesInC.o
 
 # Run all of the unit test programs.
+.PHONY: run_tests
 run_tests: run_unit_test_command_line_argument_parser run_unit_test_matrix_operations run_unit_test_multidimensional_scaling
 
 # Run the command line argument parser unit tests.
+.PHONY: run_unit_test_command_line_argument_parser
 run_unit_test_command_line_argument_parser:
 	@echo
 	@echo "*****Running Unit Tests for CommandLineArgumentParser*****"
@@ -53,6 +57,7 @@ run_unit_test_command_line_argument_parser:
 	@echo "*****Finished Unit Tests for CommandLineArgumentParser*****"
 
 # Run the matric operations unit tests.
+.PHONY: run_unit_test_matrix_operations
 run_unit_test_matrix_operations:
 	@echo
 	@echo "*****Running Unit Tests for MatrixOperations*****"
@@ -60,6 +65,7 @@ run_unit_test_matrix_operations:
 	@echo "*****Finished Unit Tests for MatrixOperations*****"
 
 # Run the multidimensional scaling unit tests.
+.PHONY: run_unit_test_multidimensional_scaling
 run_unit_test_multidimensional_scaling:
 	@echo
 	@echo "*****Running Unit Tests for MultidimensionalScaling*****"
@@ -67,5 +73,6 @@ run_unit_test_multidimensional_scaling:
 	@echo "*****Finished Unit Tests for MultidimensionalScaling*****"
 
 # Clean everything up. Grrr...Clang
+.PHONY: clean
 clean:
 	rm -rf ../LinearAlgebra/*.o *.dSYM
