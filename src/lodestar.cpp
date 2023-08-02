@@ -2,7 +2,7 @@
 // File: lodestar.cpp
 // Date: 1 August 2023
 // Author: TQ Smith
-// Principle Investigator: Dr. Zachary Szpiech
+// Principal Investigator: Dr. Zachary Szpiech
 // Purpose: Main executable of LODESTAR.
 //
 

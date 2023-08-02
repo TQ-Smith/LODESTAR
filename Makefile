@@ -2,7 +2,7 @@
 # File: Makefile
 # Date: 1 August 2023
 # Author: TQ Smith
-# Principle Investigator: Dr. Zachary Szpiech
+# Principal Investigator: Dr. Zachary Szpiech
 # Purpose: Make and run LODESTAR and all unit tests.
 #
 

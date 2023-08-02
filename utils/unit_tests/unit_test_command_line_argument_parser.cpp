@@ -2,7 +2,7 @@
 // File: unit_test_command_line_argument_parser.cpp
 // Date: 19 July 2023
 // Author: TQ Smith
-// Principle Investigator: Dr. Zachary Szpiech
+// Principal Investigator: Dr. Zachary Szpiech
 // Purpose: Unit test the command line argument parser.
 //
 

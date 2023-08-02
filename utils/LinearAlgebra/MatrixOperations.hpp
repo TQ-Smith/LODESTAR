@@ -2,7 +2,7 @@
 // File: MatrixOperations.hpp
 // Date: 19 July 2023
 // Author: TQ Smith
-// Principle Investigator: Dr. Zachary Szpiech
+// Principal Investigator: Dr. Zachary Szpiech
 // Purpose: Contains basic operations for manipulating m x n matrices
 //              of doubles.
 //

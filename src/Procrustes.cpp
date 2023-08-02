@@ -2,7 +2,7 @@
 // File: Procrustes.cpp
 // Date: 27 July 2023
 // Author: TQ Smith
-// Principle Investigator: Dr. Zachary Szpiech
+// Principal Investigator: Dr. Zachary Szpiech
 // Purpose: Perform Procrustes analysis from two real, symmetric distance
 //              matrices in dimension k and a permutation test using
 //              the Procrustes statistic.

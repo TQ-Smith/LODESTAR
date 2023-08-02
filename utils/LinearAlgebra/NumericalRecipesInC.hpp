@@ -2,7 +2,7 @@
 // File: NumericalRecipesInC.hpp
 // Date: 20 July 2023
 // Author: TQ Smith
-// Principle Investigator: Dr. Zachary Szpiech
+// Principal Investigator: Dr. Zachary Szpiech
 // Purpose: Contains a function to compute the eigenvectors and 
 //              eigenvalues of a real, symmetric matrix. Taken
 //              from Numerical Recipes in C, Third Edition.

@@ -2,7 +2,7 @@
 // File: CommandLineArgumentParser.hpp
 // Date: 19 July 2023
 // Author: TQ Smith
-// Principle Investigator: Dr. Zachary Szpiech
+// Principal Investigator: Dr. Zachary Szpiech
 // Purpose: A simple class for parsing command line arguments 
 //              supplied by the user.
 //

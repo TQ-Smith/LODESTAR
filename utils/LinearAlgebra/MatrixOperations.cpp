@@ -2,7 +2,7 @@
 // File: MatrixOperations.cpp
 // Date: 19 July 2023
 // Author: TQ Smith
-// Principle Investigator: Dr. Zachary Szpiech
+// Principal Investigator: Dr. Zachary Szpiech
 // Purpose: Contains basic operations for manipulating m x n matrices
 //              of doubles. Note, we do not account for null pointers,
 //              values of m and n, and jagged arrays. We do this for two

@@ -2,7 +2,7 @@
 // File: MultidimensionalScaling.hpp
 // Date: 21 July 2023
 // Author: TQ Smith
-// Principle Investigator: Dr. Zachary Szpiech
+// Principal Investigator: Dr. Zachary Szpiech
 // Purpose: Tests the classical MDS method and the FastMap
 //              heuristic.
 //

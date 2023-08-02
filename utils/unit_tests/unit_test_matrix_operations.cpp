@@ -2,7 +2,7 @@
 // File: unit_test_matrix_operations.cpp
 // Date: 19 July 2023
 // Author: TQ Smith
-// Principle Investigator: Dr. Zachary Szpiech
+// Principal Investigator: Dr. Zachary Szpiech
 // Purpose: Unit tests the matrix operations.
 //
 
