@@ -59,7 +59,7 @@ void compute_classical_mds(double** D, double** X, double* d, double* e, bool* d
     compute_eigen_pairs(D, d, e, doesConverge, n, true, true);
 
     // If eigenpairs could not be computed, exit routine.
-    if (!doesConverge) {
+    if (!(*doesConverge)) {
         return;
     }
 
@@ -69,7 +69,7 @@ void compute_classical_mds(double** D, double** X, double* d, double* e, bool* d
             X[a][b] = 0;
         }
         for (int b = 0; b < k; b++) {
-            X[a][b] = sqrt(d[b]) * D[a][b];
+            X[a][b] += D[a][b] * sqrt(d[b]);
         }
     }
 

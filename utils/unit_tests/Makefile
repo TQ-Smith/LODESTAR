@@ -14,7 +14,7 @@ LFLAGS = -g -o
 
 # Compile all tests, run tests, and then clean up object files and temporary .dSYM files.
 .PHONY: all
-all: unit_tests run_tests clean
+all: unit_tests run_tests
 
 # Compile all of the unit tests.
 .PHONY: unit_tests
