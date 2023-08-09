@@ -25,7 +25,7 @@ int main() {
 
     // Create our symmetric matrix.
     double** D = create_real_matrix(3, 3);
-    D[0][0] = D[1][1] = D[2][2] = 1;
+    D[0][0] = D[1][1] = D[2][2] = 0;
     D[0][1] = D[1][0] = D[1][2] = D[2][1] = 3;
     D[0][2] = D[2][0] = 5;
 
@@ -44,11 +44,10 @@ int main() {
 
     assert(doesConverge);
 
-    // Print MDS given by R.
-    cout << "Classical MDS given by cmdscale" << endl;
-    cout << "2.449490e+00  0.4714045" << endl;
-    cout << "-3.845925e-16 -0.9428090" << endl;
-    cout << "-2.449490e+00  0.4714045" << endl;
+    cout << "Cmdscale MDS" << endl;
+    cout << "2.500000e+00  0.5527708" << endl;
+    cout << "-3.925231e-16 -1.1055416" << endl;
+    cout << "-2.500000e+00  0.5527708" << endl;
     cout << endl;
 
     // Classical MDS was tested using the cmdscale R function.

@@ -22,11 +22,11 @@
 //  double z -> The first number.
 //  double b -> The second number.
 // Returns: double, The sign change of z.
-#define SIGN(z, b) (b >= 0 ? (z >= 0 ? z : -z) : (z >= 0 ? -z : z))
+#define SIGN(a, b) (b >= 0 ? (a >= 0 ? a : -a) : (a >= 0 ? -a : a))
 
 // Squares a number.
 // Accepts:
-//  double z -> The first number to be squared.
+//  double z -> The number to be squared.
 // Returns: double, The square of z.
 #define SQR(z) (z * z)
 
@@ -52,23 +52,19 @@ double pythag(const double a, const double b) {
 // Returns: void.
 void eigsrt(double** v, double* d, int n) {
 	int k;
-	for (int i = 0; i < n-1; i++) {
-		double p = d[k = i];
-		for (int j = i; j < n; j++) {
-			if (d[j] >= p) {
-				p = d[k = j];
-			}
-		}
+	for (int i=0;i<n-1;i++) {
+		double p=d[k=i];
+		for (int j=i;j<n;j++)
+			if (d[j] >= p) p=d[k=j];
 		if (k != i) {
 			d[k]=d[i];
 			d[i]=p;
-			if (v != NULL) {
-				for (int j = 0; j < n; j++) {
-					p = v[j][i];
-					v[j][i]= v[j][k];
+			if (v != NULL)
+				for (int j=0;j<n;j++) {
+					p=v[j][i];
+					v[j][i]=v[j][k];
 					v[j][k]=p;
 				}
-			}
 		}
 	}
 }
@@ -177,10 +173,8 @@ void tqli(double** z, double* d, double* e, bool* doesConverge, int n, bool yesv
 			}
 			if (m != l) {
 				if (iter++ == 30) {
-                    // The algorithm does not converge.
-                    //  Set flag and return.
 					*doesConverge = false;
-                    return;
+					return;
 				}
 				g=(d[l+1]-d[l])/(2.0*e[l]);
 				r=pythag(g,1.0);
@@ -217,8 +211,7 @@ void tqli(double** z, double* d, double* e, bool* doesConverge, int n, bool yesv
 			}
 		} while (m != l);
 	}
-    // Algorithm converges.
-    *doesConverge = true;
+	*doesConverge = true;
 }
 
 void compute_eigen_pairs(double** z, double* d, double* e, bool* doesConverge, int n, bool yesvecs, bool sort) {

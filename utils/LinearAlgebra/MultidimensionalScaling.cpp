@@ -18,9 +18,6 @@
 // Used for the square-root function.
 #include <cmath>
 
-#include <iostream>
-using namespace std;
-
 void compute_classical_mds(double** D, double** X, double* d, double* e, bool* doesConverge, int n, int k) {
 
     // We double each element and keep track of each row's and
@@ -66,10 +63,7 @@ void compute_classical_mds(double** D, double** X, double* d, double* e, bool* d
     // Calculate projections in dimension k.
     for (int a = 0; a < n; a++) {
         for (int b = 0; b < k; b++) {
-            X[a][b] = 0;
-        }
-        for (int b = 0; b < k; b++) {
-            X[a][b] += D[a][b] * sqrt(d[b]);
+            X[a][b] = D[a][b] * sqrt(d[b]);
         }
     }
 
