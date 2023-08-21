@@ -181,7 +181,7 @@ void CommandLineArgumentParser::parseCommandLine(int argc, char *argv[], bool* s
 template <typename T>
 T* CommandLineArgumentParser::getOptionArguments(string option, int* num_arguments, bool* successfulOperation) {
 
-    // Make sure the arugment exists.
+    // Make sure the argument exists.
     if (!arguments.count(option)) {
         cerr << "Option " << option << " does not exists!" << endl;
         *successfulOperation = false;
@@ -200,7 +200,7 @@ T* CommandLineArgumentParser::getOptionArguments(string option, int* num_argumen
     }
 
     // Create array of arguments.
-    T args[opt -> num_arguments];
+    T* args = new T[opt -> num_arguments];
     
     int index = 0;
     for (list<string>::iterator it = opt -> option_arguments.begin(); it != opt -> option_arguments.end(); it++) {
@@ -209,7 +209,7 @@ T* CommandLineArgumentParser::getOptionArguments(string option, int* num_argumen
         //  If conversion is not valid, then throw error.
         if (!(strstream_arg >> args[index])) {
             cerr << "Cannot perform type cast of argument for option " << option << "!" << endl;
-            delete [] args;
+            delete[] args;
             *successfulOperation = false;
             return NULL;
         }
@@ -228,7 +228,7 @@ void CommandLineArgumentParser::printOptionDescriptions() {
 
     // Iterate through options and print  description.
     for (map<string, Option*>::iterator it = arguments.begin(); it != arguments.end(); it++) {
-        cout << it -> first << ": " << it -> second -> description << endl;
+        cout << it -> first << " " << it -> second -> description << endl;
     }
 
 }
