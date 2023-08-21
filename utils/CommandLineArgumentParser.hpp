@@ -200,7 +200,7 @@ T* CommandLineArgumentParser::getOptionArguments(string option, int* num_argumen
     }
 
     // Create array of arguments.
-    T* args = new T[opt -> num_arguments];
+    T args[opt -> num_arguments];
     
     int index = 0;
     for (list<string>::iterator it = opt -> option_arguments.begin(); it != opt -> option_arguments.end(); it++) {
