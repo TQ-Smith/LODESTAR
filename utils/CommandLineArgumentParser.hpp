@@ -47,6 +47,13 @@ class CommandLineArgumentParser {
         // Returns: void.
         void parseCommandLine(int argc, char *argv[], bool* successfulOperation);
 
+        // Tests if option has been set by the user.
+        // Accepts:
+        //  string option -> The name of the option.
+        //  bool* successfulOperation -> Sets boolean if operation was valid.
+        // Returns: bool, Indicates if option was supplied by the user.
+        bool isSet(string option, bool* successfulOperation);
+
         // Prints the description for each option.
         // Accepts: void.
         // Returns: void.
@@ -58,9 +65,7 @@ class CommandLineArgumentParser {
 
         // Represents an option
         struct Option {
-            // Flag if option was set by the user.
-            bool isSet;
-            // NUmber of arguments supplied.
+            // Number of arguments supplied.
             int num_arguments;
             // Description of the option.
             string description;
@@ -106,7 +111,6 @@ void CommandLineArgumentParser::addOption(string option, string description, boo
 
     // Set default values for the option.
     Option* temp = new Option;
-    temp -> isSet = false;
     temp -> num_arguments = -1;
     temp -> description = description;
 
@@ -143,14 +147,11 @@ void CommandLineArgumentParser::parseCommandLine(int argc, char *argv[], bool* s
             opt = arguments[option];
 
             // Make sure it has not already been used.
-            if (opt -> isSet) {
+            if (opt -> num_arguments != -1) {
                 cerr << "Option " << option << " was already used!" << endl;
                 *successfulOperation = false;
                 return;
             }
-
-            // Indicate the option has been set by the user.
-            opt -> isSet = true;
 
             // No arguments have been passed.
             opt -> num_arguments = 0;
@@ -193,7 +194,7 @@ T* CommandLineArgumentParser::getOptionArguments(string option, int* num_argumen
 
     // If the option was not set or no arguments were supplied,
     //  then we do not have to parse any arguments.
-    if (!opt -> isSet || opt -> num_arguments == 0) {
+    if (opt -> num_arguments == -1 || opt -> num_arguments == 0) {
         *num_arguments = opt -> num_arguments;
         *successfulOperation = true;
         return NULL;
@@ -222,6 +223,18 @@ T* CommandLineArgumentParser::getOptionArguments(string option, int* num_argumen
 
     return args;
 
+}
+
+bool CommandLineArgumentParser::isSet(string option, bool* successfulOperation) {
+    // Make sure the argument exists.
+    if (!arguments.count(option)) {
+        cerr << "Option " << option << " does not exists!" << endl;
+        *successfulOperation = false;
+        return NULL;
+    }
+
+    // Otherwise, test if the option was set.
+    return arguments[form_option(option)] -> num_arguments != -1;
 }
 
 void CommandLineArgumentParser::printOptionDescriptions() {
