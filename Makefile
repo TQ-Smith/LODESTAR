@@ -15,7 +15,7 @@ LFLAGS = -g -o
 all: bin/lodestar bin/unit_tests
 
 # Make the LODESTAR executable.
-bin/lodestar: utils src src/lodestar.cpp utils/CommandLineArgumentParser.hpp
+bin/lodestar: src src/lodestar.cpp utils/CommandLineArgumentParser.hpp
 	g++ src/lodestar.cpp src/*.o utils/LinearAlgebra/*.o $(LFLAGS) bin/lodestar
 
 # Make the utils.
@@ -36,20 +36,28 @@ utils/LinearAlgebra/NumericalRecipesInC.o: utils/LinearAlgebra/NumericalRecipesI
 
 # Make the source files.
 .PHONY: src
-src: src/Procrustes.o
+src: utils src/Procrustes.o src/VCFParser.o
 
 # Make Procrustes.
 src/Procrustes.o: src/Procrustes.cpp src/Procrustes.hpp utils/LinearAlgebra/MatrixOperations.hpp
 	g++ $(CFLAGS) src/Procrustes.cpp -o src/Procrustes.o
 
+# Make VCFParser.
+src/VCFParser.o: src/VCFParser.cpp src/VCFParser.hpp
+	g++ $(CFLAGS) src/VCFParser.cpp -o src/VCFParser.o
+
 # Make the unit tests for LODESTAR.
 #	Note including the utils unit tests.
-.PHONY: unit_tests
-bin/unit_tests: bin/unit_tests/unit_test_procrustes
+.PHONY: bin/unit_tests
+bin/unit_tests: src bin/unit_tests/unit_test_procrustes bin/unit_tests/unit_test_vcf_parser
 
 # Create the Procrustes unit test.
 bin/unit_tests/unit_test_procrustes: unit_tests/unit_test_procrustes.cpp src/Procrustes.hpp utils/LinearAlgebra/MatrixOperations.hpp
 	g++ unit_tests/unit_test_procrustes.cpp src/Procrustes.o utils/LinearAlgebra/MatrixOperations.o $(LFLAGS) bin/unit_tests/unit_test_procrustes
+
+# Create the VCFParser unit test.
+bin/unit_tests/unit_test_vcf_parser: unit_tests/unit_test_vcf_parser.cpp src/VCFParser.hpp src/VCFParser.cpp 
+	g++ unit_tests/unit_test_vcf_parser.cpp src/VCFParser.o $(LFLAGS) bin/unit_tests/unit_test_vcf_parser
 
 # Clean up object files.
 .PHONY: clean
