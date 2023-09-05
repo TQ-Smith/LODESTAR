@@ -51,8 +51,8 @@ class CommandLineArgumentParser {
         // Accepts:
         //  string option -> The name of the option.
         //  bool* successfulOperation -> Sets boolean if operation was valid.
-        // Returns: bool, Indicates if option was supplied by the user.
-        bool isSet(string option, bool* successfulOperation);
+        // Returns: int, The number of arguments supplied by the user.
+        int getNumberOfArguments(string option, bool* successfulOperation);
 
         // Prints the description for each option.
         // Accepts: void.
@@ -225,16 +225,16 @@ T* CommandLineArgumentParser::getOptionArguments(string option, int* num_argumen
 
 }
 
-bool CommandLineArgumentParser::isSet(string option, bool* successfulOperation) {
+int CommandLineArgumentParser::getNumberOfArguments(string option, bool* successfulOperation) {
     // Make sure the argument exists.
     if (!arguments.count(option)) {
         cerr << "Option " << option << " does not exists!" << endl;
         *successfulOperation = false;
-        return NULL;
+        return -1;
     }
 
-    // Otherwise, test if the option was set.
-    return arguments[form_option(option)] -> num_arguments != -1;
+    // Return the number of arguments.
+    return arguments[form_option(option)] -> num_arguments;
 }
 
 void CommandLineArgumentParser::printOptionDescriptions() {
