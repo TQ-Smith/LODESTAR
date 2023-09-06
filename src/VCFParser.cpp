@@ -15,6 +15,10 @@
 // Used for stringstream.
 #include <sstream>
 
+// A macro to hide the implementation of
+//  creating a genotype.
+#define GENOTPYE(a, b) (0x00000000 | 1 << a | 1 << b)
+
 VCFParser::VCFParser(string file_name) {
 
     // Try to open file.
@@ -82,20 +86,24 @@ bool VCFParser::getNextLocus(string* chromosome, int* position, bool* isMonomorp
     // The number of tabs encountered.
     int count = 0;
 
+    // Used for genotype parsing.
+    int delim;
+
     // Genotype to hold the previous sample's genotype.
     //  Used to keep track of monomorphic genotypes.
+    Genotype previous_genotype;
 
-    for (int i = 0; i <= buffer.length(); i++) {
-        if (i == buffer.length() || buffer.at(i) == '\t') {
+    for (int i = 0; i <= (int) buffer.length(); i++) {
+        if (i == (int) buffer.length() || buffer.at(i) == '\t') {
 
             // The first field is the chromosome.
             if (count == 0) {
-                *chromosome = line.substr(prev + 1, i - prev);
+                *chromosome = buffer.substr(prev + 1, i - prev - 1);
             }
 
             // The second field is the position.
             if (count == 1) {
-                *position = stoi(line.substr(prev + 1, i - prev));
+                *position = stoi(buffer.substr(prev + 1, i - prev - 1));
             } 
 
             // The 9th field and greater hold the genotypes.
@@ -103,14 +111,37 @@ bool VCFParser::getNextLocus(string* chromosome, int* position, bool* isMonomorp
 
                 // Get the genotype.
                 //  NOTE: We are assuming the genotypes are first in the entry.
-                sample = line.substr(prev + 1, i - prev);
+                sample = buffer.substr(prev + 1, i - prev);
 
                 // If we encounter an incomplete genotype, the entry is incomplete,
-                //  and we set the flag and exit the parsing.
-                if (sample.at(0) == '.' || sample.at(2) == '.') {
+                //  and we set the flag and exit the parsing. Includes case of just
+                //  one allele.
+                if (sample.length() == 2 || sample.at(0) == '.' || sample.at(2) == '.') {
                     *isComplete = false;
-                    return;
+                    // Not EOF.
+                    return true;
                 }
+
+                // Now, we parse the genotype.
+                //  This should be a function but it will be called a lot
+                //  and copy the string each time will be slow.
+
+                // Get only the genotype information, which is assumed to be first.
+                sample = sample.substr(0, sample.find(':'));
+
+                // Find the allele seperator.
+                if ((delim = sample.find('/')) == -1) {
+                    delim = sample.find('|');
+                }
+
+                // Create and store our genotype.
+                genotypes[count - 9] = GENOTPYE(stoi(sample.substr(0, delim)), stoi(sample.substr(delim + 1, sample.length() - delim)));
+
+                // Test if monomorphic and keep track of previous genotype.
+                if (count > 9 && genotypes[count - 9] != previous_genotype) {
+                    *isMonomorphic = false;
+                }
+                previous_genotype = genotypes[count - 9];
 
             }
 
@@ -119,9 +150,13 @@ bool VCFParser::getNextLocus(string* chromosome, int* position, bool* isMonomorp
         }
     }
 
+    // Not EOF.
+    return true;
+
 }
 
 int VCFParser::getNumberOfSamples() {
+    // Return the number of names.
     return sample_names.size();
 }
 
