@@ -226,6 +226,9 @@ T* CommandLineArgumentParser::getOptionArguments(string option, int* num_argumen
 }
 
 int CommandLineArgumentParser::getNumberOfArguments(string option, bool* successfulOperation) {
+
+    option = form_option(option);
+
     // Make sure the argument exists.
     if (!arguments.count(option)) {
         cerr << "Option " << option << " does not exists!" << endl;
@@ -234,7 +237,7 @@ int CommandLineArgumentParser::getNumberOfArguments(string option, bool* success
     }
 
     // Return the number of arguments.
-    return arguments[form_option(option)] -> num_arguments;
+    return arguments[option] -> num_arguments;
 }
 
 void CommandLineArgumentParser::printOptionDescriptions() {
