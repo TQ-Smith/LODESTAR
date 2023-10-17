@@ -36,12 +36,19 @@ list<window*>* sliding_window(VCFParser* parser, int hap_size, int window_hap_si
     // Create our list to hold the windows.
     list<window*>* windows = new list<window*>;
 
-    // Variables needed to read in a locus.
+    // Variables needed to read in a locus from the VCF parser.
     string chromosome;
     int position; 
     bool isMonomorphic;
     bool isComplete;
     Genotype* genotypes = new Genotype[n];
+
+
+    // Free allocated genotypes array.
+    delete [] genotypes;
+    
+    // Return the list of windows.
+    return windows;
 
 }
 
