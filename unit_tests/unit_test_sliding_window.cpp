@@ -40,5 +40,20 @@ int main() {
         cout << (*it) -> chromosome << ": " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci << " SNPs." << endl;
         destroy_window(&*it);
     }
+    delete parser;
+    delete windows;
+    cout << endl;
+
+    parser = new VCFParser("unit_tests/sample2.vcf");
+    cout << "We create a sliding window with haplotype size of 3 SNPs, a window size of 2 haplotypes, and an offset of 1 haplotypes." << endl;
+    cout << "We find the windows to be:" << endl;
+    windows = sliding_window(parser, 3, 2, 1, n);
+    for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++){
+        cout << (*it) -> chromosome << ": " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci << " SNPs." << endl;
+        destroy_window(&*it);
+    }
+    delete parser;
+    delete windows;
+    cout << endl;
 
 }
