@@ -8,6 +8,12 @@
 
 #include "SlidingWindow.hpp"
 
+// Use classical MDS and FastMap.
+#include "MultidimensionalScaling.hpp"
+
+// Used to create and destroy matrices.
+#include "MatrixOperations.hpp"
+
 #include <iostream>
 
 // Allocates a window with the specified attributes.
@@ -33,7 +39,7 @@ window* create_window(string chromosome, int start_position, int end_position, i
 
 }
 
-list<window*>* sliding_window(VCFParser* parser, int hap_size, int window_hap_size, int offset_hap_size, int n) {
+list<window*>* sliding_window(VCFParser* parser, int hap_size, int window_hap_size, int offset_hap_size, int n, int k, bool useFastMap) {
 
     // Create our list to hold the windows.
     list<window*>* windows = new list<window*>;

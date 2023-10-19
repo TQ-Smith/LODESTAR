@@ -20,17 +20,25 @@ all: unit_tests run_tests
 .PHONY: unit_tests
 unit_tests: unit_test_command_line_argument_parser unit_test_matrix_operations unit_test_multidimensional_scaling
 
-# Compile the command line argument parser unit tests.
+# Make the command line argument parser unit tests.
 unit_test_command_line_argument_parser:
-	g++ unit_test_command_line_argument_parser.cpp $(LFLAGS) bin/unit_test_command_line_argument_parser
+	g++ $(LFLAGS) bin/unit_test_command_line_argument_parser unit_test_command_line_argument_parser.cpp
 
-# Compile the matrix operations unit tests.
-unit_test_matrix_operations: ../LinearAlgebra/MatrixOperations.o
-	g++ unit_test_matrix_operations.cpp ../LinearAlgebra/MatrixOperations.o $(LFLAGS) bin/unit_test_matrix_operations
+# Make the matrix operations unit tests.
+unit_test_matrix_operations: ../LinearAlgebra/MatrixOperations.o unit_test_matrix_operations.o
+	g++ $(LFLAGS) bin/unit_test_matrix_operations unit_test_matrix_operations.o ../LinearAlgebra/MatrixOperations.o
 
-# Compile the multidimensional scaling unit tests.
-unit_test_multidimensional_scaling: ../LinearAlgebra/MatrixOperations.o ../LinearAlgebra/MultidimensionalScaling.o ../LinearAlgebra/NumericalRecipesInC.o 
-	g++ unit_test_multidimensional_scaling.cpp ../LinearAlgebra/MatrixOperations.o ../LinearAlgebra/MultidimensionalScaling.o ../LinearAlgebra/NumericalRecipesInC.o $(LFLAGS) bin/unit_test_multidimensional_scaling
+# Compile unit tests for matrix operations.
+unit_test_matrix_operations.o:
+	g++ $(CFLAGS) unit_test_matrix_operations.cpp -o unit_test_matrix_operations.o
+
+# Make the multidimensional scaling unit tests.
+unit_test_multidimensional_scaling: ../LinearAlgebra/MatrixOperations.o ../LinearAlgebra/MultidimensionalScaling.o ../LinearAlgebra/NumericalRecipesInC.o unit_test_multidimensional_scaling.o
+	g++ $(LFLAGS) bin/unit_test_multidimensional_scaling unit_test_multidimensional_scaling.o ../LinearAlgebra/*.o 
+
+# Compile unit tests for multidimensional scaling.
+unit_test_multidimensional_scaling.o:
+	g++ $(CFLAGS) unit_test_multidimensional_scaling.cpp -o unit_test_multidimensional_scaling.o
 
 # Compile the matrix operations source.
 ../LinearAlgebra/MatrixOperations.o: 
@@ -75,4 +83,4 @@ run_unit_test_multidimensional_scaling:
 # Clean everything up. Grrr...Clang
 .PHONY: clean
 clean:
-	rm -rf ../LinearAlgebra/*.o *.dSYM bin/*
+	rm -rf ../LinearAlgebra/*.o *.dSYM bin/* *.o
