@@ -9,8 +9,8 @@
 #ifndef _VCF_PARSER_HPP_
 #define _VCF_PARSER_HPP_
 
-// Used to read in a file.
-#include <fstream>
+// Used to read in a compressed/uncompressed file.
+#include "../lib/gzstream.h"
 
 // We treat the lines of a file as a string.
 #include <string>
@@ -76,7 +76,7 @@ class VCFParser {
         list<string> sample_names;
 
         // Our in file stream object to read in the contents of the file.
-        ifstream* in_file;
+        igzstream* in_file;
 
 };
 

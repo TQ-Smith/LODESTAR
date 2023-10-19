@@ -20,7 +20,8 @@ using namespace std;
 int main() {
 
     // Load sample file for testing.
-    VCFParser parser("unit_tests/sample1.vcf");
+    //  We are also testing gzstream.
+    VCFParser parser("unit_tests/sample1.vcf.gz");
 
     // First, we test the constructor and the getter for
     //  the number of samples and the names of the samples.

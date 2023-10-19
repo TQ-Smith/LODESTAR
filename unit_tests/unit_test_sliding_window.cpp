@@ -3,9 +3,7 @@
 // Date: 17 October 2023
 // Author: TQ Smith
 // Principal Investigator: Dr. Zachary Szpiech
-// Purpose: Unit test all of the cases that could be encountered
-//              for a sliding window. NOTE: Does not test MDS and 
-//              Procrustes calculations. 
+// Purpose: Unit test the sliding window, ASD calculations, and MDS.
 //
 
 // Used to read in VCF files.

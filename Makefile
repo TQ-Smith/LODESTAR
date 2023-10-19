@@ -15,8 +15,16 @@ LFLAGS = -g -o
 all: bin/lodestar bin/unit_tests
 
 # Make the LODESTAR executable.
-bin/lodestar: utils src src/lodestar.cpp utils/CommandLineArgumentParser.hpp
-	g++ src/lodestar.cpp src/*.o utils/LinearAlgebra/*.o $(LFLAGS) bin/lodestar
+bin/lodestar: lib utils src utils/CommandLineArgumentParser.hpp
+	g++ $(LFLAGS) bin/lodestar utils/LinearAlgebra/*.o lib/*.o src/*.o -lz
+
+# Make the prewritten libraries.
+.PHONY: lib
+lib: lib/gzstream.o
+
+# Make gzstream.
+lib/gzstream.o:
+	g++ $(CFLAGS) lib/gzstream.c -o lib/gzstream.o
 
 # Make the utils.
 .PHONY: utils
@@ -36,18 +44,22 @@ utils/LinearAlgebra/NumericalRecipesInC.o:
 
 # Make the source files.
 .PHONY: src
-src: src/Procrustes.o src/VCFParser.o src/SlidingWindow.o
+src: src/lodestar.o src/Procrustes.o src/VCFParser.o src/SlidingWindow.o
+
+# Make LODESTAR main executable.
+src/lodestar.o:
+	g++ $(CFLAGS) src/lodestar.cpp -o src/lodestar.o
 
 # Make Procrustes.
-src/Procrustes.o: src/Procrustes.cpp src/Procrustes.hpp utils/LinearAlgebra/MatrixOperations.hpp
+src/Procrustes.o:
 	g++ $(CFLAGS) src/Procrustes.cpp -o src/Procrustes.o
 
 # Make VCFParser.
-src/VCFParser.o: src/VCFParser.cpp src/VCFParser.hpp
+src/VCFParser.o:
 	g++ $(CFLAGS) src/VCFParser.cpp -o src/VCFParser.o
 
 # Make SlidingWindow.
-src/SlidingWindow.o: src/SlidingWindow.cpp src/SlidingWindow.hpp
+src/SlidingWindow.o:
 	g++ $(CFLAGS) src/SlidingWindow.cpp -o src/SlidingWindow.o
 
 # Make the unit tests for LODESTAR.
@@ -56,18 +68,30 @@ src/SlidingWindow.o: src/SlidingWindow.cpp src/SlidingWindow.hpp
 bin/unit_tests: bin/unit_tests/unit_test_procrustes bin/unit_tests/unit_test_vcf_parser bin/unit_tests/unit_test_sliding_window
 
 # Create the Procrustes unit test.
-bin/unit_tests/unit_test_procrustes: src/Procrustes.o utils/LinearAlgebra/MatrixOperations.o
-	g++ unit_tests/unit_test_procrustes.cpp src/Procrustes.o utils/LinearAlgebra/MatrixOperations.o $(LFLAGS) bin/unit_tests/unit_test_procrustes
+bin/unit_tests/unit_test_procrustes: src/Procrustes.o utils/LinearAlgebra/MatrixOperations.o unit_tests/unit_test_procrustes.o
+	g++ $(LFLAGS) bin/unit_tests/unit_test_procrustes unit_tests/unit_test_procrustes.o src/Procrustes.o utils/LinearAlgebra/MatrixOperations.o
+
+# Compile procrustes analysis unit test.
+unit_tests/unit_test_procrustes.o:
+	g++ $(CFLAGS) unit_tests/unit_test_procrustes.cpp -o unit_tests/unit_test_procrustes.o
 
 # Create the VCFParser unit test.
-bin/unit_tests/unit_test_vcf_parser: src/VCFParser.o
-	g++ unit_tests/unit_test_vcf_parser.cpp src/VCFParser.o $(LFLAGS) bin/unit_tests/unit_test_vcf_parser
+bin/unit_tests/unit_test_vcf_parser: lib/gzstream.o src/VCFParser.o unit_tests/unit_test_vcf_parser.o
+	g++ $(LFLAGS) bin/unit_tests/unit_test_vcf_parser unit_tests/unit_test_vcf_parser.o lib/gzstream.o src/VCFParser.o -lz
+
+# Compile vcf parser unit test.
+unit_tests/unit_test_vcf_parser.o:
+	g++ $(CFLAGS) unit_tests/unit_test_vcf_parser.cpp -o unit_tests/unit_test_vcf_parser.o
 
 # Create the SlidingWindow unit test.
-bin/unit_tests/unit_test_sliding_window: src/VCFParser.o src/SlidingWindow.o 
-	g++ unit_tests/unit_test_sliding_window.cpp src/VCFParser.o src/SlidingWindow.o $(LFLAGS) bin/unit_tests/unit_test_sliding_window
+bin/unit_tests/unit_test_sliding_window: lib/gzstream.o src/VCFParser.o src/SlidingWindow.o unit_tests/unit_test_sliding_window.o
+	g++ $(LFLAGS) bin/unit_tests/unit_test_sliding_window unit_tests/unit_test_sliding_window.o lib/gzstream.o src/VCFParser.o src/SlidingWindow.o -lz
+
+# Compile sliding window unit test.
+unit_tests/unit_test_sliding_window.o:
+	g++ $(CFLAGS) unit_tests/unit_test_sliding_window.cpp -o unit_tests/unit_test_sliding_window.o
 
 # Clean up object files.
 .PHONY: clean
 clean:
-	rm bin/* bin/unit_tests/* src/*.o utils/LinearAlgebra/*.o
+	rm bin/lodestar unit_tests/*.o bin/unit_tests/* lib/*.o src/*.o utils/LinearAlgebra/*.o

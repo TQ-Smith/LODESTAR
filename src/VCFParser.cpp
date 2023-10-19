@@ -23,9 +23,9 @@ VCFParser::VCFParser(string file_name) {
 
     // Try to open file.
     // If file does not exist, print error and return.
-    in_file = new ifstream;
-    in_file -> open(file_name);
-    if (!in_file -> is_open()) {
+    in_file = new igzstream;
+    in_file -> open(file_name.c_str());
+    if (in_file -> fail()) {
         cerr << "File " << file_name << " does not exist!" << endl;
         return;
     }
