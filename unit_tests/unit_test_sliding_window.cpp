@@ -23,7 +23,7 @@ int main() {
     // Open our VCF file.
     cout << endl;
     cout << "Opening sample2.vcf ..." << endl;
-    VCFParser* parser = new VCFParser("unit_tests/sample2.vcf");
+    VCFParser* parser = new VCFParser("unit_tests/sample2.vcf.gz");
     cout << endl;
 
     // Print the number of samples.
@@ -42,7 +42,7 @@ int main() {
     delete windows;
     cout << endl;
 
-    parser = new VCFParser("unit_tests/sample2.vcf");
+    parser = new VCFParser("unit_tests/sample2.vcf.gz");
     cout << "We create a sliding window with haplotype size of 3 SNPs, a window size of 2 haplotypes, and an offset of 1 haplotypes." << endl;
     cout << "We find the windows to be:" << endl;
     windows = sliding_window(parser, 3, 2, 1, n);
