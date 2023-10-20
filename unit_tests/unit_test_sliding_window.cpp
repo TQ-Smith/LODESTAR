@@ -33,7 +33,7 @@ int main() {
 
     cout << "We create a sliding window with haplotype size of 1 SNPs, a window size of 2 haplotypes, and an offset of 1 haplotypes." << endl;
     cout << "We find the windows to be:" << endl;
-    list<window*>* windows = sliding_window(parser, 1, 2, 1, n);
+    list<window*>* windows = sliding_window(parser, 1, 2, 1, n, 2, false);
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++){
         cout << (*it) -> chromosome << ": " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci << " SNPs." << endl;
         destroy_window(&*it);
@@ -45,7 +45,7 @@ int main() {
     parser = new VCFParser("unit_tests/sample2.vcf.gz");
     cout << "We create a sliding window with haplotype size of 3 SNPs, a window size of 2 haplotypes, and an offset of 1 haplotypes." << endl;
     cout << "We find the windows to be:" << endl;
-    windows = sliding_window(parser, 3, 2, 1, n);
+    windows = sliding_window(parser, 3, 2, 1, n, 2, true);
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++){
         cout << (*it) -> chromosome << ": " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci << " SNPs." << endl;
         destroy_window(&*it);

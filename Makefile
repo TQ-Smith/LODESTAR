@@ -84,7 +84,7 @@ unit_tests/unit_test_vcf_parser.o:
 	g++ $(CFLAGS) unit_tests/unit_test_vcf_parser.cpp -o unit_tests/unit_test_vcf_parser.o
 
 # Create the SlidingWindow unit test.
-bin/unit_tests/unit_test_sliding_window: untils lib/gzstream.o src/VCFParser.o src/SlidingWindow.o unit_tests/unit_test_sliding_window.o
+bin/unit_tests/unit_test_sliding_window: utils lib/gzstream.o src/VCFParser.o src/SlidingWindow.o unit_tests/unit_test_sliding_window.o
 	g++ $(LFLAGS) bin/unit_tests/unit_test_sliding_window utils/LinearAlgebra/*.o unit_tests/unit_test_sliding_window.o lib/gzstream.o src/VCFParser.o src/SlidingWindow.o -lz
 
 # Compile sliding window unit test.
