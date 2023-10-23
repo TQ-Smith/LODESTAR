@@ -37,15 +37,15 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
 
     string chromosome;
     int position; 
-    bool isMonomorphic; 
-    bool isComplete;
+    bool isMonomorphic = false; 
+    bool isComplete = false;
 
     double* d = new double[n];
     double* e = new double[n];
     bool doesConverge;
     int maxDimReached;
 
-
+    
     delete [] genotypes;
 
     destroy_real_matrix(window_haplotype_counts, n);
