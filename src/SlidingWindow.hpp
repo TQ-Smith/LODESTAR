@@ -46,7 +46,7 @@ struct window {
 //  int k -> The dimension to project the data into. Assumes k = 1, 2, 3.
 //  bool useFastMap -> If true, preform MDS using FastMap heuristic instead of classical MDS.
 // Returns: list<window*>, The list of windows created in the genome.
-list<window*>* sliding_window(VCFParser* parser, int hap_size, int window_hap_size, int offset_hap_size, int n, int k, bool useFastMap);
+list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_size, int offset_hap_size, int n, int k, bool useFastMap);
 
 // Deallocates a window.
 // Accepts:
