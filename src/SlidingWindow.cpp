@@ -23,17 +23,36 @@
 
 #include <iostream>
 
+window* create_mds_window(
+    string chromosome, int start_position, int end_position, int num_loci, 
+    double** D, int* maxDimReached, bool* doesConverge, double* d, double* e, 
+    int n, int k, bool useFastMap) {
+    
+    double** points = create_real_matrix(n, k);
+    if (useFastMap) {
+        compute_fastmap(D, points, maxDimReached, n, k);
+    } else {
+        compute_classical_mds(D, points, d, e, doesConverge, n, k);
+    }
+    window* w = new window;
+    w -> chromosome = chromosome;
+    w -> start_position = start_position;
+    w -> end_position = end_position;
+    w -> num_loci = num_loci;
+    w -> points = points;
+    return w;
+}
+
 list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_size, int offset_hap_size, int n, int k, bool useFastMap) {
 
     list<window*>* windows = new list<window*>;
 
     Genotype* genotypes = new Genotype[n];
 
-    double** window_haplotype_counts = create_and_fill_real_matrix(0, n, n);
-    double** auxilary_haplotype_counts = create_and_fill_real_matrix(0, n, n);
-    double** next_window_haplotype_counts = create_and_fill_real_matrix(0, n, n);
-    double** global_haplotype_counts = create_and_fill_real_matrix(0, n, n);
-    double** temp;
+    double** window_haplotype_counts = create_real_matrix(n, n);
+    double** auxilary_haplotype_counts = create_real_matrix(n, n);
+    double** next_window_haplotype_counts = create_real_matrix(n, n);
+    double** global_haplotype_counts = create_real_matrix(n, n);
 
     string chromosome;
     int position; 
@@ -45,7 +64,79 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
     bool doesConverge;
     int maxDimReached;
 
-    
+    string previous_chromosome = "";
+    int start_position;
+    int start_next_position;
+    int previous_position;
+    int num_loci_window = 0;
+    int num_global_haplotyes = 0;
+
+    while (parser -> getNextLocus(&chromosome, &position, &isMonomorphic, &isComplete, genotypes)) {
+
+        if (isMonomorphic || !isComplete) {
+            continue;
+        }
+
+        if (num_loci_window != 0 && (chromosome != previous_chromosome || num_loci_window == (hap_size * window_hap_size))) {
+            int num_haps = ceil(num_loci_window / hap_size);
+            for (int i = 0; i < n; i++) {
+                for (int j = i + 1; j < n; j++) {
+                    next_window_haplotype_counts[i][j] = next_window_haplotype_counts[j][i] = window_haplotype_counts[i][j] - auxilary_haplotype_counts[j][i];
+                    window_haplotype_counts[i][j] = window_haplotype_counts[j][i]
+                        += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]) / (2 * num_haps);
+                    auxilary_haplotype_counts[j][i] = 0;
+                }
+            }
+            windows -> push_back(create_mds_window(previous_chromosome, start_position, previous_position, num_loci_window, window_haplotype_counts, &maxDimReached, &doesConverge, d, e, n, k, useFastMap));
+            double** temp = window_haplotype_counts;
+            window_haplotype_counts = next_window_haplotype_counts;
+            next_window_haplotype_counts = temp;
+            num_loci_window -= hap_size * (num_loci_window / hap_size);
+            start_position = start_next_position;
+        }
+
+        if (chromosome != previous_chromosome) {
+            for (int i = 0; i < n; i++) {
+                for (int j = i + 1; j < n; j++) {
+                    global_haplotype_counts[i][j] = global_haplotype_counts[j][i]
+                        += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]);
+                    window_haplotype_counts[i][j] = window_haplotype_counts[j][i] 
+                    = auxilary_haplotype_counts[i][j] = auxilary_haplotype_counts[j][i]
+                    = next_window_haplotype_counts[i][j] = next_window_haplotype_counts[j][i] = 0;
+                }
+                window_haplotype_counts[i][i] = auxilary_haplotype_counts[i][i] = next_window_haplotype_counts[i][i] = 0;
+            }
+            num_global_haplotyes++;
+            num_loci_window = 0;
+            start_position = position;
+        }
+
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (num_loci_window != 0 && num_loci_window % hap_size == 0) {
+                    window_haplotype_counts[i][j] = window_haplotype_counts[j][i] 
+                        += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]);
+                    global_haplotype_counts[i][j] = global_haplotype_counts[j][i] = window_haplotype_counts[i][j];
+                    if (num_loci_window <= hap_size * offset_hap_size) {
+                        auxilary_haplotype_counts[j][i] += window_haplotype_counts[i][j];
+                    }
+                    auxilary_haplotype_counts[i][j] = 0;
+                    num_global_haplotyes++;
+                }
+                auxilary_haplotype_counts[i][j] += ASD(genotypes[i], genotypes[j]);
+            }
+        }
+
+        if (num_loci_window == (hap_size * offset_hap_size + 1)) {
+            start_next_position = position;
+        }
+        previous_chromosome = chromosome;
+        previous_position = position;
+        num_loci_window++;
+
+    }
+
+
     delete [] genotypes;
 
     destroy_real_matrix(window_haplotype_counts, n);
@@ -57,10 +148,10 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
 
 }
 
-void destroy_window(window** w) {
+void destroy_window(window** w, int n) {
 
     // Deallocate points matrix.
-    delete [] (*w) -> points;
+    destroy_real_matrix((*w) -> points, n);
 
     // Deallocate structure.
     delete *w;
