@@ -31,11 +31,12 @@ int main() {
     cout << "The VCF file has " << n << " samples." << endl;
     cout << endl;
 
-    cout << "We create a sliding window with haplotype size of 1 SNPs, a window size of 2 haplotypes, and an offset of 1 haplotypes." << endl;
+    cout << "We create a sliding window with haplotype size of 1 SNPs, a window size of 1 haplotypes, and an offset of 1 haplotypes." << endl;
     cout << "We find the windows to be:" << endl;
-    list<window*>* windows = window_genome(parser, 1, 2, 1, n, 2, false);
+    list<window*>* windows = window_genome(parser, 1, 1, 1, n, 2, false);
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++){
         cout << (*it) -> chromosome << ": " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci << " SNPs." << endl;
+        cout << "With "
         destroy_window(&*it, n);
     }
     delete parser;

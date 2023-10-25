@@ -22,6 +22,7 @@
 #define ASD(i, j) (!!(i ^ j) + !(i & j))
 
 #include <iostream>
+using namespace std;
 
 window* create_mds_window(
     string chromosome, int start_position, int end_position, int num_loci, 
@@ -41,6 +42,7 @@ window* create_mds_window(
     w -> num_loci = num_loci;
     w -> points = points;
     return w;
+    
 }
 
 list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_size, int offset_hap_size, int n, int k, bool useFastMap) {
@@ -56,8 +58,8 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
 
     string chromosome;
     int position; 
-    bool isMonomorphic = false; 
-    bool isComplete = false;
+    bool isMonomorphic; 
+    bool isComplete;
 
     double* d = new double[n];
     double* e = new double[n];
@@ -69,10 +71,11 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
     int start_next_position;
     int previous_position;
     int num_loci_window = 0;
-    int num_global_haplotyes = 0;
+    int num_global_haplotypes = 0;
+    int num_global_loci = 0;
 
     while (parser -> getNextLocus(&chromosome, &position, &isMonomorphic, &isComplete, genotypes)) {
-
+        
         if (isMonomorphic || !isComplete) {
             continue;
         }
@@ -83,7 +86,8 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
                 for (int j = i + 1; j < n; j++) {
                     next_window_haplotype_counts[i][j] = next_window_haplotype_counts[j][i] = window_haplotype_counts[i][j] - auxilary_haplotype_counts[j][i];
                     window_haplotype_counts[i][j] = window_haplotype_counts[j][i]
-                        += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]) / (2 * num_haps);
+                        += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]);
+                    window_haplotype_counts[i][j] = window_haplotype_counts[j][i] /= (2 * num_haps);
                     auxilary_haplotype_counts[j][i] = 0;
                 }
             }
@@ -92,7 +96,8 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
             window_haplotype_counts = next_window_haplotype_counts;
             next_window_haplotype_counts = temp;
             num_loci_window -= hap_size * (num_loci_window / hap_size);
-            start_position = start_next_position;
+            start_position = window_hap_size == offset_hap_size ? position : start_next_position;
+            num_global_haplotypes++;
         }
 
         if (chromosome != previous_chromosome) {
@@ -106,8 +111,8 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
                 }
                 window_haplotype_counts[i][i] = auxilary_haplotype_counts[i][i] = next_window_haplotype_counts[i][i] = 0;
             }
-            num_global_haplotyes++;
             num_loci_window = 0;
+            start_next_position = position;
             start_position = position;
         }
 
@@ -116,12 +121,13 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
                 if (num_loci_window != 0 && num_loci_window % hap_size == 0) {
                     window_haplotype_counts[i][j] = window_haplotype_counts[j][i] 
                         += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]);
-                    global_haplotype_counts[i][j] = global_haplotype_counts[j][i] = window_haplotype_counts[i][j];
+                    global_haplotype_counts[i][j] = global_haplotype_counts[j][i] 
+                        += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]);
                     if (num_loci_window <= hap_size * offset_hap_size) {
                         auxilary_haplotype_counts[j][i] += window_haplotype_counts[i][j];
                     }
                     auxilary_haplotype_counts[i][j] = 0;
-                    num_global_haplotyes++;
+                    num_global_haplotypes++;
                 }
                 auxilary_haplotype_counts[i][j] += ASD(genotypes[i], genotypes[j]);
             }
@@ -133,10 +139,26 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
         previous_chromosome = chromosome;
         previous_position = position;
         num_loci_window++;
-
+        num_global_loci++;
     }
 
+    double allele_counts;
+    int num_haps = ceil(num_loci_window / hap_size);
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            allele_counts = auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j];
+            window_haplotype_counts[i][j] = window_haplotype_counts[j][i] += allele_counts;
+            window_haplotype_counts[i][j] = window_haplotype_counts[j][i] /= num_haps;
+            global_haplotype_counts[i][j] = global_haplotype_counts[j][i] += allele_counts;
+            global_haplotype_counts[i][j] = global_haplotype_counts[j][i] /= num_global_haplotypes;
+        }
+    }
+    num_global_haplotypes += num_haps;
 
+    windows -> push_back(create_mds_window(previous_chromosome, start_position, previous_position, num_loci_window, window_haplotype_counts, &maxDimReached, &doesConverge, d, e, n, k, useFastMap));
+    windows -> push_back(create_mds_window("Global", windows -> front() -> start_position, previous_position, num_global_loci, global_haplotype_counts, &maxDimReached, &doesConverge, d, e, n, k, useFastMap));
+
+    cout << "Number of Global Haplotypes: " << num_global_haplotypes << endl;
     delete [] genotypes;
 
     destroy_real_matrix(window_haplotype_counts, n);
