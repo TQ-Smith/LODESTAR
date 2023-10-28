@@ -82,15 +82,18 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
 
         if (num_loci_window != 0 && (chromosome != previous_chromosome || num_loci_window == (hap_size * window_hap_size))) {
             int num_haps = ceil(num_loci_window / hap_size);
+            cout << "Num haps: " << num_loci_window << endl;
             for (int i = 0; i < n; i++) {
                 for (int j = i + 1; j < n; j++) {
                     next_window_haplotype_counts[i][j] = next_window_haplotype_counts[j][i] = window_haplotype_counts[i][j] - auxilary_haplotype_counts[j][i];
                     window_haplotype_counts[i][j] = window_haplotype_counts[j][i]
-                        += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]);
+                        += (auxilary_haplotype_counts[i][j] >= 2 ? 2 : auxilary_haplotype_counts[i][j]);
                     window_haplotype_counts[i][j] = window_haplotype_counts[j][i] /= (2 * num_haps);
                     auxilary_haplotype_counts[j][i] = 0;
                 }
             }
+            cout << "Window ASD on " << previous_chromosome << " from " << start_position << " to " << previous_position << endl;
+            print_real_matrix(window_haplotype_counts, n, n, 1, 1);
             windows -> push_back(create_mds_window(previous_chromosome, start_position, previous_position, num_loci_window, window_haplotype_counts, &maxDimReached, &doesConverge, d, e, n, k, useFastMap));
             num_loci_window -= hap_size * offset_hap_size;
             num_global_haplotypes += offset_hap_size + ceil(num_loci_window / hap_size);
@@ -118,14 +121,15 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
             for (int j = i + 1; j < n; j++) {
                 if (num_loci_window != 0 && num_loci_window % hap_size == 0) {
                     window_haplotype_counts[i][j] = window_haplotype_counts[j][i] 
-                        += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]);
+                        += (auxilary_haplotype_counts[i][j] >= 2 ? 2 : auxilary_haplotype_counts[i][j]);
                     global_haplotype_counts[i][j] = global_haplotype_counts[j][i] 
-                        += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]);
+                        += (auxilary_haplotype_counts[i][j] >= 2 ? 2 : auxilary_haplotype_counts[i][j]);
                     if (num_loci_window <= hap_size * offset_hap_size) {
-                        auxilary_haplotype_counts[j][i] += (auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j]);
+                        auxilary_haplotype_counts[j][i] += (auxilary_haplotype_counts[i][j] >= 2 ? 2 : auxilary_haplotype_counts[i][j]);
                     }
                     auxilary_haplotype_counts[i][j] = 0;
                 }
+                cout << genotypes[i] << " " << genotypes[j] << " = " << ASD(genotypes[i], genotypes[j]) << endl;
                 auxilary_haplotype_counts[i][j] += ASD(genotypes[i], genotypes[j]);
             }
         }
@@ -144,13 +148,18 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
     num_global_haplotypes += num_haps;
     for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
-            allele_counts = auxilary_haplotype_counts[i][j] > 2 ? 0 : auxilary_haplotype_counts[i][j];
+            allele_counts = auxilary_haplotype_counts[i][j] >= 2 ? 2 : auxilary_haplotype_counts[i][j];
             window_haplotype_counts[i][j] = window_haplotype_counts[j][i] += allele_counts;
             window_haplotype_counts[i][j] = window_haplotype_counts[j][i] /= num_haps;
             global_haplotype_counts[i][j] = global_haplotype_counts[j][i] += allele_counts;
             global_haplotype_counts[i][j] = global_haplotype_counts[j][i] /= num_global_haplotypes;
         }
     }
+
+    cout << "Window ASD on " << previous_chromosome << " from " << start_position << " to " << previous_position << endl;
+    print_real_matrix(window_haplotype_counts, n, n, 1, 1);
+    cout << "Global ASD:" << endl;
+    print_real_matrix(global_haplotype_counts, n, n, 1, 1);
 
     windows -> push_back(create_mds_window(previous_chromosome, start_position, previous_position, num_loci_window, window_haplotype_counts, &maxDimReached, &doesConverge, d, e, n, k, useFastMap));
     windows -> push_back(create_mds_window("Global", windows -> front() -> start_position, previous_position, num_global_haplotypes, global_haplotype_counts, &maxDimReached, &doesConverge, d, e, n, k, useFastMap));

@@ -37,8 +37,8 @@ int main() {
     cout << endl;
 
     cout << "We create a sliding window with haplotype size of 1 SNPs, a window size of 1 haplotypes, and an offset of 1 haplotypes." << endl;
-    cout << "We find the windows to be:" << endl;
     list<window*>* windows = window_genome(parser, 1, 1, 1, n, 2, false);
+    cout << "We find the windows to be:" << endl;
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++){
         cout << (*it) -> chromosome << ": " << (*it) -> start_position << " to " << (*it) -> end_position << " with ";
         if ((*it) -> chromosome == "Global") {
@@ -66,8 +66,8 @@ int main() {
     cout << endl;
 
     cout << "We create a sliding window with haplotype size of 2 SNPs, a window size of 2 haplotypes, and an offset of 2 haplotypes." << endl;
-    cout << "We find the windows to be:" << endl;
     windows = window_genome(parser, 2, 2, 2, n, 2, false);
+    cout << "We find the windows to be:" << endl;
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++){
         cout << (*it) -> chromosome << ": " << (*it) -> start_position << " to " << (*it) -> end_position << " with ";
         if ((*it) -> chromosome == "Global") {
@@ -95,8 +95,8 @@ int main() {
     cout << endl;
 
     cout << "We create a sliding window with haplotype size of 3 SNPs, a window size of 1 haplotypes, and an offset of 1 haplotypes." << endl;
-    cout << "We find the windows to be:" << endl;
     windows = window_genome(parser, 3, 1, 1, n, 2, false);
+    cout << "We find the windows to be:" << endl;
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++){
         cout << (*it) -> chromosome << ": " << (*it) -> start_position << " to " << (*it) -> end_position << " with ";
         if ((*it) -> chromosome == "Global") {
@@ -124,8 +124,8 @@ int main() {
     cout << endl;
 
     cout << "We create a sliding window with haplotype size of 1 SNPs, a window size of 3 haplotypes, and an offset of 2 haplotypes." << endl;
-    cout << "We find the windows to be:" << endl;
     windows = window_genome(parser, 1, 3, 2, n, 2, false);
+    cout << "We find the windows to be:" << endl;
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++){
         cout << (*it) -> chromosome << ": " << (*it) -> start_position << " to " << (*it) -> end_position << " with ";
         if ((*it) -> chromosome == "Global") {
