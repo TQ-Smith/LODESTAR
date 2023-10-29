@@ -68,16 +68,10 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
     int pos;
     bool isMonomorphic, isComplete, nextRecord;
 
-    int q;
-    cout << ((long) &q) % 16 << endl;
-
     double* d = new double[n];
     double* e = new double[n];
     bool doesConverge;
     int maxDimReached;
-
-    int p;
-    cout << ((long) &p) % 16 << endl;
 
     string prev_chrom = "";
     int start_pos, next_start_pos, prev_pos, num_haps, num_loci = 0, num_global_haps = 0;
@@ -87,17 +81,15 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
 
         nextRecord = parser -> getNextLocus(&chrom, &pos, &isMonomorphic, &isComplete, genotypes);
 
-        if (isMonomorphic || !isComplete) {
+        if (nextRecord && (isMonomorphic || !isComplete)) {
             continue;
         }
 
         if (num_loci != 0 && (!nextRecord || chrom != prev_chrom || num_loci == (hap_size * window_hap_size))) {
-
-            num_haps = ceil(num_loci / hap_size);
-            if (!nextRecord) {
-                num_global_haps += num_haps;
-            } else {
-                num_global_haps += offset_hap_size + ceil((num_loci - hap_size * offset_hap_size) / hap_size);
+            num_haps = ceil(num_loci / (double) hap_size);
+            num_global_haps += offset_hap_size;
+            if (chrom != prev_chrom || !nextRecord) {
+                num_global_haps += ceil((num_loci - hap_size * offset_hap_size) / (double) hap_size);
             }
 
             for (int i = 0; i < n; i++) {
@@ -110,8 +102,11 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
                     }
                     auxilary_asd[j][i] = 0;
                 }
+                window_asd[i][i] = next_asd[i][i] = 0;
             }
-
+            cout << "Window on " << prev_chrom << " from " << start_pos << " to " << prev_pos << endl;
+            print_real_matrix(window_asd, n, n, 1, 1);
+            cout << endl;
             windows -> push_back(create_mds_window(prev_chrom, start_pos, prev_pos, num_loci, window_asd, &maxDimReached, &doesConverge, d, e, n, k, useFastMap));
 
             double** temp = window_asd;
@@ -154,6 +149,10 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
         prev_chrom = chrom;
         prev_pos = pos;
         num_loci++;
+
+        if (num_loci == (offset_hap_size * hap_size) + 1) {
+            next_start_pos = pos;
+        }
 
     }
 
