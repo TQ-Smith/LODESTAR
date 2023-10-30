@@ -26,9 +26,8 @@ double** create_real_matrix(int m, int n) {
 }
 
 double** create_and_fill_real_matrix(int value, int m, int n) {
-    double** matrix = new double*[m];
+    double** matrix = create_real_matrix(m, n);
     for (int i = 0; i < m; i++) {
-        matrix[i] = new double[n];
         // Fill each row.
         for (int j = i + 1; j < n; j++) {
             matrix[i][j] = matrix[j][i] = value;

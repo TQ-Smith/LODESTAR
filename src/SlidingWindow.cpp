@@ -17,13 +17,7 @@
 // Used for the ceiling function.
 #include <cmath>
 
-// We define a macro to calculate the number of different alleles between two diploid individuals
-//  at a single locus with the "Genotype" encoding from VCFParser.
-#define LOCUS_ASD(i, j) (0.5 * (!!(i ^ j) + !(i & j)))
-
-// We define a macro to convert ASD to ASD over the whole haplotype. If two samples have an 
-//  ASD greater than or equal to 1 over a set of loci, then the haplotype ASD between the two is 1.
-#define HAPLOTYPE_ASD(d) (d >= 1 ? 1 : d);
+#define LOCUS_ASD(i, j) (!!(i ^ j) + !(i & j))
 
 #include <iostream>
 using namespace std;
@@ -54,15 +48,12 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
     list<window*>* windows = new list<window*>;
 
     Genotype* genotypes = new Genotype[n];
-
-    double** window_asd = new double*[n];
-    double** auxilary_asd = new double*[n];
-    double** next_asd = new double*[n];
-    double** global_asd = new double*[n];
-    for (int i = 0; i < n; i++) {
-        window_asd[i] = new double[n]; auxilary_asd[i] = new double[n]; next_asd[i] = new double[n]; global_asd[i] = new double[n];
-        window_asd[i][i] = auxilary_asd[i][i] = next_asd[i][i] = global_asd[i][i] = 0;
-    }
+    Genotype* prev_genotypes = new Genotype[n];
+    Genotype* temp_genotypes = NULL;
+    double** window_asd = create_and_fill_real_matrix(0, n, n);
+    double** auxilary_asd = create_and_fill_real_matrix(0, n, n);
+    double** next_asd = create_and_fill_real_matrix(0, n, n);
+    double** global_asd = create_and_fill_real_matrix(0, n, n);
 
     string chrom;
     int pos;
@@ -75,7 +66,6 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
 
     string prev_chrom = "";
     int start_pos, next_start_pos, prev_pos, num_haps, num_loci = 0, num_global_haps = 0;
-    double hap_asd;
 
     while ( true ) {
 
@@ -94,18 +84,21 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
 
             for (int i = 0; i < n; i++) {
                 for (int j = i + 1; j < n; j++) {
-                    hap_asd = HAPLOTYPE_ASD(auxilary_asd[i][j]);
                     next_asd[i][j] = next_asd[j][i] = window_asd[i][j] - auxilary_asd[j][i];
-                    window_asd[i][j] = window_asd[j][i] = (window_asd[i][j] + hap_asd) / num_haps;
+                    window_asd[i][j] = window_asd[j][i] = (window_asd[i][j] + auxilary_asd[i][j]) / (2 * num_haps);
                     if (!nextRecord) {
-                        global_asd[i][j] = global_asd[j][i] = (global_asd[i][j] + hap_asd) / num_global_haps;
+                        if (chrom == prev_chrom && num_loci != (hap_size * window_hap_size)) {
+                            global_asd[i][j] = global_asd[j][i] += auxilary_asd[i][j];
+                        }
+                        global_asd[i][j] = global_asd[j][i] = global_asd[i][j] / (2.0 * num_global_haps);
                     }
                     auxilary_asd[j][i] = 0;
                 }
                 window_asd[i][i] = next_asd[i][i] = 0;
             }
+            
             cout << "Window on " << prev_chrom << " from " << start_pos << " to " << prev_pos << endl;
-            print_real_matrix(window_asd, n, n, 1, 1);
+            print_real_matrix(window_asd, n, n, 1, 3);
             cout << endl;
             windows -> push_back(create_mds_window(prev_chrom, start_pos, prev_pos, num_loci, window_asd, &maxDimReached, &doesConverge, d, e, n, k, useFastMap));
 
@@ -113,7 +106,7 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
             window_asd = next_asd;
             next_asd = temp;
 
-            num_loci -= hap_size * offset_hap_size;
+            num_loci -= (num_loci / hap_size) * hap_size;
             start_pos = (window_hap_size == offset_hap_size) ? pos : next_start_pos;
 
         }
@@ -128,37 +121,47 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
             start_pos = pos;
         }
 
+        num_loci++;
+
+        double asd;
+
         for (int i = 0; i < n; i++) {
             for (int j = i + 1; j < n; j++) {
                 if (prev_chrom != chrom) {
+                    global_asd[i][j] = global_asd[j][i] += auxilary_asd[i][j];
                     window_asd[i][j] = window_asd[j][i] = auxilary_asd[i][j] = auxilary_asd[j][i] = next_asd[i][j] = next_asd[j][i] = 0;
                 }
-                if (num_loci != 0 && num_loci % hap_size == 0) {
-                    hap_asd = HAPLOTYPE_ASD(auxilary_asd[i][j]);
-                    window_asd[i][j] = window_asd[j][i] += hap_asd;
-                    global_asd[i][j] = global_asd[j][i] += hap_asd;
+                asd = LOCUS_ASD(genotypes[i], genotypes[j]);
+                if (num_loci % hap_size == 0) {
+                    window_asd[i][j] = window_asd[j][i] += auxilary_asd[i][j];
+                    global_asd[i][j] = global_asd[j][i] += auxilary_asd[i][j];
                     if (num_loci <= hap_size * offset_hap_size) {
-                        auxilary_asd[j][i] += hap_asd;
+                        auxilary_asd[j][i] += auxilary_asd[i][j];
                     }
                     auxilary_asd[i][j] = 0;
                 }
-                auxilary_asd[i][j] += LOCUS_ASD(genotypes[i], genotypes[j]);
             }
         }
 
-        prev_chrom = chrom;
-        prev_pos = pos;
-        num_loci++;
+        temp_genotypes = prev_genotypes;
+        prev_genotypes = genotypes;
+        genotypes = temp_genotypes;
 
         if (num_loci == (offset_hap_size * hap_size) + 1) {
             next_start_pos = pos;
         }
 
+        prev_chrom = chrom;
+        prev_pos = pos;
+
     }
 
+    cout << "Global" << endl;
+    print_real_matrix(global_asd, n, n, 3, 3);
     windows -> push_back(create_mds_window("Global", windows -> front() -> start_position, prev_pos, num_global_haps, global_asd, &maxDimReached, &doesConverge, d, e, n, k, useFastMap));
 
     delete [] genotypes;
+    delete [] prev_genotypes;
     destroy_real_matrix(window_asd, n);
     destroy_real_matrix(auxilary_asd, n);
     destroy_real_matrix(next_asd, n);
