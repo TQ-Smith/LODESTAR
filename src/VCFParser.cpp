@@ -15,10 +15,6 @@
 // Used for stringstream.
 #include <sstream>
 
-// A macro to hide the implementation of
-//  creating a genotype.
-#define GENOTPYE(a, b) (0x00000000 | 1 << a | 1 << b)
-
 VCFParser::VCFParser(string file_name) {
 
     // Try to open file.

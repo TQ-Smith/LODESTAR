@@ -6,13 +6,16 @@
 // Purpose: Unit test the VCF file parser.
 //
 
+// Import genotype operations.
+#include "../src/Genotype.hpp"
+
+// Import the parser.
+#include "../src/VCFParser.hpp"
+
 // Used for printing and file name.
 #include <iostream>
 
 using namespace std;
-
-// Import the parser.
-#include "../src/VCFParser.hpp"
 
 // Used for testing.
 #include <cassert>
@@ -45,13 +48,15 @@ int main() {
 
     // Read in the first locus.
     assert(parser.getNextLocus(&chromosome, &position, &isMonomorphic, &isComplete, genotypes));
-    assert(chromosome == "19");
-    assert(position == 111);
+    assert(chromosome == "1");
+    assert(position == 100);
     assert(!isMonomorphic);
     assert(isComplete);
-    assert(genotypes[0] == 1);
-    assert(genotypes[1] == 1);
-    assert(genotypes[2] == 3);
+    assert(genotypes[0] == 3);
+    // Since the genotype is 1/0, the most significant bit will be set.
+    assert(genotypes[1] == 0x80000003);
+    // Since the genotype is 1/1, the most significant bit will be set.
+    assert(genotypes[2] == 0x80000002);
 
     // Read in the second locus.
     assert(parser.getNextLocus(&chromosome, &position, &isMonomorphic, &isComplete, genotypes));
@@ -63,9 +68,9 @@ int main() {
     assert(!isMonomorphic);
     assert(isComplete);
 
-    // Read in the fourth locus. This one is monomorphic.
+    // Read in the fourth locus.
     assert(parser.getNextLocus(&chromosome, &position, &isMonomorphic, &isComplete, genotypes));
-    assert(isMonomorphic);
+    assert(!isMonomorphic);
     assert(isComplete);
 
     // Read in the fifth locus.
@@ -83,11 +88,15 @@ int main() {
     assert(!isMonomorphic);
     assert(isComplete);
 
-    // Read in the eighth locus. This one is not complete.
+    // Read in the eighth locus.
+    assert(parser.getNextLocus(&chromosome, &position, &isMonomorphic, &isComplete, genotypes));
+    assert(isComplete);
+
+    // Read in the ninth locus. This one is not complete.
     assert(parser.getNextLocus(&chromosome, &position, &isMonomorphic, &isComplete, genotypes));
     assert(!isComplete);
 
-    // Read in the ninth locus. This one is not complete.
+    // Read in the tenth locus. This one is not complete.
     assert(parser.getNextLocus(&chromosome, &position, &isMonomorphic, &isComplete, genotypes));
     assert(!isComplete);
 

@@ -9,6 +9,9 @@
 #ifndef _VCF_PARSER_HPP_
 #define _VCF_PARSER_HPP_
 
+// Used to create genotypes.
+#include "Genotype.hpp"
+
 // Used to read in a compressed/uncompressed file.
 #include "../lib/gzstream.h"
 
@@ -20,10 +23,6 @@ using namespace std;
 
 // Used to hold list of sample names.
 #include <list>
-
-// We typedef int to represent a genotype at a locus.
-//  This slight distinction should help readability.
-typedef int Genotype;
 
 class VCFParser {
 

@@ -65,7 +65,7 @@ src/SlidingWindow.o:
 # Make the unit tests for LODESTAR.
 #	Note including the utils unit tests.
 .PHONY: bin/unit_tests
-bin/unit_tests: bin/unit_tests/unit_test_procrustes bin/unit_tests/unit_test_vcf_parser bin/unit_tests/unit_test_sliding_window
+bin/unit_tests: bin/unit_tests/unit_test_procrustes bin/unit_tests/unit_test_haplotype_asd bin/unit_tests/unit_test_vcf_parser bin/unit_tests/unit_test_sliding_window
 
 # Create the Procrustes unit test.
 bin/unit_tests/unit_test_procrustes: src/Procrustes.o utils/LinearAlgebra/MatrixOperations.o unit_tests/unit_test_procrustes.o
@@ -74,6 +74,10 @@ bin/unit_tests/unit_test_procrustes: src/Procrustes.o utils/LinearAlgebra/Matrix
 # Compile procrustes analysis unit test.
 unit_tests/unit_test_procrustes.o:
 	g++ $(CFLAGS) unit_tests/unit_test_procrustes.cpp -o unit_tests/unit_test_procrustes.o
+
+# Create the haplotype asd unit test.
+bin/unit_tests/unit_test_haplotype_asd: 
+	g++ $(LFLAGS) bin/unit_tests/unit_test_haplotype_asd unit_tests/unit_test_haplotype_asd.cpp
 
 # Create the VCFParser unit test.
 bin/unit_tests/unit_test_vcf_parser: lib/gzstream.o src/VCFParser.o unit_tests/unit_test_vcf_parser.o
