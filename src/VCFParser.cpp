@@ -131,7 +131,7 @@ bool VCFParser::getNextLocus(string* chromosome, int* position, bool* isMonomorp
                 }
 
                 // Create and store our genotype.
-                genotypes[count - 9] = GENOTPYE(stoi(sample.substr(0, delim)), stoi(sample.substr(delim + 1, sample.length() - delim)));
+                genotypes[count - 9] = GENOTYPE(stoi(sample.substr(0, delim)), stoi(sample.substr(delim + 1, sample.length() - delim)));
 
                 // Test if monomorphic and keep track of previous genotype.
                 if (count > 9 && genotypes[count - 9] != previous_genotype) {
@@ -154,6 +154,10 @@ bool VCFParser::getNextLocus(string* chromosome, int* position, bool* isMonomorp
 int VCFParser::getNumberOfSamples() {
     // Return the number of names.
     return sample_names.size();
+}
+
+bool VCFParser::isOpen() {
+    return in_file -> fail();
 }
 
 string* VCFParser::getSampleNames() {

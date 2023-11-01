@@ -22,9 +22,14 @@ using namespace std;
 
 int main() {
 
+    // Test if is open works.
+    VCFParser foo("foo");
+    assert(!foo.isOpen());
+
     // Load sample file for testing.
     //  We are also testing gzstream.
     VCFParser parser("unit_tests/sample1.vcf.gz");
+    assert(parser.isOpen());
 
     // First, we test the constructor and the getter for
     //  the number of samples and the names of the samples.

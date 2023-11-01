@@ -49,11 +49,10 @@ typedef int Genotype;
 //  It is the bit representation of the following:
 //      if (d == 2 || asd == 2)
 //          2
+//      else if (LEFT_ALLELE(a) == LEFT_ALLELE(b) && RIGHT_ALLELE(a) == RIGHT_ALLELE(b))
+//          d
 //      else
-//          if (LEFT_ALLELE(a) == LEFT_ALLELE(b) && RIGHT_ALLELE(a) == RIGHT_ALLELE(b))
-//              d
-//          else
-//              d + 1
+//          d + 1
 // Accepts:
 //  int d -> The current ASD of the haplotype.
 //  int asd -> The ORIENTED_ASD of the two new genotypes.

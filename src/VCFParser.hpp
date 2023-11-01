@@ -58,6 +58,11 @@ class VCFParser {
         // Returns: string*, The array of the sample names.
         string* getSampleNames();
 
+        // Tests if file is open.
+        // Accepts: void.
+        // Returns: bool, If the file is open.
+        bool isOpen();
+
         // Destroy the parser object.
         // Accepts: void.
         // Returns: void.
