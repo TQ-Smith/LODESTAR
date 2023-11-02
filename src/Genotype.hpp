@@ -44,32 +44,16 @@ typedef int Genotype;
 // A macro to calculate the number of shared allele between two genotypes WITH orientation.
 #define ORIENTED_ASD(a, b) (!!(LEFT_ALLELE(a) ^ LEFT_ALLELE(b)) + !!((RIGHT_ALLELE(a) ^ RIGHT_ALLELE(b))))
 
+// A macro to form the left haplotype between two genotype.
+//  If the greater of the two alleles comes last, set most significant bit.
+#define LEFT_HAPLOTYPE(a, b) (LEFT_ALLELE(a) | LEFT_ALLELE(b) | ((LEFT_ALLELE(b) >= LEFT_ALLELE(a)) << 31))
+
+// A macro to form the right haplotype between two genotype.
+//  If the greater of the two alleles comes last, set most significant bit.
+#define RIGHT_HAPLOTYPE(a, b) (RIGHT_ALLELE(a) | RIGHT_ALLELE(b) | ((RIGHT_ALLELE(b) >= RIGHT_ALLELE(a)) << 31))
+
 // A macro to calculate the number of different haplotypes between two sample,
 //  given the current haplotype's ASD and the next genotypes of the samples.
-//  It is the bit representation of the following:
 //
-//      if (asd == 2) {
-//          return 2;
-//      } else if ((UNORIENTED_ASD(a1, b1) == 0) && (ORIENTATION(a1) != ORIENTATION(b1))) {
-//          return UNORIENTED_ASD(a2, b2);
-//      } else if (asd == 1) {
-//          return 2;
-//      } else {
-//          return ORIENTED_ASD(a2, b2);
-//      }
-//      
-//      
-// Accepts:
-//  int asd -> The current asd of the haplotype.
-//  Genotype a1 -> The first sample's previous genotype.
-//  Genotype b1 -> The second sample's previous genotype.
-//  Genotype a2 -> The first sample's current genotype.
-//  Genotype b2 -> The second sample's current genotype.
-//
-#define HAPLOTYPE_ASD(asd, a1, b1, a2, b2) (\
-(!(asd ^ 2)) * 2 +\
-(!!(asd ^ 2) && (!UNORIENTED_ASD(a1, b1) && !!(ORIENTATION(a1) ^ ORIENTATION(b1)))) * UNORIENTED_ASD(a2, b2) +\
-(!!(asd ^ 2) && !(!UNORIENTED_ASD(a1, b1) && !!(ORIENTATION(a1) ^ ORIENTATION(b1))) && !(asd ^ 1)) * 2 +\
-(!!(asd ^ 2) && !(!UNORIENTED_ASD(a1, b1) && !!(ORIENTATION(a1) ^ ORIENTATION(b1))) && !!(asd ^ 1)) * ORIENTED_ASD(a2, b2))
 
 #endif

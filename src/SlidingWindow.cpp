@@ -20,6 +20,18 @@
 #include <iostream>
 using namespace std;
 
+int HAPLOTYPE_ASD(int asd, int left_a, int right_a, int left_b, int right_b) {
+    if (asd == 2) {
+        return 2;
+    } else if (!(left_a ^ right_a ^ left_b ^ right_b)) {
+        return 0;
+    } else if (left_a != left_b && left_a != right_b && right_a != left_b && right_a != right_b ) {
+        return 2;
+    } else {
+        return 1;
+    }
+}
+
 // A helper function used to allocate a window structure, set fields, and perfrom MDS.
 //  NOTE: Will change with threading.
 // Accepts:
@@ -118,6 +130,9 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
             for (int i = 0; i < n; i++) {
                 for (int j = i + 1; j < n; j++) {
                     next_asd[i][j] = next_asd[j][i] = window_asd[i][j] - auxilary_asd[j][i];
+                    if (num_loci == 1) {
+                        auxilary_asd[i][j] = UNORIENTED_ASD(genotypes[i], genotypes[j]);
+                    }
                     window_asd[i][j] = window_asd[j][i] = (window_asd[i][j] + auxilary_asd[i][j]) / (2.0 * num_haps);
                     if (!nextRecord) {
                         if (chrom == prev_chrom && num_loci != (hap_size * window_hap_size)) {
@@ -154,13 +169,13 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
             start_pos = pos;
         }
 
+        num_loci++;
+
         if (num_loci % hap_size == 0) {
             for (int i = 0; i < n; i++) {
                 prev_genotypes[i] = genotypes[i];
             }
-        } 
-
-        num_loci++;
+        }
 
         for (int i = 0; i < n; i++) {
             for (int j = i + 1; j < n; j++) {
@@ -168,9 +183,18 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
                     global_asd[i][j] = global_asd[j][i] += auxilary_asd[i][j];
                     window_asd[i][j] = window_asd[j][i] = auxilary_asd[i][j] = auxilary_asd[j][i] = next_asd[i][j] = next_asd[j][i] = 0;
                 }
+                // cout << prev_genotypes[i] << " " << prev_genotypes[j] << " " << genotypes[i] << " " << genotypes[j] << endl;
                 // Take care of case when hap size = 1.
-                cout << "Haplotype ASD between " << i << " and " << j << " is " << HAPLOTYPE_ASD(auxilary_asd[i][j], prev_genotypes[i], prev_genotypes[j], genotypes[i], genotypes[j]) << endl;
-                auxilary_asd[i][j] = HAPLOTYPE_ASD(auxilary_asd[i][j], prev_genotypes[i], prev_genotypes[j], genotypes[i], genotypes[j]);
+                if (num_loci == 1 && hap_size == 1) {
+                    auxilary_asd[i][j] = UNORIENTED_ASD(genotypes[i], genotypes[j]);
+                } else {
+                    if (num_loci == 1) {
+                        auxilary_asd[i][j] = 0;
+                    } else {
+                        auxilary_asd[i][j] = HAPLOTYPE_ASD(auxilary_asd[i][j], LEFT_HAPLOTYPE(prev_genotypes[i], genotypes[i]), RIGHT_HAPLOTYPE(prev_genotypes[i], genotypes[i]), LEFT_HAPLOTYPE(prev_genotypes[j], genotypes[j]), RIGHT_HAPLOTYPE(prev_genotypes[j], genotypes[j]));
+                    }
+                }
+                cout << "Haplotype ASD between " << i << " and " << j << " is " << auxilary_asd[i][j] << endl;
                 if (num_loci % hap_size == 0) {
                     window_asd[i][j] = window_asd[j][i] += auxilary_asd[i][j];
                     global_asd[i][j] = global_asd[j][i] += auxilary_asd[i][j];
@@ -180,16 +204,18 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
                     auxilary_asd[i][j] = 0;
                 }
             }
-        }
-
-        if (num_loci == (offset_hap_size * hap_size) + 1) {
-            next_start_pos = pos;
+            if (num_loci > 1 && ORIENTED_ASD(genotypes[i], genotypes[i]) != 0) {
+                prev_genotypes[i] = genotypes[i];
+            }
         }
 
         Genotype* temp_geno = prev_genotypes;
         prev_genotypes = genotypes;
         genotypes = temp_geno;
 
+        if (num_loci == (offset_hap_size * hap_size) + 1) {
+            next_start_pos = pos;
+        }
 
         prev_chrom = chrom;
         prev_pos = pos;
