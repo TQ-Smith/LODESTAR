@@ -77,6 +77,7 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
     list<window*>* windows = new list<window*>;
 
     Genotype* genotypes = new Genotype[n];
+    Genotype* prev_genotypes = new Genotype[n];
     string chrom;
     int pos;
     bool isMonomorphic, isComplete, nextRecord;
@@ -128,8 +129,16 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
                 }
                 window_asd[i][i] = next_asd[i][i] = 0;
             }
+
+            cout << "Our ASD matrix for the window on " << chrom << " from " << start_pos << " to " << prev_pos << " with " << num_haps << " haplotypes:" << endl;
+            print_real_matrix(window_asd, n, n, 2, 2);
+            cout << endl;
             
             windows -> push_back(create_window_with_mds(prev_chrom, start_pos, prev_pos, num_loci, n, k, useFastMap, window_asd, d, e));
+
+            double** temp = window_asd;
+            window_asd = next_asd;
+            next_asd = temp;
 
             num_loci -= (num_loci / hap_size) * hap_size;
             start_pos = (window_hap_size == offset_hap_size) ? pos : next_start_pos;
@@ -145,6 +154,12 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
             start_pos = pos;
         }
 
+        if (num_loci % hap_size == 0) {
+            for (int i = 0; i < n; i++) {
+                prev_genotypes[i] = genotypes[i];
+            }
+        } 
+
         num_loci++;
 
         for (int i = 0; i < n; i++) {
@@ -153,8 +168,9 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
                     global_asd[i][j] = global_asd[j][i] += auxilary_asd[i][j];
                     window_asd[i][j] = window_asd[j][i] = auxilary_asd[i][j] = auxilary_asd[j][i] = next_asd[i][j] = next_asd[j][i] = 0;
                 }
-                auxilary_asd[i][j] += !(hap_size ^ 1) * UNORIENTED_ASD(genotypes[i], genotypes[j]) 
-                                    + !!(hap_size ^ 1) * HAPLOTYPE_ASD(auxilary_asd[i][j], ORIENTED_ASD(genotypes[i], genotypes[j]), genotypes[i], genotypes[j]);
+                // Take care of case when hap size = 1.
+                cout << "Haplotype ASD between " << i << " and " << j << " is " << HAPLOTYPE_ASD(auxilary_asd[i][j], prev_genotypes[i], prev_genotypes[j], genotypes[i], genotypes[j]) << endl;
+                auxilary_asd[i][j] = HAPLOTYPE_ASD(auxilary_asd[i][j], prev_genotypes[i], prev_genotypes[j], genotypes[i], genotypes[j]);
                 if (num_loci % hap_size == 0) {
                     window_asd[i][j] = window_asd[j][i] += auxilary_asd[i][j];
                     global_asd[i][j] = global_asd[j][i] += auxilary_asd[i][j];
@@ -170,21 +186,31 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_siz
             next_start_pos = pos;
         }
 
+        Genotype* temp_geno = prev_genotypes;
+        prev_genotypes = genotypes;
+        genotypes = temp_geno;
+
+
         prev_chrom = chrom;
         prev_pos = pos;
     
     }
 
+    cout << "Our ASD matrix for the global window from " << windows -> front() -> start_position << " to " << prev_pos << " with " << num_global_haps << " haplotypes:" << endl;
+    print_real_matrix(global_asd, n, n, 2, 2);
+    cout << endl;
+
     windows -> push_back(create_window_with_mds("Global", windows -> front() -> start_position, prev_pos, num_global_haps, n, k, useFastMap, global_asd, d, e));
 
     delete [] genotypes;
+    delete [] prev_genotypes;
     if (!useFastMap) {
         delete [] d;
         delete [] e;
     }
     for (int i = 0; i < n; i++) {
-        delete [] window_asd; delete [] global_asd;
-        delete [] auxilary_asd; delete [] next_asd;
+        delete [] window_asd[i]; delete [] global_asd[i];
+        delete [] auxilary_asd[i]; delete [] next_asd[i];
     }
     delete [] window_asd; delete [] global_asd; delete [] auxilary_asd; delete [] next_asd;
 

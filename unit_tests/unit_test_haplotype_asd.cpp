@@ -17,74 +17,98 @@
 #include <bitset>
 using namespace std;
 
+/* Used to test the macro before I wrote the bit-op form.
+int h_asd(int asd, int a1, int b1, int a2, int b2) {
+
+    if (asd == 2) {
+        return 2;
+    } else if ((UNORIENTED_ASD(a1, b1) == 0) && (ORIENTATION(a1) != ORIENTATION(b1))) {
+        return UNORIENTED_ASD(a2, b2);
+    } else if (asd == 1) {
+        return 2;
+    } else {
+        return ORIENTED_ASD(a2, b2);
+    }
+
+}
+*/
+
 int main()  {
 
     // Create two genotypes.
     //  This was already tested in unit_test_vcf_parser.cpp.
-    Genotype a = GENOTYPE(1, 0);
-    Genotype b = GENOTYPE(1, 2);
-    Genotype g = GENOTYPE(1, 1);
+    Genotype a = GENOTYPE(0, 1);
+    Genotype b = GENOTYPE(1, 0);
+    Genotype c = GENOTYPE(1, 1);
 
-    // Test GET_ALLELES.
+    // Test get alleles.
     assert(GET_ALLELES(a) == 0x00000003);
-    assert(GET_ALLELES(b) == 0x00000006);
+    assert(GET_ALLELES(b) == 0x00000003);
+    assert(GET_ALLELES(c) == 0x00000002);
 
-    // Test ORIENTATION.
-    assert(ORIENTATION(a) == 1);
-    assert(ORIENTATION(b) == 0);
+    // Test orientation.
+    assert(ORIENTATION(a) == 0);
+    assert(ORIENTATION(b) == 1);
+    assert(ORIENTATION(c) == 1);
 
     // Test LSA.
     assert(LSA(a) == 0x00000001);
-    assert(LSA(b) == 0x00000002);
+    assert(LSA(b) == 0x00000001);
+    assert(LSA(c) == 0x00000002);
 
-    // Test LEFT_ALLELE.
-    assert(LEFT_ALLELE(a) == 2);
-    assert(LEFT_ALLELE(b) == 2);
-    assert(LEFT_ALLELE(g) == 2);
+    // Test left allele.
+    assert(LEFT_ALLELE(a) == 0x00000001);
+    assert(LEFT_ALLELE(b) == 0x00000002);
+    assert(LEFT_ALLELE(c) == 0x00000002);
 
-    // Test RIGHT_ALLELE.
-    assert(RIGHT_ALLELE(a) == 1);
-    assert(RIGHT_ALLELE(b) == 4);
-    assert(RIGHT_ALLELE(g) == 2);
+    // Test right allele.
+    assert(RIGHT_ALLELE(a) == 0x00000002);
+    assert(RIGHT_ALLELE(b) == 0x00000001);
+    assert(RIGHT_ALLELE(c) == 0x00000002);
 
-    // Test UNORIENTED_ASD.
-    assert(UNORIENTED_ASD(a, b) == 1);
+    // Test unoriented ASD.
+    assert(UNORIENTED_ASD(a, b) == 0);
+    assert(UNORIENTED_ASD(a, c) == 1);
+    assert(UNORIENTED_ASD(b, c) == 1);
 
-    // Test ORIENTED_ASD.
-    assert(ORIENTED_ASD(a, b) == 1);
-    Genotype c = GENOTYPE(1, 3);
-    Genotype f = GENOTYPE(1, 2);
-    Genotype e = GENOTYPE(2, 2);
+    // Test oriented ASD.
+    assert(ORIENTED_ASD(a, b) == 2);
+    assert(ORIENTED_ASD(a, c) == 1);
     assert(ORIENTED_ASD(b, c) == 1);
-    assert(ORIENTED_ASD(b, f) == 0);
-    assert(ORIENTED_ASD(a, e) == 2);
 
-    // Create out samples' haplotypes.
-    Genotype sample1[4];
-    sample1[0] = GENOTYPE(1, 2);
-    sample1[1] = GENOTYPE(1, 1);
-    sample1[2] = GENOTYPE(2, 1);
-    sample1[3] = GENOTYPE(2, 2);
+    // Create next loci in the haplotype.
+    Genotype a2 = GENOTYPE(3, 3);
+    Genotype b2 = GENOTYPE(3, 2);
+    Genotype c2 = GENOTYPE(2, 2);
 
-    Genotype sample2[4];
-    sample2[0] = GENOTYPE(1, 2);
-    sample2[1] = GENOTYPE(1, 2);
-    sample2[2] = GENOTYPE(2, 2);
-    sample2[3] = GENOTYPE(2, 2);
+    // The asd values
+    int ab_asd = 0, bc_asd = 0, ac_asd = 0;
 
-    // Distance between samples starts off as 0.
-    int d = 0;
+    // Test haplotype asd. I *think* I got all cases.
+    assert((ab_asd = HAPLOTYPE_ASD(ab_asd, a, b, a, b)) == 0);
+    assert((bc_asd = HAPLOTYPE_ASD(bc_asd, b, c, b, c)) == 1);
+    assert((ac_asd = HAPLOTYPE_ASD(ac_asd, a, c, a, c)) == 1);
 
-    // Read in the first locus.
-    assert((d = HAPLOTYPE_ASD(d, ORIENTED_ASD(sample1[0], sample2[0]), sample1[0], sample2[1])) == 0);
-    
-    // Read in the second locus.
-    assert((d = HAPLOTYPE_ASD(d, ORIENTED_ASD(sample1[1], sample2[1]), sample1[1], sample2[1])) == 1);
+    assert((ab_asd = HAPLOTYPE_ASD(ab_asd, a, b, a2, b2)) == 1);
+    assert((bc_asd = HAPLOTYPE_ASD(bc_asd, b, c, b2, c2)) == 2);
+    assert((ac_asd = HAPLOTYPE_ASD(ac_asd, a, c, a2, c2)) == 2);
 
-    // Read in the third locus.
-    assert((d = HAPLOTYPE_ASD(d, ORIENTED_ASD(sample1[2], sample2[2]), sample1[2], sample2[2])) == 2);
+    Genotype e = GENOTYPE(2, 3);
+    Genotype g = GENOTYPE(2, 3);
+    Genotype e2 = GENOTYPE(4, 5);
+    Genotype g2 = GENOTYPE(5, 4);
+    int eg_asd = 0;
 
-    // Read in the fourth locus.
-    assert((d = HAPLOTYPE_ASD(d, ORIENTED_ASD(sample1[3], sample2[3]), sample1[3], sample2[3])) == 2);
+    assert((eg_asd = HAPLOTYPE_ASD(eg_asd, e, g, e, g)) == 0);
+    assert((eg_asd = HAPLOTYPE_ASD(eg_asd, e, g, e2, g2)) == 2);
+
+    Genotype y = GENOTYPE(0, 1);
+    Genotype z = GENOTYPE(1, 0);
+    Genotype y2 = GENOTYPE(1, 0);
+    Genotype z2 = GENOTYPE(0, 1);
+    int yz_asd = 0;
+
+    assert((yz_asd = HAPLOTYPE_ASD(yz_asd, y, z, y, z)) == 0);
+    assert((yz_asd = HAPLOTYPE_ASD(yz_asd, y, z, y2, z2)) == 0);
 
 }
