@@ -52,8 +52,4 @@ typedef int Genotype;
 //  If the greater of the two alleles comes last, set most significant bit.
 #define RIGHT_HAPLOTYPE(a, b) (RIGHT_ALLELE(a) | RIGHT_ALLELE(b) | ((RIGHT_ALLELE(b) >= RIGHT_ALLELE(a)) << 31))
 
-// A macro to calculate the number of different haplotypes between two sample,
-//  given the current haplotype's ASD and the next genotypes of the samples.
-//
-
 #endif

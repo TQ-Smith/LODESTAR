@@ -169,7 +169,7 @@ void CommandLineArgumentParser::parseCommandLine(int argc, char *argv[], bool* s
             // Add argument to current option's argument list
             //  and increment the number of arguments.
             opt -> option_arguments.push_back(string(argv[i]));
-            opt -> num_arguments++;
+            opt -> num_arguments += 1;
 
         }
 
@@ -181,6 +181,8 @@ void CommandLineArgumentParser::parseCommandLine(int argc, char *argv[], bool* s
 
 template <typename T>
 T* CommandLineArgumentParser::getOptionArguments(string option, int* num_arguments, bool* successfulOperation) {
+
+    option = form_option(option);
 
     // Make sure the argument exists.
     if (!arguments.count(option)) {
@@ -244,7 +246,8 @@ void CommandLineArgumentParser::printOptionDescriptions() {
 
     // Iterate through options and print  description.
     for (map<string, Option*>::iterator it = arguments.begin(); it != arguments.end(); it++) {
-        cout << it -> first << " " << it -> second -> description << endl;
+        // Could add formatting in the future.
+        cout << it -> first << " -> " << it -> second -> description << endl;
     }
 
 }
