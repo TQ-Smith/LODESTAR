@@ -28,16 +28,50 @@ int main() {
     cout << endl;
 
     int hap_size = 1;
-    int window_hap_size = 1;
-    int offset_hap_size = 1;
+    int win_size = 1;
+    int step_size = 1;
     int n = 3;
-    int k = 3;
+    int k = 2;
     bool useFastMap = false;
 
     cout << "We window the genome with haplotype size of 1 SNP, window size of 1 haplotype, and offset size of 1 haplotype." << endl;
     cout << "The generated windows:" << endl << endl;
 
-    list<window*>* windows = window_genome(parser, hap_size, window_hap_size, offset_hap_size, n, k, useFastMap);
+    list<window*>* windows = window_genome(parser, hap_size, win_size, step_size, n, k, useFastMap);
+    
+    for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++) {
+        cout << "Window on " << (*it) -> chromosome << " from " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci;
+        if ((*it) -> chromosome == "Global") {
+            cout << " haplotypes." << endl;
+        } else {
+            cout << " loci." << endl;
+        }
+        destroy_window(&*it, n);
+    }
+    delete parser;
+    delete windows;
+
+
+    cout << endl;
+    cout << "Second Test:" << endl;
+    cout << "-----------" << endl;
+    cout << endl;
+    cout << "Opening unit_tests/sample1.vcf.gz ..." << endl;
+    parser = new VCFParser("unit_tests/sample1.vcf.gz");
+    cout << "Opened unit_tests/sample1.vcf.gz ..." << endl;
+    cout << endl;
+
+    hap_size = 2;
+    win_size = 2;
+    step_size = 2;
+    n = 3;
+    k = 2;
+    useFastMap = false;
+
+    cout << "We window the genome with haplotype size of 2 SNP, window size of 2 haplotype, and offset size of 2 haplotype." << endl;
+    cout << "The generated windows:" << endl << endl;
+
+    windows = window_genome(parser, hap_size, win_size, step_size, n, k, useFastMap);
     
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++) {
         cout << "Window on " << (*it) -> chromosome << " from " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci;
@@ -52,8 +86,7 @@ int main() {
     delete windows;
 
     cout << endl;
-    cout << endl;
-    cout << "Second Test:" << endl;
+    cout << "Third Test:" << endl;
     cout << "-----------" << endl;
     cout << endl;
     cout << "Opening unit_tests/sample1.vcf.gz ..." << endl;
@@ -61,17 +94,84 @@ int main() {
     cout << "Opened unit_tests/sample1.vcf.gz ..." << endl;
     cout << endl;
 
-    hap_size = 2;
-    window_hap_size = 2;
-    offset_hap_size = 2;
+    hap_size = 3;
+    win_size = 1;
+    step_size = 1;
     n = 3;
-    k = 3;
+    k = 2;
     useFastMap = false;
 
-    cout << "We window the genome with haplotype size of 2 SNP, window size of 2 haplotype, and offset size of 2 haplotype." << endl;
+    cout << "We window the genome with haplotype size of 3 SNP, window size of 1 haplotype, and offset size of 1 haplotype." << endl;
     cout << "The generated windows:" << endl << endl;
 
-    windows = window_genome(parser, hap_size, window_hap_size, offset_hap_size, n, k, useFastMap);
+    windows = window_genome(parser, hap_size, win_size, step_size, n, k, useFastMap);
+    
+    for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++) {
+        cout << "Window on " << (*it) -> chromosome << " from " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci;
+        if ((*it) -> chromosome == "Global") {
+            cout << " haplotypes." << endl;
+        } else {
+            cout << " loci." << endl;
+        }
+        destroy_window(&*it, n);
+    }
+    delete parser;
+    delete windows;
+
+
+    cout << endl;
+    cout << "Fourth Test:" << endl;
+    cout << "-----------" << endl;
+    cout << endl;
+    cout << "Opening unit_tests/sample1.vcf.gz ..." << endl;
+    parser = new VCFParser("unit_tests/sample1.vcf.gz");
+    cout << "Opened unit_tests/sample1.vcf.gz ..." << endl;
+    cout << endl;
+
+    hap_size = 1;
+    win_size = 3;
+    step_size = 2;
+    n = 3;
+    k = 2;
+    useFastMap = false;
+
+    cout << "We window the genome with haplotype size of 1 SNP, window size of 3 haplotype, and offset size of 2 haplotype." << endl;
+    cout << "The generated windows:" << endl << endl;
+
+    windows = window_genome(parser, hap_size, win_size, step_size, n, k, useFastMap);
+    
+    for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++) {
+        cout << "Window on " << (*it) -> chromosome << " from " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci;
+        if ((*it) -> chromosome == "Global") {
+            cout << " haplotypes." << endl;
+        } else {
+            cout << " loci." << endl;
+        }
+        destroy_window(&*it, n);
+    }
+    delete parser;
+    delete windows;
+
+    cout << endl;
+    cout << "Fifth Test:" << endl;
+    cout << "-----------" << endl;
+    cout << endl;
+    cout << "Opening unit_tests/sample2.vcf.gz ..." << endl;
+    parser = new VCFParser("unit_tests/sample2.vcf.gz");
+    cout << "Opened unit_tests/sample2.vcf.gz ..." << endl;
+    cout << endl;
+
+    hap_size = 5;
+    win_size = 1;
+    step_size = 1;
+    n = 3;
+    k = 2;
+    useFastMap = false;
+
+    cout << "We window the genome with haplotype size of 5 SNP, window size of 1 haplotype, and offset size of 1 haplotype." << endl;
+    cout << "The generated windows:" << endl << endl;
+
+    windows = window_genome(parser, hap_size, win_size, step_size, n, k, useFastMap);
     
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++) {
         cout << "Window on " << (*it) -> chromosome << " from " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci;

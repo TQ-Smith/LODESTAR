@@ -17,20 +17,9 @@
 // Used for the ceiling function.
 #include <cmath>
 
-#include <iostream>
-using namespace std;
-
-int HAPLOTYPE_ASD(int asd, int left_a, int right_a, int left_b, int right_b) {
-    if (asd == 2) {
-        return 2;
-    } else if (!(left_a ^ right_a ^ left_b ^ right_b)) {
-        return 0;
-    } else if (left_a != left_b && left_a != right_b && right_a != left_b && right_a != right_b ) {
-        return 2;
-    } else {
-        return 1;
-    }
-}
+// Used for debugging.
+// #include <iostream>
+// using namespace std;
 
 // A helper function used to allocate a window structure, set fields, and perfrom MDS.
 //  NOTE: Will change with threading.
@@ -43,16 +32,18 @@ int HAPLOTYPE_ASD(int asd, int left_a, int right_a, int left_b, int right_b) {
 //  int k -> The dimension to project into.
 //  bool useFastMap -> Flag to indicate use of FastMap.
 //  double** D -> Our distance matrix between the samples.
-//  double* d -> An auxilary array used by classical MDS, holds eigenvalues. NULL if FastMap is used. -| -> If this function is used for threading,
-//  double* e -> Another auxilary array used by classical MDS. NULL if FastMap is used. ---------------| -> each thread must have their own d and e. 
 // Returns: window*, The pointer to the newly allocated window structure.
-window* create_window_with_mds(string chrom, int start_pos, int end_pos, int num_loci, int n, int k, bool useFastMap, double** D, double* d, double* e ) {
+window* create_window_with_mds(string chrom, int start_pos, int end_pos, int num_loci, int n, int k, bool useFastMap, double** D) {
     
     // Used for classical MDS to test convergence.
     bool doesConverge;
 
     // Used by FastMap to get the maximum dimension reached by the algorithm.
     int maxDimReached = k;
+
+    // Used for classical MDS. This is fast because k = 1, 2, or 3.
+    double d[k];
+    double e[k];
 
     // Allocate matrix to hold dimension reduced samples.
     double** points = create_real_matrix(n, k);
@@ -84,11 +75,154 @@ window* create_window_with_mds(string chrom, int start_pos, int end_pos, int num
 
 }
 
-list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_size, int offset_hap_size, int n, int k, bool useFastMap) {
+list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int step_size, int n, int k, bool useFastMap) {
     
     list<window*>* windows = new list<window*>;
 
-    
+    double** allele_counts  = new double*[n];
+    double** local_and_global_window = new double*[n];
+    Genotype** prev_genotypes  = new Genotype*[n];
+    for (int i = 0; i <  n; i++) {
+        allele_counts[i] = new double[n];
+        local_and_global_window[i] = new double[n];
+        prev_genotypes[i] = new Genotype[n];
+    }
+
+    string prev_chrom = "";
+    int start_pos, next_start_pos, prev_pos, num_haps, num_loci = 0, num_global_haps = 0;
+    int left_i, right_i, left_j, right_j;
+    bool newWindow = true;
+
+    string chrom;
+    int pos;
+    bool isMonomorphic, isComplete, nextRecord;
+    Genotype* genotypes = new Genotype[n];
+
+    while (true) {
+
+        nextRecord = parser -> getNextLocus(&chrom, &pos, &isMonomorphic, &isComplete, genotypes);
+
+        if (nextRecord && (isMonomorphic || !isComplete)) {
+            continue;
+        }
+
+        if (num_loci != 0 && (!nextRecord || chrom != prev_chrom || num_loci == (hap_size * win_size))) {
+
+            num_haps = ceil(num_loci / (double) hap_size);
+            num_global_haps += step_size;
+            if (chrom != prev_chrom || !nextRecord) {
+                num_global_haps += ceil((num_loci - hap_size * step_size) / (double) hap_size);
+            }
+
+            for (int i = 0; i < n; i++) {
+                for (int j = i + 1; j < n; j++) {
+                    allele_counts[i][i] = local_and_global_window[i][j];
+                    if (hap_size > 1 && num_loci == 1) {
+                        allele_counts[i][j] = UNORIENTED_ASD(prev_genotypes[i][j], prev_genotypes[j][i]);
+                    }
+                    local_and_global_window[i][j] -= allele_counts[j][i];
+                    if ( hap_size != 1) {
+                        local_and_global_window[j][i] += allele_counts[i][j];
+                    }
+                    if (!nextRecord || prev_chrom != chrom) {
+                        local_and_global_window[j][i] += local_and_global_window[i][j];
+                    }
+                    allele_counts[i][j] = (allele_counts[i][j] + allele_counts[i][i]) / (2 * num_haps);
+                    allele_counts[j][i] = allele_counts[i][j];
+                }
+                allele_counts[i][i] = 0;
+            }
+
+            // cout << "Window on " << prev_chrom << " from " << start_pos << " to " << prev_pos << endl;
+            // print_real_matrix(allele_counts, n, n, 2, 2);
+            // cout << endl;
+
+            windows -> push_back(create_window_with_mds(prev_chrom, start_pos, prev_pos, num_loci, n, k, useFastMap, allele_counts));
+
+            num_loci -= step_size * hap_size;
+            start_pos = (win_size == step_size) ? pos : next_start_pos;
+            newWindow = true;
+
+        }
+
+        if (!nextRecord) {
+            break;
+        }
+
+        if (prev_chrom != chrom) {
+            num_loci = 0;
+            next_start_pos = pos;
+            start_pos = pos;
+        }
+
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (chrom != prev_chrom) {
+                    local_and_global_window[i][j] = 0;
+                }
+                if (newWindow) {
+                    allele_counts[i][j] = allele_counts[j][i] = 0;
+                }
+                if (num_loci % hap_size == 0) {
+                    if (hap_size == 1) {
+                        allele_counts[i][j] = UNORIENTED_ASD(genotypes[i], genotypes[j]);
+                    }
+                    if (num_loci < hap_size * step_size) {
+                        allele_counts[j][i] += allele_counts[i][j];
+                    }
+                    local_and_global_window[i][j] += allele_counts[i][j];
+                    local_and_global_window[j][i] += allele_counts[i][j];
+                    prev_genotypes[i][j] = genotypes[i];
+                    prev_genotypes[j][i] = genotypes[j];
+                    allele_counts[i][j] = 0;
+                }
+                if (hap_size != 1 && num_loci > 0 && allele_counts[i][j] != 2  && ORIENTED_ASD(genotypes[i], genotypes[j]) != 0) {
+                    left_i = LEFT_HAPLOTYPE(prev_genotypes[i][j], genotypes[i]); 
+                    right_i = RIGHT_HAPLOTYPE(prev_genotypes[i][j], genotypes[i]);
+                    left_j = LEFT_HAPLOTYPE(prev_genotypes[j][i], genotypes[j]); 
+                    right_j = RIGHT_HAPLOTYPE(prev_genotypes[j][i], genotypes[j]);
+                    allele_counts[i][j] = HAPLOTYPE_ASD(left_i, right_i, left_j, right_j);
+                    prev_genotypes[i][j] = genotypes[i];
+                    prev_genotypes[j][i] = genotypes[j];
+                }
+            }
+        }
+
+        newWindow = false;
+        prev_chrom = chrom;
+        prev_pos = pos;
+        if (num_loci == step_size * hap_size) {
+            next_start_pos = pos;
+        }
+        num_loci++;
+
+    }
+
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            local_and_global_window[j][i] = local_and_global_window[j][i] / (2 * num_global_haps);
+            local_and_global_window[i][j] = local_and_global_window[j][i];
+        }
+        local_and_global_window[i][i] = 0;
+    }
+
+    // cout << "Global Windows" << endl;
+    // print_real_matrix(local_and_global_window, n, n, 2, 2);
+    // cout << endl;
+
+    windows -> push_back(create_window_with_mds("Global", windows -> front() -> start_position, prev_pos, num_global_haps, n, k, useFastMap, local_and_global_window));
+
+    for (int i = 0; i < n; i++) {
+        delete [] allele_counts[i];
+        delete [] local_and_global_window[i];
+        delete [] prev_genotypes[i];
+    }
+    delete [] allele_counts;
+    delete [] local_and_global_window;
+    delete [] prev_genotypes;
+
+    delete [] genotypes;
+
     return windows;
 
 }

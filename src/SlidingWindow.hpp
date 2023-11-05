@@ -36,6 +36,6 @@ struct window {
 
 };
 
-list<window*>* window_genome(VCFParser* parser, int hap_size, int window_hap_size, int offset_hap_size, int n, int k, bool useFastMap);
+list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int step_size, int n, int k, bool useFastMap);
 
 void destroy_window(window** w, int n);

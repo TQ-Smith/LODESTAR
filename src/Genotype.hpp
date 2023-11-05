@@ -52,4 +52,28 @@ typedef int Genotype;
 //  If the greater of the two alleles comes last, set most significant bit.
 #define RIGHT_HAPLOTYPE(a, b) (RIGHT_ALLELE(a) | RIGHT_ALLELE(b) | ((RIGHT_ALLELE(b) >= RIGHT_ALLELE(a)) << 31))
 
+// We define out haplotype asd function.
+//  NOTE: This only works for two loci.
+//        Counts the number of shared haplotypes.
+//  Equivalent to the following if-statement:
+//  
+//  if (left_a == left_b && right_a == right_b)
+//      return 0;
+//  else if ((left_a != left_b) && (left_a != left_b) && (right_a != left_b) && (right_a != right_b))
+//      return 2;
+//  else
+//      return 1;
+//
+// Accepts:
+//  left_a -> The left haplotype of sample a.
+//  right_a -> The right haplotype of sample a.
+//  left_b -> The left haplotype of sample b.
+//  right_b -> The right haplotype of sample b.
+// Returns: double, The ASD between the two haplotypes.
+#define HAPLOTYPE_ASD(left_a, right_a, left_b, right_b) (\
+    (!(left_a ^ left_b) && !(right_a ^ right_b)) * 0.0 +\
+    ((!!(left_a ^ left_b) || !!(right_a ^ right_b)) && (!!(left_a ^ left_b) && !!(left_a ^ left_b) && (!!right_a ^ left_b) && !!(right_a ^ right_b))) * 2.0 + \
+    ((!!(left_a ^ left_b) || !!(right_a ^ right_b)) && (!(left_a ^ left_b) || !(left_a ^ left_b) || !(right_a ^ left_b) || !(right_a ^ right_b))) * 1.0 \
+)
+
 #endif
