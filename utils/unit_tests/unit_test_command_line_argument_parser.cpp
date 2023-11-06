@@ -42,11 +42,6 @@ int main() {
     assert(successfulOperation);
     cout << "We have succesfully added two options!" << endl << endl;
 
-    // Test the printOptionDescription method.
-    cout << "We print the description of the options..." << endl;
-    parser.printOptionDescriptions();
-    cout << endl << endl;
-
     // Test the parseCommandLine method.
     cout << "Now, we parse the commandline arguments..." << endl;
     cout << "First, we throw errors." << endl;
@@ -82,6 +77,16 @@ int main() {
     char *argv4[8] = {"test", "--test1", "1", "2", "--help", "--t2", "0.01", "ab"};
     parser2.parseCommandLine(8,  argv4, &successfulOperation);
     assert(successfulOperation);
+
+    // Test get options and get option description.
+    int num_options;
+    string* options = parser2.getOptions();
+    string description;
+    cout << "The options are:" << endl;
+    for (int i = 0; i < parser2.getNumOptions(); i++) {
+        cout << options[i] << "\t" << parser2.getDescription(options[i], &successfulOperation) << endl;
+    }
+    delete [] options;
 
     // We test the getNumberOfArguments function.
     assert(parser2.getNumberOfArguments("test1", &successfulOperation) == 2);

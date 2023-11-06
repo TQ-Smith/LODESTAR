@@ -23,6 +23,7 @@ int main() {
     fill_real_matrix(b, 3, 2, 2);
     double** c = deep_copy_real_matrix(b, 2, 2);
     double** d = create_and_fill_real_matrix(4, 2, 4);
+    cout << "Here" << endl;
 
     // Test the printing of the matrices.
     cout << "Matrix A = " << endl;
