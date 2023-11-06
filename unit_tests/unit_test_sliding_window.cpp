@@ -3,7 +3,8 @@
 // Date: 31 October 2023
 // Author: TQ Smith
 // Principal Investigator: Dr. Zachary Szpiech
-// Purpose: Unit test the sliding window algorithm for ASD calculations.
+// Purpose: Unit test the sliding window algorithm and ASD calculations.
+//              Does not test MDS.
 //
 
 // Used for parsing VCF files.
@@ -18,6 +19,12 @@ using namespace std;
 
 int main() {
 
+    // NOTE: Must uncomment print statements in SlidingWindow.cpp to print
+    //  each window's dissimilarity matrix.
+
+    // I *think* this covers all major cases.
+
+    // Test single SNP, non overlapping windows.
     cout << endl;
     cout << "First Test:" << endl;
     cout << "-----------" << endl;
@@ -37,8 +44,10 @@ int main() {
     cout << "We window the genome with haplotype size of 1 SNP, window size of 1 haplotype, and offset size of 1 haplotype." << endl;
     cout << "The generated windows:" << endl << endl;
 
+    // Window the genome.
     list<window*>* windows = window_genome(parser, hap_size, win_size, step_size, n, k, useFastMap);
     
+    // Print windows.
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++) {
         cout << "Window on " << (*it) -> chromosome << " from " << (*it) -> start_position << " to " << (*it) -> end_position << " with " << (*it) -> num_loci;
         if ((*it) -> chromosome == "Global") {
@@ -51,7 +60,7 @@ int main() {
     delete parser;
     delete windows;
 
-
+    // Test mini-haplotype, non-overlapping windows
     cout << endl;
     cout << "Second Test:" << endl;
     cout << "-----------" << endl;
@@ -85,6 +94,7 @@ int main() {
     delete parser;
     delete windows;
 
+    // Test the case when a single SNP is in a mini-haplotype at the end of a chromosome.
     cout << endl;
     cout << "Third Test:" << endl;
     cout << "-----------" << endl;
@@ -119,6 +129,7 @@ int main() {
     delete windows;
 
 
+    // Test mini-haplotype, overlapping windows.
     cout << endl;
     cout << "Fourth Test:" << endl;
     cout << "-----------" << endl;
@@ -152,6 +163,8 @@ int main() {
     delete parser;
     delete windows;
 
+    // Test the case when different samples share identical genotypes
+    //  for mini-haplotypes.
     cout << endl;
     cout << "Fifth Test:" << endl;
     cout << "-----------" << endl;

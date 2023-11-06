@@ -51,15 +51,15 @@ int main()  {
     assert(RIGHT_ALLELE(b) == 0x00000002);
     assert(RIGHT_ALLELE(c) == 0x00000002);
 
-    // Test unoriented ASD.
-    assert(UNORIENTED_ASD(a, b) == 2);
-    assert(UNORIENTED_ASD(a, c) == 1);
-    assert(UNORIENTED_ASD(b, c) == 1);
+    // Test unoriented DISSIMILARITY.
+    assert(UNORIENTED_DISSIMILARITY(a, b) == 2);
+    assert(UNORIENTED_DISSIMILARITY(a, c) == 1);
+    assert(UNORIENTED_DISSIMILARITY(b, c) == 1);
 
-    // Test oriented ASD.
-    assert(ORIENTED_ASD(a, b) == 2);
-    assert(ORIENTED_ASD(a, c) == 1);
-    assert(ORIENTED_ASD(b, c) == 1);
+    // Test oriented DISSIMILARITY.
+    assert(ORIENTED_DISSIMILARITY(a, b) == 2);
+    assert(ORIENTED_DISSIMILARITY(a, c) == 1);
+    assert(ORIENTED_DISSIMILARITY(b, c) == 1);
 
     // Form part of the haplotype.
     Genotype a2 = GENOTYPE(1, 0);
@@ -77,13 +77,13 @@ int main()  {
     assert(RIGHT_HAPLOTYPE(c, c2) == 0x80000002);
 
     // Test our haplotype asd calculation.
-    //  NOTE: HAPLOTYPE_ASD only considers haplotypes of two loci.
+    //  NOTE: HAPLOTYPE_DISSIMILARITY only considers haplotypes of two loci.
     // Two different haplotypes.
-    assert(HAPLOTYPE_ASD(LEFT_HAPLOTYPE(a, a2), RIGHT_HAPLOTYPE(a, a2), LEFT_HAPLOTYPE(b, b2), RIGHT_HAPLOTYPE(b, b2)) == 2);
+    assert(HAPLOTYPE_DISSIMILARITY(LEFT_HAPLOTYPE(a, a2), RIGHT_HAPLOTYPE(a, a2), LEFT_HAPLOTYPE(b, b2), RIGHT_HAPLOTYPE(b, b2)) == 2);
     // Test only one in common.
-    assert(HAPLOTYPE_ASD(LEFT_HAPLOTYPE(b, b2), RIGHT_HAPLOTYPE(b, b2), LEFT_HAPLOTYPE(c, c2), RIGHT_HAPLOTYPE(c, c2)) == 1);
-    assert(HAPLOTYPE_ASD(LEFT_HAPLOTYPE(a, a2), RIGHT_HAPLOTYPE(a, a2), LEFT_HAPLOTYPE(c, c2), RIGHT_HAPLOTYPE(c, c2)) == 1);
+    assert(HAPLOTYPE_DISSIMILARITY(LEFT_HAPLOTYPE(b, b2), RIGHT_HAPLOTYPE(b, b2), LEFT_HAPLOTYPE(c, c2), RIGHT_HAPLOTYPE(c, c2)) == 1);
+    assert(HAPLOTYPE_DISSIMILARITY(LEFT_HAPLOTYPE(a, a2), RIGHT_HAPLOTYPE(a, a2), LEFT_HAPLOTYPE(c, c2), RIGHT_HAPLOTYPE(c, c2)) == 1);
     // Test two identical haplotypes.
-    assert(HAPLOTYPE_ASD(LEFT_HAPLOTYPE(a, a2), RIGHT_HAPLOTYPE(a, a2), LEFT_HAPLOTYPE(a, a2), RIGHT_HAPLOTYPE(a, a2)) == 0);
+    assert(HAPLOTYPE_DISSIMILARITY(LEFT_HAPLOTYPE(a, a2), RIGHT_HAPLOTYPE(a, a2), LEFT_HAPLOTYPE(a, a2), RIGHT_HAPLOTYPE(a, a2)) == 0);
 
 }

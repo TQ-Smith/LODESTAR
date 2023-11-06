@@ -37,12 +37,12 @@ typedef int Genotype;
 //  with orientation, the macro returns the number 0x00000000.
 #define RIGHT_ALLELE(a) (!ORIENTATION(a) * (GET_ALLELES(a) - LSA(a)) + ORIENTATION(a) * LSA(a))
 
-// A macro to calculate the ASD between two genotypes IGNORING orientation.
+// A macro to calculate the dissimilarity between two genotypes IGNORING orientation.
 //  ASD in the sense of the number of different alleles between the two genotypes.
-#define UNORIENTED_ASD(a, b) (!!(GET_ALLELES(a) ^ GET_ALLELES(b)) + !(GET_ALLELES(a) & GET_ALLELES(b)))
+#define UNORIENTED_DISSIMILARITY(a, b) (!!(GET_ALLELES(a) ^ GET_ALLELES(b)) + !(GET_ALLELES(a) & GET_ALLELES(b)))
 
-// A macro to calculate the number of shared allele between two genotypes WITH orientation.
-#define ORIENTED_ASD(a, b) (!!(LEFT_ALLELE(a) ^ LEFT_ALLELE(b)) + !!((RIGHT_ALLELE(a) ^ RIGHT_ALLELE(b))))
+// A macro to calculate the number of dissimilar alleles between two genotypes WITH orientation.
+#define ORIENTED_DISSIMILARITY(a, b) (!!(LEFT_ALLELE(a) ^ LEFT_ALLELE(b)) + !!((RIGHT_ALLELE(a) ^ RIGHT_ALLELE(b))))
 
 // A macro to form the left haplotype between two genotype.
 //  If the greater of the two alleles comes last, set most significant bit.
@@ -70,10 +70,10 @@ typedef int Genotype;
 //  left_b -> The left haplotype of sample b.
 //  right_b -> The right haplotype of sample b.
 // Returns: double, The ASD between the two haplotypes.
-#define HAPLOTYPE_ASD(left_a, right_a, left_b, right_b) (\
+#define HAPLOTYPE_DISSIMILARITY(left_a, right_a, left_b, right_b) (\
     (!(left_a ^ left_b) && !(right_a ^ right_b)) * 0.0 +\
-    ((!!(left_a ^ left_b) || !!(right_a ^ right_b)) && (!!(left_a ^ left_b) && !!(left_a ^ left_b) && (!!right_a ^ left_b) && !!(right_a ^ right_b))) * 2.0 + \
-    ((!!(left_a ^ left_b) || !!(right_a ^ right_b)) && (!(left_a ^ left_b) || !(left_a ^ left_b) || !(right_a ^ left_b) || !(right_a ^ right_b))) * 1.0 \
+    (!!(left_a ^ left_b) && !!(left_a ^ right_b) && !!(right_a ^ left_b) && !!(right_a ^ right_b)) * 2.0 +\
+    (!(left_a ^ left_b) || !(left_a ^ right_b) || !(right_a ^ left_b) || !(right_a ^ right_b)) * 1.0\
 )
 
 #endif

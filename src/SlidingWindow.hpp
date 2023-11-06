@@ -7,6 +7,7 @@
 //              Gives defintion for a sliding window along a genome.
 //
 
+// Used for chromosome name.
 #include <string>
 
 // Used to read in VCF files.
@@ -36,6 +37,23 @@ struct window {
 
 };
 
+// Our main windowing algorithm. For each window, calculate ASD
+//  matrix and perform MDS.
+// Accepts:
+//  VCFParser* parser -> The VCF file reader.
+//  int hap_size -> The number of SNPs in each haplotype.
+//  int win_size -> The number of haplotypes in each window.
+//  int step_size -> The number of haplotypes in each step.
+//  int n -> The number of samples.
+//  int k -> The dimension to project into.
+//  bool useFastMap -> If set, use FastMap MDS heuristic.
+// Returns: list<windows*>*, the windows along the genome. Last one
+//              window* is the global window.
 list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int step_size, int n, int k, bool useFastMap);
 
+// Destroy the memory allocated to a window.
+// Accepts:
+//  window** w -> A pointer to a pointer to a window. Sets pointer to NULL.
+//  int n -> The number of samples.
+// Returns: void.
 void destroy_window(window** w, int n);
