@@ -72,8 +72,8 @@ typedef int Genotype;
 // Returns: double, The ASD between the two haplotypes.
 #define HAPLOTYPE_DISSIMILARITY(left_a, right_a, left_b, right_b) (\
     (!(left_a ^ left_b) && !(right_a ^ right_b)) * 0.0 +\
-    (!!(left_a ^ left_b) && !!(left_a ^ right_b) && !!(right_a ^ left_b) && !!(right_a ^ right_b)) * 2.0 +\
-    (!(left_a ^ left_b) || !(left_a ^ right_b) || !(right_a ^ left_b) || !(right_a ^ right_b)) * 1.0\
+    (!(!(left_a ^ left_b) && !(right_a ^ right_b)) && (!!(left_a ^ left_b) && !!(left_a ^ right_b) && !!(right_a ^ left_b) && !!(right_a ^ right_b))) * 2.0 +\
+    (!(!(left_a ^ left_b) && !(right_a ^ right_b)) && !(!!(left_a ^ left_b) && !!(left_a ^ right_b) && !!(right_a ^ left_b) && !!(right_a ^ right_b))) * 1.0\
 )
 
 #endif

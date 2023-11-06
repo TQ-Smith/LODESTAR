@@ -17,6 +17,10 @@
 // Used for the ceiling function.
 #include <cmath>
 
+void print_genotype(int a) {
+    cout << LEFT_ALLELE(a) << "-" << RIGHT_ALLELE(a);
+}
+
 // A helper function used to allocate a window structure, set fields, and perfrom MDS.
 //  NOTE: Will change with threading.
 // Accepts:
@@ -82,28 +86,76 @@ void advance_window(double** allele_counts, double** local_and_global_window, Ge
     
     for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
-            allele_counts[i][i] = local_and_global_window[i][j];
-            // If we are using multi-locus haplotypes and we only have one locus in the window, treat haplotype as one locus.
-            if (hap_size > 1 && num_loci == 1) {
-                allele_counts[i][j] = UNORIENTED_DISSIMILARITY(prev_genotypes[i][j], prev_genotypes[j][i]);
-            }
-            // Subtract step dissimilarity from window dissimilarity.
-            local_and_global_window[i][j] -= allele_counts[j][i];
-            // Add haplotype dissimilarity to global.
-            if (hap_size != 1) {
+            // Add the remaining haplotype's ASD to the local window.
+            local_and_global_window[i][j] += allele_counts[i][j];
+            if (num_loci != hap_size * win_size) {
+                local_and_global_window[j][i] += (local_and_global_window[i][j] - allele_counts[j][i]);
+            } else {
                 local_and_global_window[j][i] += allele_counts[i][j];
             }
-            // If the window ended when chromosome changed or EOF, add whole window's dissimilarity to global.
-            if (num_loci != (hap_size * win_size)) {
-                local_and_global_window[j][i] += local_and_global_window[i][j];
-            }
-            // Finally, add current haplotype dissimilarity to window's dissimilarity, 
-            //  convert to ASD, and store window's ASD matrix in allele_counts.
-            allele_counts[i][j] = (allele_counts[i][j] + allele_counts[i][i]) / (2 * num_haps);
+            // Convert to asd and move window to asd_counts.
+            allele_counts[i][j] = local_and_global_window[i][j] / (2.0 * num_haps);
+            // Subtract step from current window.
+            local_and_global_window[i][j] -= allele_counts[j][i];
             allele_counts[j][i] = allele_counts[i][j];
         }
-        // Set diagonal to 0 for MDS calculation.
+        // Set diagonal to 0 for MDS.
         allele_counts[i][i] = 0;
+    }
+
+}
+
+// A method that defines the behavior of processing a VCF entry.
+//  Note needed as a seperate method but improves the readability of the window_genome function.
+// Accepts: As defined in window_genome, except newChrom -> boolean to indicate the start of a new chromosome.
+// Returns: void.
+void calculate_dissimilarity(double** allele_counts, double** local_and_global_window, Genotype** prev_genotypes, Genotype* genotypes, int num_loci, int hap_size, int step_size, bool newChrom, bool newWindow, int n) {
+
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            // If we are on a new chromosome, then we zero our haplotype, step, and window counts.
+            if (newChrom) {
+                local_and_global_window[i][j] = 0;
+                allele_counts[i][j] = allele_counts[j][i] = 0;
+            }
+            // If we are in a new window, copy over leftovers from previous window
+            //  and zero haplotype counts.
+            if (newWindow) {
+                allele_counts[j][i] = local_and_global_window[i][j];
+                allele_counts[i][j] = 0;
+            }
+            // If we are starting a new haplotype..
+            if (num_loci % hap_size == 0) {
+                // Add counts to offset if in interval.
+                if (num_loci <= hap_size * step_size) {
+                    allele_counts[j][i] += allele_counts[i][j];
+                }
+                // Add haplotype to window.
+                local_and_global_window[i][j] += allele_counts[i][j];
+                local_and_global_window[j][i] += allele_counts[i][j];
+                // Set previous genotypes (only important for mini-haplotypes).
+                prev_genotypes[i][j] = genotypes[i];
+                prev_genotypes[j][i] = genotypes[j];
+                // Reset haplotype counts.
+                allele_counts[i][j] = 0;
+            }
+            // If 1 SNP haplotypes or we are on the first locus.
+            if (hap_size == 1 || num_loci == 0) {
+                // Calculate unoriented dissimilarity.
+                allele_counts[i][j] = UNORIENTED_DISSIMILARITY(genotypes[i], genotypes[j]);
+            // Otherewise, we are dealing with mini-haplotypes of at least size 2.
+            } else {
+                // If dissimilarity is not already two, we calculate the updated haplotype dissimilarity.
+                if (allele_counts[i][j] != 2) {
+                    allele_counts[i][j] = HAPLOTYPE_DISSIMILARITY(LEFT_HAPLOTYPE(prev_genotypes[i][j], genotypes[i]), RIGHT_HAPLOTYPE(prev_genotypes[i][j], genotypes[i]), LEFT_HAPLOTYPE(prev_genotypes[j][i], genotypes[j]), RIGHT_HAPLOTYPE(prev_genotypes[j][i], genotypes[j]));
+                }
+                // We only reset previous genotypyes if current ones are not identical.
+                if (UNORIENTED_DISSIMILARITY(genotypes[i], genotypes[j]) != 0) {
+                    prev_genotypes[i][j] = genotypes[i];
+                    prev_genotypes[j][i] = genotypes[j];
+                }
+            }
+        }
     }
 
 }
@@ -132,7 +184,7 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
     double** local_and_global_window = new double*[n];
     Genotype** prev_genotypes  = new Genotype*[n];
     for (int i = 0; i < n; i++) {
-        allele_counts[i] = new double[n];
+        allele_counts[i] = new double[n]; 
         local_and_global_window[i] = new double[n];
         prev_genotypes[i] = new Genotype[n];
         for (int j = 0; j < n; j++) {
@@ -185,15 +237,19 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
             // Advance the window.
             advance_window(allele_counts, local_and_global_window, prev_genotypes, num_loci, hap_size, win_size, n);
 
-            cout << "Window on " << prev_chrom << " from " << start_pos << " to " << prev_pos << endl;
+            cout << "-----------------" << endl;
+            cout << "Window on " << chrom << " from " << start_pos << " to " << prev_pos << endl;
             print_real_matrix(allele_counts, n, n, 2, 2);
             cout << endl;
+            // cout << "Local and Global:" << endl;
+            // print_real_matrix(local_and_global_window, n, n, 2, 2);
+            // cout << "-----------------" << endl;
 
             // Perfrom MDS and add to list.
             windows -> push_back(create_window_with_mds(prev_chrom, start_pos, prev_pos, num_loci, n, k, useFastMap, allele_counts));
 
             // Determine number of loci and start position of the next window.
-            num_loci -= step_size * hap_size;
+            num_loci -= (step_size * hap_size);
             start_pos = (win_size == step_size) ? pos : next_start_pos;
 
             // Set flag current entry is in new window.
@@ -214,47 +270,13 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
             start_pos = pos;
         }
 
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                // Zero window counts if new chromosome.
-                if (chrom != prev_chrom) {
-                    local_and_global_window[i][j] = 0;
-                }
-                // Zero haplotype and set counts if new window.
-                if (newWindow) {
-                    allele_counts[i][j] = allele_counts[j][i] = 0;
-                }
-                // If start of a new haplotype.
-                if (num_loci % hap_size == 0) {
-                    // If single locus haplotypes, use unoriented dissimilarity.
-                    if (hap_size == 1) {
-                        allele_counts[i][j] = UNORIENTED_DISSIMILARITY(genotypes[i], genotypes[j]);
-                    }
-                    // Add dissimilarity to step if haplotype is in interval.
-                    if (num_loci < hap_size * step_size) {
-                        allele_counts[j][i] += allele_counts[i][j];
-                    }
-                    // Add previous haplotype dissimilarity to current window and global.
-                    local_and_global_window[i][j] += allele_counts[i][j];
-                    local_and_global_window[j][i] += allele_counts[i][j];
-                    // Starting a new haplotype, set genotypes for multi-locus haplotypes.
-                    prev_genotypes[i][j] = genotypes[i];
-                    prev_genotypes[j][i] = genotypes[j];
-                    // Reset dissimilarity when haplotype is starts.
-                    allele_counts[i][j] = 0;
-                }
-                // For multi-locus haplotypes, we calculate the dissimilarity between samples using the current record
-                //  if it is not the first locus in the haplotype, the dissimilarity is not already 2, and the genotypes
-                //  between the samples are not identical.
-                if (hap_size != 1 && num_loci > 0 && allele_counts[i][j] != 2 && ORIENTED_DISSIMILARITY(genotypes[i], genotypes[j]) != 0) {
-                    // Calculate dissimilarity.
-                    allele_counts[i][j] = HAPLOTYPE_DISSIMILARITY(LEFT_HAPLOTYPE(prev_genotypes[i][j], genotypes[i]), RIGHT_HAPLOTYPE(prev_genotypes[i][j], genotypes[i]), LEFT_HAPLOTYPE(prev_genotypes[j][i], genotypes[j]), RIGHT_HAPLOTYPE(prev_genotypes[j][i], genotypes[j]));
-                    // New previous genotypes.
-                    prev_genotypes[i][j] = genotypes[i];
-                    prev_genotypes[j][i] = genotypes[j];
-                }
-            }
-        }
+        // Update dissimilarities.
+        calculate_dissimilarity(allele_counts, local_and_global_window, prev_genotypes, genotypes, num_loci, hap_size, step_size, prev_chrom != chrom, newWindow, n);
+
+        // cout << endl;
+        // cout << "Counts:" << endl;
+        // print_real_matrix(allele_counts, n, n, 2, 2);
+        // cout << endl;
 
         newWindow = false;
         prev_chrom = chrom;
@@ -263,7 +285,6 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
         if (num_loci == step_size * hap_size) {
             next_start_pos = pos;
         }
-
         // Next locus.
         num_loci++;
 
@@ -272,7 +293,7 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
     // local_and_global_window is converted to global ASD matrix.
     for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
-            local_and_global_window[j][i] = local_and_global_window[j][i] / (2 * num_global_haps);
+            local_and_global_window[j][i] = local_and_global_window[j][i] / (2.0 * num_global_haps);
             local_and_global_window[i][j] = local_and_global_window[j][i];
         }
         local_and_global_window[i][i] = 0;
@@ -288,12 +309,12 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
 
     // Free all dynamically allocated memory.
     for (int i = 0; i < n; i++) {
-        delete [] allele_counts[i];
-        delete [] local_and_global_window[i];
+        delete [] allele_counts[i]; 
+        delete [] local_and_global_window[i]; 
         delete [] prev_genotypes[i];
     }
-    delete [] allele_counts;
-    delete [] local_and_global_window;
+    delete [] allele_counts; 
+    delete [] local_and_global_window; 
     delete [] prev_genotypes;
     delete [] genotypes;
 
