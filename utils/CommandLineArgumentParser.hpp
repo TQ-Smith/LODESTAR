@@ -70,7 +70,7 @@ class CommandLineArgumentParser {
         // Get number of available options.
         // Accepts: void.
         // Returns: int, The number of options.
-        int getNumOptions();
+        int getNumberOfOptions();
 
         ~CommandLineArgumentParser();
 
@@ -110,7 +110,6 @@ void CommandLineArgumentParser::addOption(string option, string description, boo
 
     // Do not allow the empty string as an option.
     if (option.length() == 0) {
-        cerr << "Cannot use the empty string as an option!" << endl;
         *successfulOperation = false;
         return;
     }
@@ -120,7 +119,6 @@ void CommandLineArgumentParser::addOption(string option, string description, boo
 
     // Do not allow adding an option that already exists.
     if (arguments.count(option)) {
-        cerr << "Option " << option << " already exists!" << endl;
         *successfulOperation = false;
         return;
     }
@@ -156,7 +154,6 @@ void CommandLineArgumentParser::parseCommandLine(int argc, char *argv[], bool* s
 
             // Make sure the option exits in the dictionary.
             if (!arguments.count(option)) {
-                cerr << "Option " << option << " does not exists!" << endl;
                 *successfulOperation = false;
                 return;
             }
@@ -166,7 +163,6 @@ void CommandLineArgumentParser::parseCommandLine(int argc, char *argv[], bool* s
 
             // Make sure it has not already been used.
             if (opt -> num_arguments != -1) {
-                cerr << "Option " << option << " was already used!" << endl;
                 *successfulOperation = false;
                 return;
             }
@@ -179,7 +175,6 @@ void CommandLineArgumentParser::parseCommandLine(int argc, char *argv[], bool* s
             
             // Make sure the first argument is an option.
             if (opt == NULL) {
-                cerr << "No option created for " << argv[i] << "." << endl;
                 *successfulOperation = false;
                 return;
             }
@@ -202,7 +197,6 @@ T* CommandLineArgumentParser::getOptionArguments(string option, int* num_argumen
 
     // Make sure the argument exists.
     if (!arguments.count(option)) {
-        cerr << "Option " << option << " does not exists!" << endl;
         *successfulOperation = false;
         return NULL;
     }
@@ -227,7 +221,6 @@ T* CommandLineArgumentParser::getOptionArguments(string option, int* num_argumen
         // Convert each argument to the type.
         //  If conversion is not valid, then throw error.
         if (!(strstream_arg >> args[index])) {
-            cerr << "Cannot perform type cast of argument for option " << option << "!" << endl;
             delete[] args;
             *successfulOperation = false;
             return NULL;
@@ -245,11 +238,8 @@ T* CommandLineArgumentParser::getOptionArguments(string option, int* num_argumen
 
 int CommandLineArgumentParser::getNumberOfArguments(string option, bool* successfulOperation) {
 
-    option = form_option(option);
-
     // Make sure the argument exists.
     if (!arguments.count(option)) {
-        cerr << "Option " << option << " does not exists!" << endl;
         *successfulOperation = false;
         return -1;
     }
@@ -285,7 +275,6 @@ string CommandLineArgumentParser::getDescription(string option, bool* successful
 
     // Make sure the argument exists.
     if (!arguments.count(option)) {
-        cerr << "Option " << option << " does not exists!" << endl;
         *successfulOperation = false;
         return "";
     }
@@ -297,7 +286,7 @@ string CommandLineArgumentParser::getDescription(string option, bool* successful
 
 }
 
-int CommandLineArgumentParser::getNumOptions() {
+int CommandLineArgumentParser::getNumberOfOptions() {
     return num_options;
 }
 

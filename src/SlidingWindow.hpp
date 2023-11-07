@@ -35,6 +35,15 @@ struct window {
     //  individuals in the window.
     double** points;
 
+    // The Procrustes dissimilarity statistic.
+    double statistic;
+
+    // The p-value form the permutation test.
+    double p_value;
+
+    // The window number.
+    int index;
+
 };
 
 // Our main windowing algorithm. For each window, calculate ASD
