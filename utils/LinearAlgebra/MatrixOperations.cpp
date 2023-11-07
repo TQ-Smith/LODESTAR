@@ -29,10 +29,9 @@ double** create_and_fill_real_matrix(int value, int m, int n) {
     double** matrix = create_real_matrix(m, n);
     for (int i = 0; i < m; i++) {
         // Fill each row.
-        for (int j = i + 1; j < n; j++) {
-            matrix[i][j] = matrix[j][i] = value;
+        for (int j = 0; j < n; j++) {
+            matrix[i][j] = value;
         }
-        matrix[i][i] = value;
     }
     return matrix;
 }
@@ -108,9 +107,10 @@ void print_real_matrix(double** matrix, int m, int n, int width, int percision) 
 void fill_real_matrix(double** matrix, int value, int m, int n) {
     // Iterate through the elements and set value.
     for (int i = 0; i < m; i++) {
-        for (int j = i; j < n; j++) {
+        for (int j = i + 1; j < n; j++) {
             matrix[i][j] = matrix[j][i] = value;
         }
+        matrix[i][i] = value;
     }
 }
 

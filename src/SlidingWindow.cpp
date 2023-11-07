@@ -17,10 +17,6 @@
 // Used for the ceiling function.
 #include <cmath>
 
-void print_genotype(int a) {
-    cout << LEFT_ALLELE(a) << "-" << RIGHT_ALLELE(a);
-}
-
 // A helper function used to allocate a window structure, set fields, and perfrom MDS.
 //  NOTE: Will change with threading.
 // Accepts:
@@ -79,11 +75,11 @@ window* create_window_with_mds(string chrom, int start_pos, int end_pos, int num
 //  Not needed as a seperate method but improves the readability of the window_genome function.
 // Accepts: As defined in window_genome.
 // Returns: void.
-void advance_window(double** allele_counts, double** local_and_global_window, Genotype** prev_genotypes, int num_loci, int hap_size, int win_size, int n) {
+void advance_window(double** allele_counts, double** local_and_global_window, Genotype** prev_genotypes, int num_loci, int hap_size, int step_size, int win_size, int n) {
     
     // Calculate number of haplotypes in the window.
     int num_haps = ceil(num_loci / (double) hap_size);
-    
+
     for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
             // Add the remaining haplotype's ASD to the local window.
@@ -93,10 +89,15 @@ void advance_window(double** allele_counts, double** local_and_global_window, Ge
             } else {
                 local_and_global_window[j][i] += allele_counts[i][j];
             }
-            // Convert to asd and move window to asd_counts.
-            allele_counts[i][j] = local_and_global_window[i][j] / (2.0 * num_haps);
-            // Subtract step from current window.
-            local_and_global_window[i][j] -= allele_counts[j][i];
+            // Is this the best solution? Why?
+            if (step_size * win_size == 1) {
+                local_and_global_window[i][j] -= allele_counts[j][i];
+                allele_counts[i][j] = local_and_global_window[i][j] / (2.0 * num_haps);
+            } else {
+                allele_counts[i][j] = local_and_global_window[i][j] / (2.0 * num_haps);
+                local_and_global_window[i][j] -= allele_counts[j][i];
+            }
+            // The allele_counts matrix becomes the window.
             allele_counts[j][i] = allele_counts[i][j];
         }
         // Set diagonal to 0 for MDS.
@@ -235,15 +236,14 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
             }
 
             // Advance the window.
-            advance_window(allele_counts, local_and_global_window, prev_genotypes, num_loci, hap_size, win_size, n);
+            advance_window(allele_counts, local_and_global_window, prev_genotypes, num_loci, hap_size, step_size, win_size, n);
 
-            cout << "-----------------" << endl;
-            cout << "Window on " << chrom << " from " << start_pos << " to " << prev_pos << endl;
-            print_real_matrix(allele_counts, n, n, 2, 2);
-            cout << endl;
             // cout << "Local and Global:" << endl;
             // print_real_matrix(local_and_global_window, n, n, 2, 2);
-            // cout << "-----------------" << endl;
+            // cout << endl;
+            cout << "Window on " << prev_chrom << " from " << start_pos << " to " << prev_pos << endl;
+            print_real_matrix(allele_counts, n, n, 2, 2);
+            cout << endl;
 
             // Perfrom MDS and add to list.
             windows -> push_back(create_window_with_mds(prev_chrom, start_pos, prev_pos, num_loci, n, k, useFastMap, allele_counts));
@@ -274,7 +274,7 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
         calculate_dissimilarity(allele_counts, local_and_global_window, prev_genotypes, genotypes, num_loci, hap_size, step_size, prev_chrom != chrom, newWindow, n);
 
         // cout << endl;
-        // cout << "Counts:" << endl;
+        // cout << "Counts at " << pos << ":" << endl;
         // print_real_matrix(allele_counts, n, n, 2, 2);
         // cout << endl;
 

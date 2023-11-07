@@ -10,6 +10,7 @@
 #ifndef _COMMAND_LINE_ARGUMENT_PARSER_HPP_
 #define _COMMAND_LINE_ARGUMENT_PARSER_HPP_
 
+#include <algorithm>
 #include <string>
 #include <sstream>
 #include <list>
@@ -54,10 +55,22 @@ class CommandLineArgumentParser {
         // Returns: int, The number of arguments supplied by the user.
         int getNumberOfArguments(string option, bool* successfulOperation);
 
-        // Prints the description for each option.
+        // Returns a sorted (lexographic) array of the possible commandline options.
         // Accepts: void.
-        // Returns: void.
-        void printOptionDescriptions();
+        // Returns: string*, A sorted array of option names. NULL if no options.
+        string* getOptions();
+
+        // Returns the description of a given option.
+        // Accepts:
+        //  string option -> The option to retrieve.
+        //  bool* successfulOperation -> Sets if option exists.
+        // Returns: string, The description of the given option. Null string if does not exist.
+        string getDescription(string option, bool* successfulOperation);
+
+        // Get number of available options.
+        // Accepts: void.
+        // Returns: int, The number of options.
+        int getNumOptions();
 
         ~CommandLineArgumentParser();
 
@@ -75,6 +88,9 @@ class CommandLineArgumentParser {
 
         // Maps option name to its attributes.
         map<string, Option*> arguments;
+
+        // Keeps track of the number of keys.
+        int num_options = 0;
 
 };
 
@@ -116,6 +132,8 @@ void CommandLineArgumentParser::addOption(string option, string description, boo
 
     // Add option to dictonary.
     arguments[option] = temp;
+
+    num_options++;
 
     *successfulOperation = true;
 
@@ -182,8 +200,6 @@ void CommandLineArgumentParser::parseCommandLine(int argc, char *argv[], bool* s
 template <typename T>
 T* CommandLineArgumentParser::getOptionArguments(string option, int* num_arguments, bool* successfulOperation) {
 
-    option = form_option(option);
-
     // Make sure the argument exists.
     if (!arguments.count(option)) {
         cerr << "Option " << option << " does not exists!" << endl;
@@ -240,16 +256,49 @@ int CommandLineArgumentParser::getNumberOfArguments(string option, bool* success
 
     // Return the number of arguments.
     return arguments[option] -> num_arguments;
+
 }
 
-void CommandLineArgumentParser::printOptionDescriptions() {
+string* CommandLineArgumentParser::getOptions() {
 
-    // Iterate through options and print  description.
-    for (map<string, Option*>::iterator it = arguments.begin(); it != arguments.end(); it++) {
-        // Could add formatting in the future.
-        cout << it -> first << " -> " << it -> second -> description << endl;
+    // NULL if no options.
+    if (num_options == 0) {
+        return NULL;
     }
 
+    // Create string array and fill with keys.
+    string* options = new string[num_options];
+    int i = 0;
+    for(map<string, Option*>::iterator it = arguments.begin(); it != arguments.end(); ++it) {
+        options[i] = it -> first;
+        i++;
+    }
+
+    // Sort the keys.
+    sort(options, options + num_options);
+
+    return options;
+
+}
+
+string CommandLineArgumentParser::getDescription(string option, bool* successfulOperation) {
+
+    // Make sure the argument exists.
+    if (!arguments.count(option)) {
+        cerr << "Option " << option << " does not exists!" << endl;
+        *successfulOperation = false;
+        return "";
+    }
+
+    *successfulOperation = true;
+
+    // Return the description.
+    return arguments[option] -> description; 
+
+}
+
+int CommandLineArgumentParser::getNumOptions() {
+    return num_options;
 }
 
 CommandLineArgumentParser::~CommandLineArgumentParser() {

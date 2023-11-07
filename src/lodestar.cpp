@@ -22,11 +22,12 @@ int main(int argc, char *argv[]) {
     CommandLineArgumentParser cmd_parser;
     bool successfulOperation;
     int num_arguments;
-    string*  str_args = NULL;
+    string* str_args = NULL;
     int* int_args = NULL;
     double* double_args = NULL;
 
     // A list of all command line option variables.
+    //  Default values are immediately set.
     string input_file;
     string output_file;
     string format = "txt";
