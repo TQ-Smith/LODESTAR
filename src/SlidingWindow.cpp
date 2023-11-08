@@ -38,8 +38,8 @@ window* create_window_with_mds(string chrom, int start_pos, int end_pos, int num
     int maxDimReached = k;
 
     // Used for classical MDS. This is fast because k = 1, 2, or 3.
-    double d[k];
-    double e[k];
+    double* d = new double[n];
+    double* e = new double[n];
 
     // Allocate matrix to hold dimension reduced samples.
     double** points = create_real_matrix(n, k);
@@ -58,10 +58,17 @@ window* create_window_with_mds(string chrom, int start_pos, int end_pos, int num
     w -> end_position = end_pos;
     w -> num_loci = num_loci;
 
-    
-    // What about maxDimReached and doesConverge?
-    w -> points = points;
-    
+    // Ask Zach about maxDimReached and doesConverge?
+    if (maxDimReached == k && doesConverge) {
+        w -> points = points;
+    } else {
+        destroy_real_matrix(points, n);
+        w -> points = NULL;
+    }
+
+    delete [] d;
+    delete [] e;
+
     return w;
 
 }
@@ -242,7 +249,6 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
 
             // Perfrom MDS and add to list.
             windows -> push_back(create_window_with_mds(prev_chrom, start_pos, prev_pos, num_loci, n, k, useFastMap, allele_counts));
-
             // Determine number of loci and start position of the next window.
             num_loci -= (step_size * hap_size);
             start_pos = (win_size == step_size) ? pos : next_start_pos;

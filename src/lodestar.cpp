@@ -298,6 +298,15 @@ int main(int argc, char *argv[]) {
     window* global = windows -> back();
     windows -> pop_back();
 
+    if ((global -> points) == NULL) {
+        cout << "Global MDS procedure did not converge!" << endl;
+        cout << endl;
+        delete global;
+        delete windows;
+        delete vcf_parser;
+        return 0;
+    }
+
     // Allocate memory for Procrustes analysis.
     double* x_0 = new double[n];
     double** C = create_real_matrix(n, n);
@@ -319,19 +328,21 @@ int main(int argc, char *argv[]) {
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++) {
         current_window = *it;
 
-        // Center points.
-        center_matrix(current_window -> points, x_0, n, k);
+        if (current_window -> points != NULL) {
+            // Center points.
+            center_matrix(current_window -> points, x_0, n, k);
 
-        // Get Procrustes dissimilarity statistic.
-        statistic = procrustes_analysis(current_window -> points, global -> points, C, CT_C, n, k);
+            // Get Procrustes dissimilarity statistic.
+            statistic = procrustes_analysis(current_window -> points, global -> points, C, CT_C, n, k);
 
-        // Execute permutation test.
-        p_value = permutation_test(num_perms, current_window -> points, global -> points, shuffleX, C, CT_C, n, k, statistic);
+            // Execute permutation test.
+            p_value = permutation_test(num_perms, current_window -> points, global -> points, shuffleX, C, CT_C, n, k, statistic);
 
-        // Set values for window.
-        current_window -> statistic = statistic;
-        current_window -> p_value = p_value;
-        
+            // Set values for window.
+            current_window -> statistic = statistic;
+            current_window -> p_value = p_value;
+        }
+
         current_window -> index = index;
 
         index++;
@@ -362,11 +373,13 @@ int main(int argc, char *argv[]) {
         cout << "Start Position: " << (current_window -> start_position) << endl;
         cout << "End Position: " << (current_window -> end_position) << endl;
         cout << "Number of Loci: " << (current_window -> num_loci) << endl;
-        cout << "Statistic: " << (current_window -> statistic) << endl;
-        cout << "P-Value: " << (current_window -> p_value) << endl;
-        cout << "Points:" << endl;
-        print_real_matrix(current_window -> points, n, k, 4, 4);
-        cout << endl;
+        if ((current_window -> points) != NULL) {
+            cout << "Statistic: " << (current_window -> statistic) << endl;
+            cout << "P-Value: " << (current_window -> p_value) << endl;
+            cout << "Points:" << endl;
+            print_real_matrix(current_window -> points, n, k, 4, 4);
+            cout << endl;
+        }
         cout << endl;
     }
 

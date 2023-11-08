@@ -17,6 +17,9 @@
 // Used in QR algorithm to get double EPS.
 #include <limits>
 
+#include <iostream>
+using namespace std;
+
 // Determine sign of z based on sign of b.
 // Accepts:
 //  double z -> The first number.
@@ -217,6 +220,7 @@ void tqli(double** z, double* d, double* e, bool* doesConverge, int n, bool yesv
 void compute_eigen_pairs(double** z, double* d, double* e, bool* doesConverge, int n, bool yesvecs, bool sort) {
 	tred2(z, d, e, n, yesvecs);
     tqli(z, d, e, doesConverge, n, yesvecs);
-	if (sort)
+	if ((*doesConverge) && sort) {
 		eigsrt(z, d, n);
+	}
 }
