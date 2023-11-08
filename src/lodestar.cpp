@@ -38,18 +38,18 @@ using namespace std;
 void print_help(CommandLineArgumentParser* cmd_parser) {
 
     // Print header.
-    cout << "LODESTAR: LOcal DEcomposition and Similarity To All Regions" << endl;
-    cout << "-----------------------------------------------------------" << endl;
-    cout << endl;
-    cout << "Options:" << endl;
+    cerr << "LODESTAR: LOcal DEcomposition and Similarity To All Regions" << endl;
+    cerr << "-----------------------------------------------------------" << endl;
+    cerr << endl;
+    cerr << "Options:" << endl;
 
     bool successfulOperation;
 
     // Get each option in alphabetical order and print description.
     string* options = cmd_parser -> getOptions();
     for (int i = 0; i < cmd_parser -> getNumberOfOptions(); i++) {
-        cout << setw(15) << options[i] << " ";
-        cout << setw(60) << cmd_parser -> getDescription(options[i], &successfulOperation) << endl;
+        cerr << setw(15) << options[i] << " ";
+        cerr << setw(60) << cmd_parser -> getDescription(options[i], &successfulOperation) << endl;
     }
     delete [] options;
 
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
         case -1: break;
         // Print error if arguments were given.
         default:
-            cout << "--help does not take any arguments! Exiting ..." << endl;
+            cerr << "--help does not take any arguments! Exiting ..." << endl;
             break;
     };
 
@@ -118,11 +118,11 @@ int main(int argc, char *argv[]) {
             break;
         // Otherwise, print error and exit.
         default:
-            cout << "-i must be given one argument! Exiting ..." << endl;
+            cerr << "-i must be given one argument! Exiting ..." << endl;
             return 0;
             break;
     };
-    /*
+    
     // Parse -o option.
     switch(cmd_parser.getNumberOfArguments("-o", &successfulOperation)) {
         // If one argument was given, set file name.
@@ -133,11 +133,11 @@ int main(int argc, char *argv[]) {
             break;
         // Otherwise, print error and exit.
         default:
-            cout << "-o must be given one argument! Exiting ..." << endl;
+            cerr << "-o must be given one argument! Exiting ..." << endl;
             return 0;
             break;
     };
-    */
+    
 
     // Parse --format option.
     switch (cmd_parser.getNumberOfArguments("--format", &successfulOperation)) {
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
         case 1:
             str_args = cmd_parser.getOptionArguments<string>("--format", &num_arguments, &successfulOperation);
             if (str_args[0] != "txt" || str_args[0] != "json" || !successfulOperation) {
-                cout << "--format must be given \"txt\" or \"json\"! Exiting ..." << endl;
+                cerr << "--format must be given \"txt\" or \"json\"! Exiting ..." << endl;
                 delete [] str_args;
                 return 0;
             }
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
         // Use default
         case -1: break;
         default:
-            cout << "--format must be given \"txt\" or \"json\"! Exiting ..." << endl;
+            cerr << "--format must be given \"txt\" or \"json\"! Exiting ..." << endl;
             return 0;
             break;
     };
@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
         case 1:
             int_args = cmd_parser.getOptionArguments<int>("-h", &num_arguments, &successfulOperation);
             if (int_args[0] <= 0 || !successfulOperation) {
-                cout << "-h must be given a positive integer! Exiting ..." << endl;
+                cerr << "-h must be given a positive integer! Exiting ..." << endl;
                 delete [] int_args;
                 return 0;
             }
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
         // Use default
         case -1: break;
         default:
-            cout << "-h must be give one positive integer! Exiting ..." << endl;
+            cerr << "-h must be give one positive integer! Exiting ..." << endl;
             return 0;
             break;
     };
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
         case 1:
             int_args = cmd_parser.getOptionArguments<int>("-w", &num_arguments, &successfulOperation);
             if (int_args[0] <= 0 || !successfulOperation) {
-                cout << "-w must be given a positive integer! Exiting ..." << endl;
+                cerr << "-w must be given a positive integer! Exiting ..." << endl;
                 delete [] int_args;
                 return 0;
             }
@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
         // Use default
         case -1: break;
         default:
-            cout << "-w must be give one positive integer! Exiting ..." << endl;
+            cerr << "-w must be give one positive integer! Exiting ..." << endl;
             return 0;
             break;
     };
@@ -205,7 +205,7 @@ int main(int argc, char *argv[]) {
         case 1:
             int_args = cmd_parser.getOptionArguments<int>("-s", &num_arguments, &successfulOperation);
             if (int_args[0] <= 0 || int_args[0] > w || !successfulOperation) {
-                cout << "-s must be given a positive integer less than or equal to window width! Exiting ..." << endl;
+                cerr << "-s must be given a positive integer less than or equal to window width! Exiting ..." << endl;
                 delete [] int_args;
                 return 0;
             }
@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
         // Use default
         case -1: break;
         default:
-            cout << "-s must be give one positive integer! Exiting ..." << endl;
+            cerr << "-s must be give one positive integer! Exiting ..." << endl;
             return 0;
             break;
     };
@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
         case 1:
             int_args = cmd_parser.getOptionArguments<int>("-k", &num_arguments, &successfulOperation);
             if (int_args[0] < 1 || int_args[0] > 3 || !successfulOperation) {
-                cout << "-k must be 1, 2, or 3! Exiting ..." << endl;
+                cerr << "-k must be 1, 2, or 3! Exiting ..." << endl;
                 delete [] int_args;
                 return 0;
             }
@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
         // Use default
         case -1: break;
         default:
-            cout << "-k must be 1, 2, or 3! Exiting ..." << endl;
+            cerr << "-k must be 1, 2, or 3! Exiting ..." << endl;
             return 0;
             break;
     };
@@ -250,7 +250,7 @@ int main(int argc, char *argv[]) {
         case -1: break;
         // Print error if arguments were given.
         default:
-            cout << "--fastmap does not take any arguments! Exiting ..." << endl;
+            cerr << "--fastmap does not take any arguments! Exiting ..." << endl;
             break;
     };
 
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
         case 1:
             int_args = cmd_parser.getOptionArguments<int>("--num_perms", &num_arguments, &successfulOperation);
             if (int_args[0] <= 0 || !successfulOperation) {
-                cout << "-num_perms must be a positive integer! Exiting ..." << endl;
+                cerr << "-num_perms must be a positive integer! Exiting ..." << endl;
                 delete [] int_args;
                 return 0;
             }
@@ -269,12 +269,22 @@ int main(int argc, char *argv[]) {
         // Use default
         case -1: break;
         default:
-            cout << "--num_perms must be a positive integer! Exiting ..." << endl;
+            cerr << "--num_perms must be a positive integer! Exiting ..." << endl;
             return 0;
             break;
     };
 
     //////////////////////////// FINISHED PARSING COMMAND LINE ARGUMENTS ////////////////////////////
+
+
+    ofstream fout;
+    output_file += ".lodestar.out";
+    fout.open(output_file.c_str());
+    if (fout.fail())
+    {
+        cerr << "ERROR: could not open " << output_file << " for writing.\n";
+        return 1;
+    }
 
 
 
@@ -283,7 +293,7 @@ int main(int argc, char *argv[]) {
     // Open VCF file.
     VCFParser* vcf_parser = new VCFParser(input_file);
     if (!(vcf_parser -> isOpen())) {
-        cout << "Input file does not exist!" << endl;
+        cerr << "Input file does not exist!" << endl;
         delete vcf_parser;
         return 0;
     }
@@ -299,8 +309,8 @@ int main(int argc, char *argv[]) {
     windows -> pop_back();
 
     if ((global -> points) == NULL) {
-        cout << "Global MDS procedure did not converge!" << endl;
-        cout << endl;
+        cerr << "Global MDS procedure did not converge!" << endl;
+        cerr << endl;
         delete global;
         delete windows;
         delete vcf_parser;
@@ -364,10 +374,22 @@ int main(int argc, char *argv[]) {
     /////////////////////////////////// OUTPUT LODESTAR RESULTS /////////////////////////////////////
 
     // We could output as we iterate but this is more flexible.
-    cout << endl;
+    //cerr << endl;
+    fout << "win\tchr\tstart\tend\tnloci\tt\tpval\n";
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++) {
         current_window = *it;
 
+        fout << (current_window -> index) << "\t" << (current_window -> chromosome) << "\t";
+        fout << (current_window -> start_position) << "\t" << (current_window -> end_position) << "\t";
+        fout << (current_window -> num_loci) << "\t";
+        if ((current_window -> points) != NULL) {
+            fout << (current_window -> statistic) << "\t" << (current_window -> p_value) << endl;
+        }
+        else{
+            fout << "NA\tNA\n";
+        }
+
+        /*
         cout << "Window: " << (current_window -> index) << endl;
         cout << "Chromosome: " << (current_window -> chromosome) << endl;
         cout << "Start Position: " << (current_window -> start_position) << endl;
@@ -381,13 +403,16 @@ int main(int argc, char *argv[]) {
             cout << endl;
         }
         cout << endl;
+        */
     }
 
-    cout << "Global" << endl;
-    cout << "Number of Haplotypes: " << (global -> num_loci) << endl;
-    cout << "Points:" << endl;
+    fout.close();
+
+    //cout << "Global" << endl;
+    //cout << "Number of Haplotypes: " << (global -> num_loci) << endl;
+    //cout << "Points:" << endl;
     print_real_matrix(global -> points, n, k, 4, 4);
-    cout << endl;
+    //cout << endl;
 
     // We are done with the windows.
     delete global;

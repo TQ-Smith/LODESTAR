@@ -243,7 +243,7 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
             // cout << "Local and Global:" << endl;
             // print_real_matrix(local_and_global_window, n, n, 2, 2);
             // cout << endl;
-            cout << "Window on " << prev_chrom << " from " << start_pos << " to " << prev_pos << endl;
+            cerr << "Window on " << prev_chrom << " from " << start_pos << " to " << prev_pos << endl;
             // print_real_matrix(allele_counts, n, n, 2, 2);
             // cout << endl;
 
