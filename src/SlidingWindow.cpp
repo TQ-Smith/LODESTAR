@@ -32,7 +32,7 @@
 window* create_window_with_mds(string chrom, int start_pos, int end_pos, int num_loci, int n, int k, bool useFastMap, double** D) {
     
     // Used for classical MDS to test convergence.
-    bool doesConverge;
+    bool doesConverge = true;
 
     // Used by FastMap to get the maximum dimension reached by the algorithm.
     int maxDimReached = k;
@@ -58,14 +58,9 @@ window* create_window_with_mds(string chrom, int start_pos, int end_pos, int num
     w -> end_position = end_pos;
     w -> num_loci = num_loci;
 
-    // If divergence of cMDS or k was not reached in FastMap, do not save the points.
-    //  Ask Zach if this is okay.
-    if (maxDimReached != k || !doesConverge) {
-        destroy_real_matrix(points, n);
-        w -> points = NULL;
-    } else {
-        w -> points = points;
-    }
+    
+    // What about maxDimReached and doesConverge?
+    w -> points = points;
     
     return w;
 
@@ -242,8 +237,8 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
             // print_real_matrix(local_and_global_window, n, n, 2, 2);
             // cout << endl;
             cout << "Window on " << prev_chrom << " from " << start_pos << " to " << prev_pos << endl;
-            print_real_matrix(allele_counts, n, n, 2, 2);
-            cout << endl;
+            // print_real_matrix(allele_counts, n, n, 2, 2);
+            // cout << endl;
 
             // Perfrom MDS and add to list.
             windows -> push_back(create_window_with_mds(prev_chrom, start_pos, prev_pos, num_loci, n, k, useFastMap, allele_counts));
@@ -299,9 +294,9 @@ list<window*>* window_genome(VCFParser* parser, int hap_size, int win_size, int 
         local_and_global_window[i][i] = 0;
     }
 
-    cout << "Global Windows" << endl;
-    print_real_matrix(local_and_global_window, n, n, 2, 2);
-    cout << endl;
+    // cout << "Global Window" << endl;
+    // print_real_matrix(local_and_global_window, n, n, 2, 2);
+    // cout << endl;
 
     // Perform MDS on global and add to list.
     //  NOTE: num_loci for global is the number of haplotypes over the genome.

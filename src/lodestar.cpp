@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
             return 0;
             break;
     };
-
+    /*
     // Parse -o option.
     switch(cmd_parser.getNumberOfArguments("-o", &successfulOperation)) {
         // If one argument was given, set file name.
@@ -137,6 +137,7 @@ int main(int argc, char *argv[]) {
             return 0;
             break;
     };
+    */
 
     // Parse --format option.
     switch (cmd_parser.getNumberOfArguments("--format", &successfulOperation)) {
@@ -282,7 +283,7 @@ int main(int argc, char *argv[]) {
     // Open VCF file.
     VCFParser* vcf_parser = new VCFParser(input_file);
     if (!(vcf_parser -> isOpen())) {
-        cout << "Input files does not exist!" << endl;
+        cout << "Input file does not exist!" << endl;
         delete vcf_parser;
         return 0;
     }
@@ -296,12 +297,6 @@ int main(int argc, char *argv[]) {
     // Get the global window.
     window* global = windows -> back();
     windows -> pop_back();
-
-    // Make sure global points exists.
-    if (global -> points == NULL) {
-        cout << "Global matrix does not exist! Exiting ..." << endl;
-        return 0;
-    }
 
     // Allocate memory for Procrustes analysis.
     double* x_0 = new double[n];
@@ -324,24 +319,18 @@ int main(int argc, char *argv[]) {
     for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++) {
         current_window = *it;
 
-        if (current_window -> points != NULL) {
-            // Center points.
-            center_matrix(current_window -> points, x_0, n, k);
+        // Center points.
+        center_matrix(current_window -> points, x_0, n, k);
 
-            // Get Procrustes dissimilarity statistic.
-            statistic = procrustes_analysis(current_window -> points, global -> points, C, CT_C, n, k);
+        // Get Procrustes dissimilarity statistic.
+        statistic = procrustes_analysis(current_window -> points, global -> points, C, CT_C, n, k);
 
-            // Execute permutation test.
-            p_value = permutation_test(num_perms, current_window -> points, global -> points, shuffleX, C, CT_C, n, k, statistic);
+        // Execute permutation test.
+        p_value = permutation_test(num_perms, current_window -> points, global -> points, shuffleX, C, CT_C, n, k, statistic);
 
-            // Set values for window.
-            current_window -> statistic = statistic;
-            current_window -> p_value = p_value;
-        } else {
-            // If the points matrix does not set statistic and p_value as nan.
-            current_window -> statistic = numeric_limits<double>::quiet_NaN();
-            current_window -> p_value = numeric_limits<double>::quiet_NaN();
-        }
+        // Set values for window.
+        current_window -> statistic = statistic;
+        current_window -> p_value = p_value;
         
         current_window -> index = index;
 
@@ -363,8 +352,32 @@ int main(int argc, char *argv[]) {
 
     /////////////////////////////////// OUTPUT LODESTAR RESULTS /////////////////////////////////////
 
+    // We could output as we iterate but this is more flexible.
+    cout << endl;
+    for (list<window*>::iterator it = windows -> begin(); it != windows -> end(); it++) {
+        current_window = *it;
+
+        cout << "Window: " << (current_window -> index) << endl;
+        cout << "Chromosome: " << (current_window -> chromosome) << endl;
+        cout << "Start Position: " << (current_window -> start_position) << endl;
+        cout << "End Position: " << (current_window -> end_position) << endl;
+        cout << "Number of Loci: " << (current_window -> num_loci) << endl;
+        cout << "Statistic: " << (current_window -> statistic) << endl;
+        cout << "P-Value: " << (current_window -> p_value) << endl;
+        cout << "Points:" << endl;
+        print_real_matrix(current_window -> points, n, k, 4, 4);
+        cout << endl;
+        cout << endl;
+    }
+
+    cout << "Global" << endl;
+    cout << "Number of Haplotypes: " << (global -> num_loci) << endl;
+    cout << "Points:" << endl;
+    print_real_matrix(global -> points, n, k, 4, 4);
+    cout << endl;
 
     // We are done with the windows.
+    delete global;
     delete windows;
 
     /////////////////////////////////// FINISHED LODESTAR OUTPUT ////////////////////////////////////

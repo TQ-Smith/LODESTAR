@@ -22,7 +22,6 @@ VCFParser::VCFParser(string file_name) {
     in_file = new igzstream;
     in_file -> open(file_name.c_str());
     if (in_file -> fail()) {
-        cerr << "File " << file_name << " does not exist!" << endl;
         return;
     }
 
@@ -157,7 +156,7 @@ int VCFParser::getNumberOfSamples() {
 }
 
 bool VCFParser::isOpen() {
-    return in_file -> fail();
+    return !(in_file -> fail());
 }
 
 string* VCFParser::getSampleNames() {
