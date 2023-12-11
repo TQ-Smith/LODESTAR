@@ -1,5 +1,7 @@
 # no .a or .o files
 *.[ao]
+*.vcf.gz
+*.vcf
 # but do track lib.a
 !lib.a
 *~
