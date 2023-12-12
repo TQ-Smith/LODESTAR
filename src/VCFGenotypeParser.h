@@ -15,19 +15,22 @@
 typedef char GENOTYPE;
 
 typedef struct {
-    char* file_name;
+    kstring_t* file_name;
     BGZF* file;
     int num_samples;
-    char** sample_names;
+    kstring_t* sample_names;
 
-    GENOTYPE* nextGenotypes;
+    kstring_t* buffer;
+
+    kstring_t* nextChromosome;
     int nextPosition;
-    char* nextChromosome;
+    int nextNumAlleles;
+    GENOTYPE* nextGenotypes;
 } VCFGenotypeParser;
 
 VCFGenotypeParser* init_vcf_genotype_parser(char* file_name);
 
-bool getNextLocus(VCFGenotypeParser* parser, char* chromosome, int* position, GENOTYPE* genotypes);
+bool get_next_locus(VCFGenotypeParser* parser, kstring_t* chromosome, int* position, int* numOfAlleles, GENOTYPE* genotypes);
 
 void destroy_vcf_genotype_parser(VCFGenotypeParser* parser);
 
