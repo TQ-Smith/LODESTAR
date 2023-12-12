@@ -10,29 +10,25 @@
 
 #include "../klib/bgzf.h"
 
-#include "../klib/kdq.h"
-
-KDQ_INIT(kstring_t)
+#include "../klib/kstring.h"
 
 typedef char GENOTYPE;
 
 typedef struct {
-    kstring_t file_name;
+    char* file_name;
     BGZF* file;
     int num_samples;
-    kdq_t(kstring_t) *sample_names;
+    char** sample_names;
 
     GENOTYPE* nextGenotypes;
     int nextPosition;
-    kstring_t nextChromosome;
+    char* nextChromosome;
 } VCFGenotypeParser;
 
 VCFGenotypeParser* init_vcf_genotype_parser(char* file_name);
 
 bool getNextLocus(VCFGenotypeParser* parser, char* chromosome, int* position, GENOTYPE* genotypes);
 
-char** getSampleNames(VCFGenotypeParser* parser);
-
-destroy_vcf_genotype_parser(VCFGenotypeParser* parser);
+void destroy_vcf_genotype_parser(VCFGenotypeParser* parser);
 
 #endif
