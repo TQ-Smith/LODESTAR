@@ -21,6 +21,7 @@ typedef struct {
     kstring_t* sample_names;
 
     kstring_t* buffer;
+    bool isEOF;
 
     kstring_t* nextChromosome;
     int nextPosition;
@@ -30,7 +31,7 @@ typedef struct {
 
 VCFGenotypeParser* init_vcf_genotype_parser(char* file_name);
 
-bool get_next_locus(VCFGenotypeParser* parser, kstring_t* chromosome, int* position, int* numOfAlleles, GENOTYPE** genotypes);
+void get_next_locus(VCFGenotypeParser* parser, kstring_t* chromosome, int* position, int* numOfAlleles, GENOTYPE** genotypes);
 
 void destroy_vcf_genotype_parser(VCFGenotypeParser* parser);
 
@@ -39,7 +40,7 @@ static inline GENOTYPE parse_genotype(char* start) {
     char* next = NULL;
     if (start[0] != '.')
         genotype = ((char) strtol(start, &next, 10) << 4) | (char) 0x0F;
-    if (next[1] != '.' && next[1] != '\t')
+    if (next[1] != '.' && next[1] != '\t' && next[1] != ':')
         genotype &= (0xF0 | (char) strtol(next + 1, (char**) NULL, 10));
     return genotype;
 }
