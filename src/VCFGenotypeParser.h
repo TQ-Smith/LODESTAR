@@ -6,22 +6,26 @@
 
 #include <stdbool.h>
 
-#include "../klib/kstring.h"
-
-#include "../klib/bgzf.h"
+#include "../klib/zlib.h"
 
 #include "../klib/kstring.h"
+
+#include "../klib/kseq.h"
+
+#define BUFFER_SIZE 4096
+KSTREAM_INIT(gzFile, gzread, BUFFER_SIZE)
 
 typedef char GENOTYPE;
 
 typedef struct {
     kstring_t* file_name;
-    BGZF* file;
-    int num_samples;
-    kstring_t* sample_names;
-
+    gzFile file;
+    kstream_t* stream;
     kstring_t* buffer;
     bool isEOF;
+
+    int num_samples;
+    kstring_t* sample_names;
 
     kstring_t* nextChromosome;
     int nextPosition;
@@ -37,11 +41,11 @@ void destroy_vcf_genotype_parser(VCFGenotypeParser* parser);
 
 static inline GENOTYPE parse_genotype(char* start) {
     GENOTYPE genotype = (GENOTYPE) 0xFF;
-    char* next = NULL;
+    char* next = start + 1;
     if (start[0] != '.')
-        genotype = ((char) strtol(start, &next, 10) << 4) | (char) 0x0F;
-    if (next[1] != '.' && next[1] != '\t' && next[1] != ':')
-        genotype &= (0xF0 | (char) strtol(next + 1, (char**) NULL, 10));
+        genotype = (strtol(start, &next, 10) << 4) | 0x0F;
+    if ((next[0] == '|' || next[0] == '/') && next[1] != '.')
+        genotype = (genotype & 0xF0) | strtol(next + 1, (char**) NULL, 10);
     return genotype;
 }
 
