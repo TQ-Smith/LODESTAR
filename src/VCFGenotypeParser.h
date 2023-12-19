@@ -39,11 +39,11 @@ void get_next_locus(VCFGenotypeParser* parser, kstring_t* chromosome, int* posit
 
 void destroy_vcf_genotype_parser(VCFGenotypeParser* parser);
 
-static inline GENOTYPE parse_genotype(char* start) {
-    GENOTYPE genotype = (GENOTYPE) 0xFF;
+static inline GENOTYPE parse_genotype(char* start, int numAlleles) {
+    GENOTYPE genotype = (GENOTYPE) ((numAlleles + 1) << 4) | (numAlleles + 1);
     char* next = start + 1;
     if (start[0] != '.')
-        genotype = (strtol(start, &next, 10) << 4) | 0x0F;
+        genotype = (strtol(start, &next, 10) << 4) | (numAlleles + 1);
     if ((next[0] == '|' || next[0] == '/') && next[1] != '.')
         genotype = (genotype & 0xF0) | strtol(next + 1, (char**) NULL, 10);
     return genotype;

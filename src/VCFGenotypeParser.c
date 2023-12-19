@@ -90,7 +90,7 @@ void get_next_locus(VCFGenotypeParser* parser, kstring_t* chromosome, int* posit
                     if (ks_str(parser -> buffer)[j] == ',')
                         numAlleles++;
             } else if (num_tabs > 8)
-                parser -> nextGenotypes[num_tabs - 9] = parse_genotype(ks_str(parser -> buffer) + prev_index + 1);
+                parser -> nextGenotypes[num_tabs - 9] = parse_genotype(ks_str(parser -> buffer) + prev_index + 1, numAlleles);
             prev_index = i;
             num_tabs++;
         }
@@ -113,8 +113,10 @@ void destroy_vcf_genotype_parser(VCFGenotypeParser* parser) {
     free(ks_str(parser -> buffer)); free(parser -> buffer);
     free(ks_str(parser -> nextChromosome)); free(parser -> nextChromosome);
     free(parser -> nextGenotypes);
+    free(parser);
 }
 
+/*
 int main() {
     
     VCFGenotypeParser* parser = init_vcf_genotype_parser("vcf_parser_test.vcf.gz");
@@ -151,3 +153,4 @@ int main() {
     free(ks_str(chromosome)); free(chromosome);
     
 }
+*/
