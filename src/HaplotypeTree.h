@@ -11,7 +11,7 @@
 #include "../klib/khash.h"
 KHASH_MAP_INIT_INT(32, int)
 
-#define MAX_NUM_NODES (1 << 15)
+#define MAX_NUM_LEAVES (1 << 15)
 
 typedef struct {
 
@@ -21,9 +21,7 @@ typedef struct {
 
     khash_t(32)* labelMap;
 
-    int numNodes;
-    int prevNumGroups;
-    int prevNumLeavesPerGroup;
+    int numLeaves;
 
 } HaplotypeTree;
 
