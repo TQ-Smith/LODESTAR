@@ -44,20 +44,24 @@ void add_locus(HaplotypeTree* tree, int numAlleles, GENOTYPE* genotypes, bool co
 
 void relabel_haplotypes(HaplotypeTree* tree) {
 
-    while (kh_size(tree -> labelMap) != 0)
-        kh_del(32, tree -> labelMap, kh_begin(tree -> labelMap));
+    kh_clear(32, tree -> labelMap);
 
+    khiter_t k;
     int ret, newLabel = 0;
 
     for (int i = 0; i < tree -> numSamples; i++) {
-        if (kh_get(32, tree -> labelMap, tree -> leftHaplotype[i]) != kh_end(tree -> labelMap))
-            kh_value(tree -> labelMap, kh_put(32, tree -> labelMap, tree -> leftHaplotype[i], &ret)) = newLabel++;
+        if (kh_get(32, tree -> labelMap, tree -> leftHaplotype[i]) == kh_end(tree -> labelMap)) {
+            k = kh_put(32, tree -> labelMap, tree -> leftHaplotype[i], &ret);
+            kh_value(tree -> labelMap, k) = newLabel++;
+        }
 
-        if (kh_get(32, tree -> labelMap, tree -> rightHaplotype[i]) != kh_end(tree -> labelMap))
-            kh_value(tree -> labelMap, kh_put(32, tree -> labelMap, tree -> rightHaplotype[i], &ret)) = newLabel++;
-
-        tree -> leftHaplotype[i] = kh_value(tree -> labelMap, tree -> leftHaplotype[i]);
-        tree -> rightHaplotype[i] = kh_value(tree -> labelMap, tree -> rightHaplotype[i]);
+        if (kh_get(32, tree -> labelMap, tree -> rightHaplotype[i]) == kh_end(tree -> labelMap)) {
+            k = kh_put(32, tree -> labelMap, tree -> rightHaplotype[i], &ret);
+            kh_value(tree -> labelMap, k) = newLabel++;
+        }
+        
+        tree -> leftHaplotype[i] = kh_value(tree -> labelMap, kh_get(32, tree -> labelMap, tree -> leftHaplotype[i]));
+        tree -> rightHaplotype[i] = kh_value(tree -> labelMap, kh_get(32, tree -> labelMap, tree -> rightHaplotype[i]));
     }
 
 }
@@ -104,7 +108,7 @@ int main() {
         printf("Sample %d %x/%x -> %d %d\n", i + 1, LEFT_ALLELE(genotypes[i]), RIGHT_ALLELE(genotypes[i]), tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
     printf("\n");
 
-    printf("Relabeled:\n");
+    printf("\nRelabeled:\n");
     relabel_haplotypes(tree);
     for (int i = 0; i < parser -> num_samples; i++)
         printf("Sample %d -> %d %d\n", i + 1, tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
