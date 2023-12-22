@@ -45,20 +45,16 @@ void add_locus(HaplotypeTree* tree, int numAlleles, GENOTYPE* genotypes, bool co
 void relabel_haplotypes(HaplotypeTree* tree) {
 
     kh_clear(32, tree -> labelMap);
-
-    khiter_t k;
+    
     int ret, newLabel = 0;
 
     for (int i = 0; i < tree -> numSamples; i++) {
-        if (kh_get(32, tree -> labelMap, tree -> leftHaplotype[i]) == kh_end(tree -> labelMap)) {
-            k = kh_put(32, tree -> labelMap, tree -> leftHaplotype[i], &ret);
-            kh_value(tree -> labelMap, k) = newLabel++;
-        }
 
-        if (kh_get(32, tree -> labelMap, tree -> rightHaplotype[i]) == kh_end(tree -> labelMap)) {
-            k = kh_put(32, tree -> labelMap, tree -> rightHaplotype[i], &ret);
-            kh_value(tree -> labelMap, k) = newLabel++;
-        }
+        if (kh_get(32, tree -> labelMap, tree -> leftHaplotype[i]) == kh_end(tree -> labelMap))
+            kh_value(tree -> labelMap, kh_put(32, tree -> labelMap, tree -> leftHaplotype[i], &ret)) = newLabel++;
+
+        if (kh_get(32, tree -> labelMap, tree -> rightHaplotype[i]) == kh_end(tree -> labelMap))
+            kh_value(tree -> labelMap, kh_put(32, tree -> labelMap, tree -> rightHaplotype[i], &ret)) = newLabel++;
         
         tree -> leftHaplotype[i] = kh_value(tree -> labelMap, kh_get(32, tree -> labelMap, tree -> leftHaplotype[i]));
         tree -> rightHaplotype[i] = kh_value(tree -> labelMap, kh_get(32, tree -> labelMap, tree -> rightHaplotype[i]));
