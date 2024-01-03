@@ -9,8 +9,8 @@ HaplotypeTree* init_haplotype_tree(int numSamples) {
     HaplotypeTree* tree = (HaplotypeTree*) calloc(1, sizeof(HaplotypeTree));
 
     tree -> numSamples = numSamples;
-    tree -> leftHaplotype = (int*) calloc(numSamples, sizeof(int));
-    tree -> rightHaplotype = (int*) calloc(numSamples, sizeof(int));
+    tree -> leftHaplotype = (unsigned int*) calloc(numSamples, sizeof(int));
+    tree -> rightHaplotype = (unsigned int*) calloc(numSamples, sizeof(int));
 
     tree -> labelMap = kh_init(32);
 
@@ -58,7 +58,10 @@ void relabel_haplotypes(HaplotypeTree* tree) {
         
         tree -> leftHaplotype[i] = kh_value(tree -> labelMap, kh_get(32, tree -> labelMap, tree -> leftHaplotype[i]));
         tree -> rightHaplotype[i] = kh_value(tree -> labelMap, kh_get(32, tree -> labelMap, tree -> rightHaplotype[i]));
+
     }
+
+    tree -> numLeaves = newLabel + 1;
 
 }
 
@@ -125,6 +128,12 @@ int main() {
     printf("Second Locus Haplotype:\n");
     for (int i = 0; i < parser -> num_samples; i++)
         printf("Sample %d %x/%x -> %d %d\n", i + 1, LEFT_ALLELE(genotypes[i]), RIGHT_ALLELE(genotypes[i]), tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
+    printf("\n");
+
+    printf("\nRelabeled:\n");
+    relabel_haplotypes(tree);
+    for (int i = 0; i < parser -> num_samples; i++)
+        printf("Sample %d -> %d %d\n", i + 1, tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
     printf("\n");
 
     destroy_vcf_genotype_parser(parser);

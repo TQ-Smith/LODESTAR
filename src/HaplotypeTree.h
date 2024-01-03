@@ -11,13 +11,13 @@
 #include "../klib/khash.h"
 KHASH_MAP_INIT_INT(32, int)
 
-#define MAX_NUM_LEAVES (1 << 15)
+#define MAX_NUM_LEAVES (1 << 25)
 
 typedef struct {
 
     int numSamples;
-    int* leftHaplotype;
-    int* rightHaplotype;
+    unsigned int* leftHaplotype;
+    unsigned int* rightHaplotype;
 
     khash_t(32)* labelMap;
 
