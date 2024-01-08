@@ -21,14 +21,14 @@ HaplotypeTree* init_haplotype_tree(int numSamples) {
 }
 
 void add_locus(HaplotypeTree* tree, int numAlleles, GENOTYPE* genotypes, bool collapseMissingGenotypes) {
-
+    
     for (int i = 0; i < tree -> numSamples; i++) {
         if (tree -> numLeaves == 1) {
             tree -> leftHaplotype[i] = LEFT_ALLELE(genotypes[i]);
             tree -> rightHaplotype[i] = RIGHT_ALLELE(genotypes[i]);
-        } else if (collapseMissingGenotypes && ((tree -> leftHaplotype[i] + 1) == tree -> numLeaves || (tree -> rightHaplotype[i] + 1) == tree -> numLeaves)) {
-            tree -> leftHaplotype[i] = tree -> numLeaves * (numAlleles + 1);
-            tree -> rightHaplotype[i] = tree -> numLeaves * (numAlleles + 1);
+        } else if (collapseMissingGenotypes && (tree -> leftHaplotype[i] == (tree -> numLeaves - 1) || tree -> rightHaplotype[i] == (tree -> numLeaves - 1) || LEFT_ALLELE(genotypes[i]) == numAlleles || RIGHT_ALLELE(genotypes[i]) == numAlleles)) {
+            tree -> leftHaplotype[i] = tree -> numLeaves * (numAlleles + 1) - 1;
+            tree -> rightHaplotype[i] = tree -> numLeaves * (numAlleles + 1) - 1;
         } else {
             tree -> leftHaplotype[i] = tree -> leftHaplotype[i] * (numAlleles + 1) + LEFT_ALLELE(genotypes[i]);
             tree -> rightHaplotype[i] = tree -> rightHaplotype[i] * (numAlleles + 1) + RIGHT_ALLELE(genotypes[i]);
@@ -48,17 +48,31 @@ void relabel_haplotypes(HaplotypeTree* tree) {
     
     int ret, newLabel = 0;
 
+    khiter_t k = kh_put(32, tree -> labelMap, tree -> numLeaves - 1, &ret);
+    kh_value(tree -> labelMap, k) = 0xFFFFFFFF;
+
     for (int i = 0; i < tree -> numSamples; i++) {
 
-        if (kh_get(32, tree -> labelMap, tree -> leftHaplotype[i]) == kh_end(tree -> labelMap))
-            kh_value(tree -> labelMap, kh_put(32, tree -> labelMap, tree -> leftHaplotype[i], &ret)) = newLabel++;
+        if (kh_get(32, tree -> labelMap, tree -> leftHaplotype[i]) == kh_end(tree -> labelMap)) {
+            k = kh_put(32, tree -> labelMap, tree -> leftHaplotype[i], &ret);
+            kh_value(tree -> labelMap, k) = newLabel++;
+        }
 
-        if (kh_get(32, tree -> labelMap, tree -> rightHaplotype[i]) == kh_end(tree -> labelMap))
-            kh_value(tree -> labelMap, kh_put(32, tree -> labelMap, tree -> rightHaplotype[i], &ret)) = newLabel++;
+        if (kh_get(32, tree -> labelMap, tree -> rightHaplotype[i]) == kh_end(tree -> labelMap)) {
+            k = kh_put(32, tree -> labelMap, tree -> rightHaplotype[i], &ret);
+            kh_value(tree -> labelMap, k) = newLabel++;
+        }
         
         tree -> leftHaplotype[i] = kh_value(tree -> labelMap, kh_get(32, tree -> labelMap, tree -> leftHaplotype[i]));
         tree -> rightHaplotype[i] = kh_value(tree -> labelMap, kh_get(32, tree -> labelMap, tree -> rightHaplotype[i]));
 
+    }
+
+    for (int i = 0; i < tree -> numSamples; i++) {
+        if (tree -> leftHaplotype[i] == 0xFFFFFFFF)
+            tree -> leftHaplotype[i] = newLabel;
+        if (tree -> rightHaplotype[i] == 0xFFFFFFFF)
+            tree -> rightHaplotype[i] = newLabel;
     }
 
     tree -> numLeaves = newLabel + 1;
@@ -85,56 +99,7 @@ int main() {
 
     HaplotypeTree* tree = init_haplotype_tree(parser -> num_samples);
 
-    printf("\nCollapse Missing Genotypes\n");
-    get_next_locus(parser, chromosome, &position, &numOfAlleles, &genotypes);
-    add_locus(tree, numOfAlleles, genotypes, true);
-    printf("First Locus Haplotype:\n");
-    for (int i = 0; i < parser -> num_samples; i++)
-        printf("Sample %d %x/%x -> %d %d\n", i + 1, LEFT_ALLELE(genotypes[i]), RIGHT_ALLELE(genotypes[i]), tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
-    printf("\n");
-
-    get_next_locus(parser, chromosome, &position, &numOfAlleles, &genotypes);
-    add_locus(tree, numOfAlleles, genotypes, true);
-    printf("Second Locus Haplotype:\n");
-    for (int i = 0; i < parser -> num_samples; i++)
-        printf("Sample %d %x/%x -> %d %d\n", i + 1, LEFT_ALLELE(genotypes[i]), RIGHT_ALLELE(genotypes[i]), tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
-    printf("\n");
-
-    get_next_locus(parser, chromosome, &position, &numOfAlleles, &genotypes);
-    add_locus(tree, numOfAlleles, genotypes, true);
-    printf("Third Locus Haplotype:\n");
-    for (int i = 0; i < parser -> num_samples; i++)
-        printf("Sample %d %x/%x -> %d %d\n", i + 1, LEFT_ALLELE(genotypes[i]), RIGHT_ALLELE(genotypes[i]), tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
-    printf("\n");
-
-    printf("\nRelabeled:\n");
-    relabel_haplotypes(tree);
-    for (int i = 0; i < parser -> num_samples; i++)
-        printf("Sample %d -> %d %d\n", i + 1, tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
-    printf("\n");
-
-    tree -> numLeaves = 1;
-    printf("\nNext Chromosome\nDo Not Collapse Missing Genotypes\n");
-
-    get_next_locus(parser, chromosome, &position, &numOfAlleles, &genotypes);
-    add_locus(tree, numOfAlleles, genotypes, false);
-    printf("First Locus Haplotype:\n");
-    for (int i = 0; i < parser -> num_samples; i++)
-        printf("Sample %d %x/%x -> %d %d\n", i + 1, LEFT_ALLELE(genotypes[i]), RIGHT_ALLELE(genotypes[i]), tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
-    printf("\n");
-
-    get_next_locus(parser, chromosome, &position, &numOfAlleles, &genotypes);
-    add_locus(tree, numOfAlleles, genotypes, false);
-    printf("Second Locus Haplotype:\n");
-    for (int i = 0; i < parser -> num_samples; i++)
-        printf("Sample %d %x/%x -> %d %d\n", i + 1, LEFT_ALLELE(genotypes[i]), RIGHT_ALLELE(genotypes[i]), tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
-    printf("\n");
-
-    printf("\nRelabeled:\n");
-    relabel_haplotypes(tree);
-    for (int i = 0; i < parser -> num_samples; i++)
-        printf("Sample %d -> %d %d\n", i + 1, tree -> leftHaplotype[i], tree -> rightHaplotype[i]);
-    printf("\n");
+    
 
     destroy_vcf_genotype_parser(parser);
     free(genotypes);
