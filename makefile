@@ -2,8 +2,11 @@
 CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 
-bin/HaplotypeTree: src/HaplotypeTree.o
-	gcc $(LFLAGS) bin/HaplotypeTree src/HaplotypeTree.o src/VCFGenotypeParser.o klib/kstring.o -lz
+bin/SlidingWindow: src/SlidingWindow.o
+	gcc $(LFLAGS) bin/SlidingWindow src/SlidingWindow.o src/HaplotypeTree.o src/VCFGenotypeParser.o klib/kstring.o -lz
+
+src/SlidingWindow.o: src/HaplotypeTree.o
+	gcc $(CFLAGS) src/SlidingWindow.c -o src/SlidingWindow.o
 
 src/HaplotypeTree.o: src/VCFGenotypeParser.o
 	gcc $(CFLAGS) src/HaplotypeTree.c -o src/HaplotypeTree.o
