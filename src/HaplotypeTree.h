@@ -16,8 +16,14 @@ KHASH_MAP_INIT_INT(32, int)
 typedef struct {
 
     int numSamples;
+    GENOTYPE* genotypes;
     unsigned int* leftHaplotype;
     unsigned int* rightHaplotype;
+
+    int numLoci;
+    kstring_t* chromosome;
+    int start_locus;
+    int end_locus;
 
     khash_t(32)* labelMap;
 
@@ -27,7 +33,7 @@ typedef struct {
 
 HaplotypeTree* init_haplotype_tree(int numSamples);
 
-void add_locus(HaplotypeTree* tree, int numAlleles, GENOTYPE* genotypes, bool collapseMissingGenotypes);
+void get_next_haplotype(VCFGenotypeParser* parser, HaplotypeTree* tree, int HAP_SIZE);
 
 void relabel_haplotypes(HaplotypeTree* tree);
 
