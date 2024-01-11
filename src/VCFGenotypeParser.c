@@ -78,6 +78,11 @@ void get_next_locus(VCFGenotypeParser* parser, kstring_t* chromosome, int* posit
     int dret;
     ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret);
 
+    if (ks_len(parser -> buffer) == 0) {
+        parser -> isEOF = true;
+        return;
+    }
+
     int num_tabs = 0, prev_index = 0, numAlleles = 2;
     for (int i = 0; i <= ks_len(parser -> buffer); i++) {
         if (i == ks_len(parser -> buffer) || ks_str(parser -> buffer)[i] == '\t') {

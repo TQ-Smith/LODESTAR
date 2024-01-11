@@ -22,8 +22,8 @@ typedef struct {
 
     int numLoci;
     kstring_t* chromosome;
-    int start_locus;
-    int end_locus;
+    int startLocus;
+    int endLocus;
 
     khash_t(32)* labelMap;
 
@@ -33,7 +33,7 @@ typedef struct {
 
 HaplotypeTree* init_haplotype_tree(int numSamples);
 
-void get_next_haplotype(VCFGenotypeParser* parser, HaplotypeTree* tree, int HAP_SIZE);
+bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeTree* tree, int HAP_SIZE);
 
 void relabel_haplotypes(HaplotypeTree* tree);
 

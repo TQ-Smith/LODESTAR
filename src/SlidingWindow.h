@@ -11,8 +11,8 @@
 typedef struct {
 
     kstring_t* chromosome;
-    int start_locus;
-    int end_locus;
+    int startLocus;
+    int endLocus;
     int numLoci;
 
 } Window;

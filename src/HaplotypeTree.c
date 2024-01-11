@@ -86,25 +86,29 @@ void relabel_haplotypes(HaplotypeTree* tree) {
 
 }
 
-void get_next_haplotype(VCFGenotypeParser* parser, HaplotypeTree* tree, int HAP_SIZE) {
+bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeTree* tree, int HAP_SIZE) {
 
     if (parser -> isEOF)
-        return;
+        return false;
 
     tree -> chromosome -> l = 0;
     kputs(ks_str(parser -> nextChromosome), tree -> chromosome);
-    tree -> start_locus = parser -> nextPosition;
+    tree -> startLocus = parser -> nextPosition;
 
     tree -> numLeaves = 1;
     tree -> numLoci = 0;
 
+    bool isCompleteHap = true;
     int numAlleles;
 
-    while(!(parser -> isEOF) && (tree -> numLoci < HAP_SIZE) && strcmp(ks_str(tree -> chromosome), ks_str(parser -> nextChromosome)) == 0) {
-        get_next_locus(parser, tree -> chromosome, &(tree -> end_locus), &numAlleles, &(tree -> genotypes));
+    while(!(parser -> isEOF) && (tree -> numLoci < HAP_SIZE) && isCompleteHap) {
+        get_next_locus(parser, tree -> chromosome, &(tree -> endLocus), &numAlleles, &(tree -> genotypes));
         add_locus(tree, numAlleles, true);
+        isCompleteHap = strcmp(ks_str(tree -> chromosome), ks_str(parser -> nextChromosome)) == 0;
         tree -> numLoci++;
     }
+
+    return !(parser -> isEOF) && isCompleteHap;
 
 }
 
@@ -122,8 +126,8 @@ void destroy_haplotype_tree(HaplotypeTree* tree) {
 /*
 void print_tree_info(HaplotypeTree* tree) {
     printf("Chromosome: %s\n", ks_str(tree -> chromosome));
-    printf("Start locus: %d\n", tree -> start_locus);
-    printf("End locus: %d\n", tree -> end_locus);
+    printf("Start locus: %d\n", tree -> startLocus);
+    printf("End locus: %d\n", tree -> endLocus);
     printf("Number of loci: %d\n", tree -> numLoci);
     printf("Sample Haplotypes:\n");
     for (int i = 0; i < tree -> numSamples; i++)
