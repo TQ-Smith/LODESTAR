@@ -15,25 +15,14 @@ Window* get_next_window(VCFGenotypeParser* parser, HaplotypeTree* tree, Window* 
 
     Window* nextWindow = init_window();
 
-    bool noNextHapOnSameChromosome = true;
     int numHaps = currentWindow -> numLoci / HAP_SIZE;
 
-    while(noNextHapOnSameChromosome && numHaps < WINDOW_SIZE) {
-        noNextHapOnSameChromosome = get_next_haplotype(parser, tree, HAP_SIZE);
+    while(get_next_haplotype(parser, tree, HAP_SIZE) && numHaps < WINDOW_SIZE) {
 
-        printf("Hap\n");
+        // Process haplotype.
 
-        currentWindow -> numLoci += tree -> numLoci;
-        if (numHaps % OFFSET_SIZE == 0)
-            nextWindow -> startLocus = parser -> nextPosition;
         numHaps++;
     }
-    currentWindow -> endLocus = tree -> endLocus;
-    if (strcmp(ks_str(currentWindow -> chromosome), ks_str(parser -> nextChromosome)) == 0)
-        nextWindow -> numLoci = 0;
-    else
-        nextWindow -> numLoci = currentWindow -> numLoci - (HAP_SIZE * OFFSET_SIZE);
-    kputs(ks_str(parser -> nextChromosome), nextWindow -> chromosome);
 
     return nextWindow;
 
@@ -56,7 +45,7 @@ klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeTre
     
     while ((nextWindow = get_next_window(parser, tree, currentWindow, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE)) != NULL) {
 
-        // Process current Window.
+        // Process currentWindow.
 
         *kl_pushp(WindowPtr, windows) = currentWindow;
 
@@ -88,9 +77,9 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    int WINDOW_SIZE = 2, HAP_SIZE = 2, OFFSET_SIZE = 1;
+    int WINDOW_SIZE = 2, HAP_SIZE = 1, OFFSET_SIZE = 1;
 
-    VCFGenotypeParser* parser = init_vcf_genotype_parser("haplotype_tree_test.vcf.gz");
+    VCFGenotypeParser* parser = init_vcf_genotype_parser("sliding_window_test.vcf.gz");
     HaplotypeTree* tree = init_haplotype_tree(parser -> num_samples);
     
     klist_t(WindowPtr)* windows = slide_through_genome(parser, tree, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE);
