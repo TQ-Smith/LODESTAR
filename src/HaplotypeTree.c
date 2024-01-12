@@ -98,17 +98,17 @@ bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeTree* tree, int HAP_
     tree -> numLeaves = 1;
     tree -> numLoci = 0;
 
-    bool isCompleteHap = true;
+    bool isSameChromosome = true;
     int numAlleles;
 
-    while(!(parser -> isEOF) && (tree -> numLoci < HAP_SIZE) && isCompleteHap) {
+    while(!(parser -> isEOF) && (tree -> numLoci < HAP_SIZE) && isSameChromosome) {
         get_next_locus(parser, tree -> chromosome, &(tree -> endLocus), &numAlleles, &(tree -> genotypes));
         add_locus(tree, numAlleles, true);
-        isCompleteHap = strcmp(ks_str(tree -> chromosome), ks_str(parser -> nextChromosome)) == 0;
+        isSameChromosome = strcmp(ks_str(tree -> chromosome), ks_str(parser -> nextChromosome)) == 0;
         tree -> numLoci++;
     }
 
-    return !(parser -> isEOF) && isCompleteHap;
+    return tree -> numLoci == HAP_SIZE && isSameChromosome;
 
 }
 

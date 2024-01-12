@@ -15,14 +15,25 @@ Window* get_next_window(VCFGenotypeParser* parser, HaplotypeTree* tree, Window* 
 
     Window* nextWindow = init_window();
 
+    kputs(ks_str(parser -> nextChromosome), currentWindow -> chromosome);
+
+    bool isSameChromosome = true;
     int numHaps = currentWindow -> numLoci / HAP_SIZE;
 
-    while(get_next_haplotype(parser, tree, HAP_SIZE) && numHaps < WINDOW_SIZE) {
+    while(numHaps < WINDOW_SIZE && isSameChromosome) {
+        isSameChromosome = get_next_haplotype(parser, tree, HAP_SIZE);
 
         // Process haplotype.
+        printf("%d\n", tree -> startLocus);
 
+        currentWindow -> numLoci += tree -> numLoci;
         numHaps++;
     }
+    currentWindow -> endLocus = tree -> endLocus;
+    if (isSameChromosome)
+        nextWindow -> numLoci = currentWindow -> numLoci - (HAP_SIZE * OFFSET_SIZE);
+    else
+        nextWindow -> numLoci = 0;
 
     return nextWindow;
 
@@ -39,10 +50,6 @@ klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeTre
     Window* nextWindow = NULL;
     Window* temp = NULL;
 
-    currentWindow -> startLocus = parser -> nextPosition;
-    kputs(ks_str(parser -> nextChromosome), currentWindow -> chromosome);
-    currentWindow -> numLoci = 0;
-    
     while ((nextWindow = get_next_window(parser, tree, currentWindow, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE)) != NULL) {
 
         // Process currentWindow.
