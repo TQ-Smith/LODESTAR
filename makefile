@@ -3,13 +3,13 @@ CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 
 bin/SlidingWindow: src/SlidingWindow.o
-	gcc $(LFLAGS) bin/SlidingWindow src/SlidingWindow.o src/HaplotypeTree.o src/VCFGenotypeParser.o klib/kstring.o -lz
+	gcc $(LFLAGS) bin/SlidingWindow src/SlidingWindow.o src/HaplotypeEncoder.o src/VCFGenotypeParser.o klib/kstring.o -lz
 
-src/SlidingWindow.o: src/HaplotypeTree.o
+src/SlidingWindow.o: src/HaplotypeEncoder.o
 	gcc $(CFLAGS) src/SlidingWindow.c -o src/SlidingWindow.o
 
-src/HaplotypeTree.o: src/VCFGenotypeParser.o
-	gcc $(CFLAGS) src/HaplotypeTree.c -o src/HaplotypeTree.o
+src/HaplotypeEncoder.o: src/VCFGenotypeParser.o
+	gcc $(CFLAGS) src/HaplotypeEncoder.c -o src/HaplotypeEncoder.o
 
 src/VCFGenotypeParser.o: klib/kstring.o
 	gcc $(CFLAGS) src/VCFGenotypeParser.c -o src/VCFGenotypeParser.o

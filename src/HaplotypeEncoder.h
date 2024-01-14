@@ -29,14 +29,14 @@ typedef struct {
 
     int numLeaves;
 
-} HaplotypeTree;
+} HaplotypeEncoder;
 
-HaplotypeTree* init_haplotype_tree(int numSamples);
+HaplotypeEncoder* init_haplotype_encoder(int numSamples);
 
-bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeTree* tree, int HAP_SIZE);
+bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeEncoder* tree, int HAP_SIZE);
 
-void relabel_haplotypes(HaplotypeTree* tree);
+void relabel_haplotypes(HaplotypeEncoder* tree);
 
-void destroy_haplotype_tree(HaplotypeTree* tree);
+void destroy_haplotype_encoder(HaplotypeEncoder* tree);
 
 #endif
