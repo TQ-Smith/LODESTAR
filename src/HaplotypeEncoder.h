@@ -33,10 +33,10 @@ typedef struct {
 
 HaplotypeEncoder* init_haplotype_encoder(int numSamples);
 
-bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeEncoder* tree, int HAP_SIZE);
+bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE);
 
-void relabel_haplotypes(HaplotypeEncoder* tree);
+void relabel_haplotypes(HaplotypeEncoder* encoder);
 
-void destroy_haplotype_encoder(HaplotypeEncoder* tree);
+void destroy_haplotype_encoder(HaplotypeEncoder* encoder);
 
 #endif
