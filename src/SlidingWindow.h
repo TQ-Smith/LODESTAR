@@ -10,6 +10,8 @@
 
 typedef struct {
 
+    int windowNum;
+    int windowNumOnChromosome;
     kstring_t* chromosome;
     int startLocus;
     int endLocus;
