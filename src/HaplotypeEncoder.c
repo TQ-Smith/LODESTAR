@@ -108,7 +108,7 @@ bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, in
         encoder -> numLoci++;
     }
 
-    return encoder -> numLoci == HAP_SIZE && isSameChromosome;
+    return !(parser -> isEOF) && encoder -> numLoci == HAP_SIZE && isSameChromosome;
 
 }
 

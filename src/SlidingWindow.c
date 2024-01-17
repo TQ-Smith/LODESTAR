@@ -20,16 +20,17 @@ Window* get_next_window(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, Wi
     kputs(ks_str(parser -> nextChromosome), currentWindow -> chromosome);
 
     bool isSameChromosome = true;
-    int numHapsAlreadyProcessed = currentWindow -> numLoci / HAP_SIZE;
+    int numHapsInOverlap = currentWindow -> numLoci / HAP_SIZE;
 
-    while(numHapsAlreadyProcessed < WINDOW_SIZE && isSameChromosome) {
+    while(numHapsInOverlap < WINDOW_SIZE && isSameChromosome) {
         isSameChromosome = get_next_haplotype(parser, encoder, HAP_SIZE);
         // Process haplotype.
+        if (numHapsInOverlap % OFFSET_SIZE == 0)
+            startLoci[(currentWindow -> windowNumOnChromosome + numHapsInOverlap) % ((WINDOW_SIZE - OFFSET_SIZE) / OFFSET_SIZE + 1)] = encoder -> startLocus;
         currentWindow -> numLoci += encoder -> numLoci;
-        numHapsAlreadyProcessed++;
-        numHaps++;
+        numHapsInOverlap++;
     }
-    // currentWindow -> startLocus = startLoci[(currentWindow -> windowNum - OFFSET_SIZE) / OFFSET_SIZE];
+    currentWindow -> startLocus = startLoci[currentWindow -> windowNumOnChromosome % ((WINDOW_SIZE - OFFSET_SIZE) / OFFSET_SIZE + 1)];
     currentWindow -> endLocus = encoder -> endLocus;
     nextWindow -> windowNum = currentWindow -> windowNum + 1;
     if (isSameChromosome) {
@@ -51,15 +52,17 @@ klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeEnc
 
     klist_t(WindowPtr)* windows = kl_init(WindowPtr);
 
-    int* startLoci = (int*) calloc(((WINDOW_SIZE - OFFSET_SIZE) / OFFSET_SIZE), sizeof(int));
+    int* startLoci = (int*) calloc((WINDOW_SIZE - OFFSET_SIZE) / OFFSET_SIZE + 1, sizeof(int));
     
     Window* currentWindow = init_window();
     Window* nextWindow = NULL;
     Window* temp = NULL;
 
+    int i = 1;
     while ((nextWindow = get_next_window(parser, encoder, currentWindow, startLoci, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE)) != NULL) {
 
         // Process currentWindow.
+        printf("Processed Window %d!\n", i++);
 
         *kl_pushp(WindowPtr, windows) = currentWindow;
 
@@ -69,6 +72,7 @@ klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeEnc
 
     }
 
+    destroy_window(currentWindow);
     free(startLoci);
 
     return windows;
@@ -95,7 +99,7 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    int WINDOW_SIZE = 2, HAP_SIZE = 1, OFFSET_SIZE = 1;
+    int WINDOW_SIZE = 10, HAP_SIZE = 100, OFFSET_SIZE = 1;
 
     VCFGenotypeParser* parser = init_vcf_genotype_parser("sliding_window_test.vcf.gz");
     HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> num_samples);
