@@ -1,4 +1,9 @@
 
+# File: Makefile
+# Date: 18 Janurary 2023
+# Author: TQ Smith
+# Purpose: Compiles Sliding Window Algorithm.
+
 CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 
