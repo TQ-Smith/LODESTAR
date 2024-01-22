@@ -8,7 +8,10 @@ CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 
 bin/SlidingWindow: src/SlidingWindow.o
-	gcc $(LFLAGS) bin/SlidingWindow src/SlidingWindow.o src/HaplotypeEncoder.o src/VCFGenotypeParser.o klib/kstring.o -lz
+	gcc $(LFLAGS) bin/SlidingWindow src/SlidingWindow.o src/HaplotypeEncoder.o src/VCFGenotypeParser.o klib/kstring.o src/ASD.o src/Matrix.o -lz
+
+src/ASD.o: src/Matrix.o
+	gcc $(CFLAGS) src/ASD.c -o src/ASD.o
 
 src/SlidingWindow.o: src/HaplotypeEncoder.o
 	gcc $(CFLAGS) src/SlidingWindow.c -o src/SlidingWindow.o
@@ -18,6 +21,9 @@ src/HaplotypeEncoder.o: src/VCFGenotypeParser.o
 
 src/VCFGenotypeParser.o: klib/kstring.o
 	gcc $(CFLAGS) src/VCFGenotypeParser.c -o src/VCFGenotypeParser.o
+
+src/Matrix.o:
+	gcc $(CFLAGS) src/Matrix.c -o src/Matrix.o
 
 klib/kstring.o:
 	gcc $(CFLAGS) klib/kstring.c -o klib/kstring.o
