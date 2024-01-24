@@ -1,6 +1,6 @@
 
 // File: VCFGenotypeParser.c
-// Date: 18 Janurary 2023
+// Date: 18 Janurary 2024
 // Author: TQ Smith
 // Purpose: Parse the genotypes for each record in a VCF file.
 

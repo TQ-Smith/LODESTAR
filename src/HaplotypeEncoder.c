@@ -1,6 +1,6 @@
 
 // File: HaplotypeEncoder.c
-// Date: 18 Janurary 2023
+// Date: 18 Janurary 2024
 // Author: TQ Smith
 // Purpose: Track the haplotypes of each sample using a simplified arithmetic encoding.
 
