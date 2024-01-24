@@ -7,20 +7,26 @@
 CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 
-bin/SlidingWindow: src/SlidingWindow.o
-	gcc $(LFLAGS) bin/SlidingWindow src/SlidingWindow.o src/HaplotypeEncoder.o src/VCFGenotypeParser.o klib/kstring.o src/ASD.o src/Matrix.o -lz
+bin/test: src/test.o
+	gcc $(LFLAGS) bin/test src/test.o src/Window.o src/SlidingWindow.o src/HaplotypeEncoder.o src/VCFGenotypeParser.o klib/kstring.o src/ASD.o src/Matrix.o -lz
 
-src/ASD.o: src/Matrix.o
-	gcc $(CFLAGS) src/ASD.c -o src/ASD.o
+src/test.o: src/SlidingWindow.o
+	gcc $(CFLAGS) src/test.c -o src/test.o
 
-src/SlidingWindow.o: src/HaplotypeEncoder.o
+src/SlidingWindow.o: src/ASD.o src/HaplotypeEncoder.o src/Window.o
 	gcc $(CFLAGS) src/SlidingWindow.c -o src/SlidingWindow.o
+
+src/ASD.o: src/Matrix.o 
+	gcc $(CFLAGS) src/ASD.c -o src/ASD.o
 
 src/HaplotypeEncoder.o: src/VCFGenotypeParser.o
 	gcc $(CFLAGS) src/HaplotypeEncoder.c -o src/HaplotypeEncoder.o
 
 src/VCFGenotypeParser.o: klib/kstring.o
 	gcc $(CFLAGS) src/VCFGenotypeParser.c -o src/VCFGenotypeParser.o
+
+src/Window.o:
+	gcc $(CFLAGS) src/Window.c -o src/Window.o
 
 src/Matrix.o:
 	gcc $(CFLAGS) src/Matrix.c -o src/Matrix.o

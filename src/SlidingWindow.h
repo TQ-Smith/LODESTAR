@@ -11,43 +11,12 @@
 
 #include "HaplotypeEncoder.h"
 
+#include "Window.h"
+
+#include "ASD.h"
+
 // We are using klib list.
 #include "../klib/klist.h"
-
-// A structure to hold a window's information.
-//  Will change significantly given the application.
-typedef struct {
-
-    // The window number out of all processed windows.
-    int windowNum;
-    // The window number on a griven chromosome.
-    int windowNumOnChromosome;
-    // The chromosome the window is on.
-    kstring_t* chromosome;
-    // The start locus of the window.
-    int startLocus;
-    // The end locus of the window.
-    int endLocus;
-    // The number of loci within the window.
-    int numLoci;
-
-} Window;
-
-// Creates a window object.
-//  Will change with the given application.
-// Accepts:
-//  void.
-// Returns:
-//  Window*, A pointer to a new window structure.
-Window* init_window();
-
-// Deallocates the memory occupied by a window.
-//  Will change with the given application.
-// Accepts:
-//  Window* window -> The window to deallocate.
-// Returns:
-//  void.
-void destroy_window(Window* window);
 
 // A macro is used to wrap the destroy_window function when
 //  deallocating a list of windows. Will change with the 
@@ -64,6 +33,6 @@ KLIST_INIT(WindowPtr, Window*, destroy_w)
 //  int OFFSET_SIZE -> The number of haplotypes in the offset.
 // Returns:
 //  klist_t(WindowPtr)*, A pointer to a klist of window pointers.
-klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int WINDOW_SIZE, int HAP_SIZE, int OFFSET_SIZE);
+klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, ASD* asd, int WINDOW_SIZE, int HAP_SIZE, int OFFSET_SIZE);
 
 #endif
