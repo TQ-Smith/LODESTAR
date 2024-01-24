@@ -4,9 +4,11 @@
 
 #include "HaplotypeEncoder.h"
 
+#include "Window.h"
+
 #include <stdbool.h>
 
-#define TRIANGULAR_NUMBER(n) ((n * n + n) / 2)
+#define TRIANGULAR_NUMBER(N) ((N * N + N) / 2)
 
 #define INDEX(i, j, N) ((i <= j) ? (i * N + (j - 1)) : (j * N + (i - 1)))
 
@@ -21,11 +23,13 @@ typedef struct {
     double* globalSim;
     double* globalSimCounts;
 
+    double** windowASDMatrix;
+
 } ASD;
 
 ASD* init_asd(int numSamples);
 
-void process_haplotype(HaplotypeEncoder* encoder, ASD* asd, int OFFSET_SIZE, bool isSameChromosome);
+void process_haplotype(HaplotypeEncoder* encoder, ASD* asd, int numHapsInOverlap, bool isSameChromosome, int OFFSET_SIZE, int WINDOW_SIZE);
 
 void destroy_asd(ASD* asd);
 

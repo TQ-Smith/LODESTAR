@@ -40,7 +40,7 @@ Window* get_next_window(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, Wi
         isSameChromosome = get_next_haplotype(parser, encoder, true, HAP_SIZE);
 
         // Process haplotype.
-        process_haplotype(encoder, asd, OFFSET_SIZE, isSameChromosome);
+        process_haplotype(encoder, asd, numHapsInOverlap, isSameChromosome, OFFSET_SIZE, WINDOW_SIZE);
 
         // If the haplotype encountered is a start position for a future window, save the haplotype's start position.
         if (numHapsInOverlap % OFFSET_SIZE == 0)
