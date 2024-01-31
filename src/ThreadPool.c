@@ -31,8 +31,8 @@ void* thread_loop(ThreadPool_t* pool) {
         if (!(pool -> doNotBlockWhenFull) && (pool -> curQueueSize == (pool -> maxQueueSize - 1)))
             pthread_cond_broadcast(&(pool -> queueNotFull));
 
-        if (pool -> curQueueSize)
-            pthread_cond_signal(&(pool -> queueNotFull));
+        if (pool -> curQueueSize == 0)
+            pthread_cond_signal(&(pool -> queueEmpty));
 
         pthread_mutex_unlock(&(pool -> queueLock));
 
@@ -44,7 +44,7 @@ void* thread_loop(ThreadPool_t* pool) {
 
 }
 
-ThreadPool_t* init_thread_pool(int numWorkerThreads, int maxQueueSize, int doNotBlockWhenFull) {
+ThreadPool_t* init_thread_pool(int numWorkerThreads, int maxQueueSize, bool doNotBlockWhenFull) {
 
     ThreadPool_t* pool = (ThreadPool_t*) calloc(1, sizeof(ThreadPool_t));
 
@@ -107,6 +107,14 @@ int thread_pool_add_work(ThreadPool_t* pool, void* routine, void* arg) {
 
 }
 
+void thread_pool_wait(ThreadPool_t* pool) {
+
+    pthread_mutex_lock(&(pool -> queueLock));
+
+    pthread_mutex_unlock(&(pool -> queueLock));
+
+}
+
 int thread_pool_destroy(ThreadPool_t* pool, bool finish) {
 
     ThreadPoolWork_t* temp;
@@ -151,13 +159,13 @@ void task(void *arg){
 
 int main() {
 
-    ThreadPool_t* pool = init_thread_pool(4, 100, 0);
+    ThreadPool_t* pool = init_thread_pool(4, 100, false);
 
     printf("\nAdding 50 tasks to threadpool:\n");
 	for (int i = 0; i < 50; i++)
 		thread_pool_add_work(pool, task, (void*) (long) i);
 
-    thread_pool_destroy(pool, true);
+    thread_pool_destroy(pool, false);
 
     printf("Destroyed Thread Pool!\n");
 

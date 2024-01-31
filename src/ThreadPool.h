@@ -19,7 +19,7 @@ typedef struct ThreadPool {
     int numThreads;
     int maxQueueSize;
 
-    int doNotBlockWhenFull;
+    bool doNotBlockWhenFull;
 
     pthread_t *threads;
     int curQueueSize;
@@ -35,9 +35,11 @@ typedef struct ThreadPool {
 
 } ThreadPool_t;
 
-ThreadPool_t* init_thread_pool(int numWorkerThreads, int maxQueueSize, int doNotBlockWhenFull);
+ThreadPool_t* init_thread_pool(int numWorkerThreads, int maxQueueSize, bool doNotBlockWhenFull);
 
 int thread_pool_add_work(ThreadPool_t* pool, void* routine, void* arg);
+
+void thread_pool_wait(ThreadPool_t* pool);
 
 int thread_pool_destroy(ThreadPool_t* pool, bool finish);
 
