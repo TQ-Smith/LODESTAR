@@ -96,6 +96,14 @@ klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeEnc
     while ((nextWindow = get_next_window(parser, encoder, currentWindow, asd, startLoci, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE)) != NULL) {
 
         // Process currentWindow.
+        printf("Window %d ASD Matrix:\n", currentWindow -> windowNum);
+        for (int i = 0; i < asd -> numSamples; i++) {
+            for (int j = 0; j < asd -> numSamples; j++) {
+                printf("%lf\t", asd -> windowASDMatrix[i][j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
         
         // Add the currentWindow to the list.
         *kl_pushp(WindowPtr, windows) = currentWindow;

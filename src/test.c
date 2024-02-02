@@ -21,9 +21,9 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    int WINDOW_SIZE = 10, HAP_SIZE = 100, OFFSET_SIZE = 1;
+    int WINDOW_SIZE = 3, HAP_SIZE = 1, OFFSET_SIZE = 1;
 
-    VCFGenotypeParser* parser = init_vcf_genotype_parser("sliding_window_test.vcf.gz");
+    VCFGenotypeParser* parser = init_vcf_genotype_parser("asd_test.vcf.gz");
     HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> num_samples);
     ASD* asd = init_asd(parser -> num_samples);
     

@@ -29,6 +29,27 @@ typedef struct {
 
 ASD* init_asd(int numSamples);
 
+int static inline IBS(unsigned int left_i, unsigned int right_i, unsigned int left_j, unsigned int right_j) {
+    if (left_i == left_j) {
+		if (right_i == right_j)
+			return 2;
+		else
+			return 1;		
+    } else if (left_i == right_j) {
+		if (left_j == right_i)
+			return 2;
+		else
+			return 1;
+    } else { 
+		if (right_i == right_j)
+			return 1;
+		else if (left_i == left_j)
+			return 1;
+		else
+			return 0;
+    }
+}
+
 void process_haplotype(HaplotypeEncoder* encoder, ASD* asd, int numHapsInOverlap, bool isSameChromosome, int OFFSET_SIZE, int WINDOW_SIZE);
 
 void destroy_asd(ASD* asd);
