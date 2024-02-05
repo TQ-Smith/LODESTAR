@@ -16,7 +16,7 @@
 typedef struct ThreadPoolWork {
 
     // The function for the thread to execute.
-    void (*routine) ();
+    void (*routine) (void*);
     // The argument to the function.
     void* arg;
     // Pointer to the next work request in the queue.

@@ -6,6 +6,8 @@
 
 #include "Window.h"
 
+#include "ThreadPool.h"
+
 #include <stdbool.h>
 
 #define TRIANGULAR_NUMBER(N) ((N * N + N) / 2)
@@ -50,7 +52,7 @@ int static inline IBS(unsigned int left_i, unsigned int right_i, unsigned int le
     }
 }
 
-void process_haplotype(HaplotypeEncoder* encoder, ASD* asd, int numHapsInOverlap, bool isSameChromosome, int OFFSET_SIZE, int WINDOW_SIZE);
+void process_haplotype(HaplotypeEncoder* encoder, ASD* asd, ThreadPool_t* pool, int numHapsInOverlap, bool isSameChromosome, int OFFSET_SIZE, int WINDOW_SIZE);
 
 void destroy_asd(ASD* asd);
 
