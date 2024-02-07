@@ -116,12 +116,12 @@ void process_haplotype(HaplotypeEncoder* encoder, ASD* asd, ThreadPool_t* pool, 
         int startIndex = 0;
 
         for (int i = 0; i < pool -> numThreads; i++) {
-            printf("Start Index: %d End Index: %d\n", startIndex, startIndex + partitionSize - 1);
+            // printf("Start Index: %d End Index: %d\n", startIndex, startIndex + partitionSize - 1);
             partition = create_asd_partition(encoder, asd, numHapsInOverlap, isSameChromosome, OFFSET_SIZE, WINDOW_SIZE, startIndex, partitionSize);
             thread_pool_add_work(pool, compute_asd_partition, (void*) partition);
             startIndex += partitionSize;
         }
-        printf("Start Index: %d End Index: %d\n", startIndex, numPairs - 1);
+        // printf("Start Index: %d End Index: %d\n", startIndex, numPairs - 1);
         partition = create_asd_partition(encoder, asd, numHapsInOverlap, isSameChromosome, OFFSET_SIZE, WINDOW_SIZE, startIndex, numPairs - startIndex);
         compute_asd_partition((void*) partition);
 

@@ -23,14 +23,14 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    int WINDOW_SIZE = 2, HAP_SIZE = 1, OFFSET_SIZE = 1;
+    int WINDOW_SIZE = 40000, HAP_SIZE = 1, OFFSET_SIZE = 1;
 
-    VCFGenotypeParser* parser = init_vcf_genotype_parser("asd_test.vcf.gz");
+    VCFGenotypeParser* parser = init_vcf_genotype_parser("./data/test.data.40k.vcf");
     HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> num_samples);
     ASD* asd = init_asd(parser -> num_samples);
-    ThreadPool_t* pool = init_thread_pool(2, 10, false);
+    ThreadPool_t* pool = init_thread_pool(7, 10, false);
     
-    klist_t(WindowPtr)* windows = slide_through_genome(parser, encoder, asd, pool, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE);
+    klist_t(WindowPtr)* windows = slide_through_genome(parser, encoder, asd, NULL, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE);
     
     printf("\nHaplotype Size of %d SNPs\nOffset Size of %d Haplotypes\nWindow Size of %d Haplotypes\n", HAP_SIZE, OFFSET_SIZE, WINDOW_SIZE);
 
