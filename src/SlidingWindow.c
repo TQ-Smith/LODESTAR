@@ -16,7 +16,7 @@
 //  int WINDOW_SIZE -> The number of haplotypes in the window.
 //  int HAP_SIZE -> The number of loci in a haplotype.
 //  int OFFSET_SIZE -> The number of haplotypes in the offset.
-Window* get_next_window(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, Window* currentWindow, ASD* asd, ThreadPool_t* pool, int* startLoci, int WINDOW_SIZE, int HAP_SIZE, int OFFSET_SIZE) {
+Window* get_next_window(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, Window* currentWindow, int* startLoci, int WINDOW_SIZE, int HAP_SIZE, int OFFSET_SIZE) {
     
     // If EOF, there is no new window.
     if (parser -> isEOF)
@@ -38,9 +38,6 @@ Window* get_next_window(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, Wi
     while(numHapsInOverlap < WINDOW_SIZE && isSameChromosome) {
         // Get the next haplotype.
         isSameChromosome = get_next_haplotype(parser, encoder, true, HAP_SIZE);
-
-        // Process haplotype.
-        process_haplotype(encoder, asd, pool, numHapsInOverlap, isSameChromosome, OFFSET_SIZE, WINDOW_SIZE);
 
         // If the haplotype encountered is a start position for a future window, save the haplotype's start position.
         if (numHapsInOverlap % OFFSET_SIZE == 0)
@@ -71,7 +68,7 @@ Window* get_next_window(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, Wi
 
 }
 
-klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, ASD* asd, ThreadPool_t* pool, int WINDOW_SIZE, int HAP_SIZE, int OFFSET_SIZE) {
+klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int WINDOW_SIZE, int HAP_SIZE, int OFFSET_SIZE) {
     
     // If EOF, there are no windows to process.
     if (parser -> isEOF)
@@ -93,20 +90,8 @@ klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeEnc
     Window* temp = NULL;
 
     // While there is a window to process.
-    while ((nextWindow = get_next_window(parser, encoder, currentWindow, asd, pool, startLoci, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE)) != NULL) {
+    while ((nextWindow = get_next_window(parser, encoder, currentWindow, startLoci, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE)) != NULL) {
 
-        // Process currentWindow.
-        printf("Window %d ASD Matrix\n", currentWindow -> windowNum);
-        
-        /*
-        for (int i = 0; i < asd -> numSamples; i++) {
-            for (int j = 0; j < asd -> numSamples; j++) {
-                printf("%lf\t", asd -> windowASDMatrix[i][j]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-        */
         
         // Add the currentWindow to the list.
         *kl_pushp(WindowPtr, windows) = currentWindow;

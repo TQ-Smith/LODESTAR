@@ -13,10 +13,6 @@
 
 #include "Window.h"
 
-#include "ASD.h"
-
-#include "ThreadPool.h"
-
 // We are using klib list.
 #include "../klib/klist.h"
 
@@ -35,6 +31,6 @@ KLIST_INIT(WindowPtr, Window*, destroy_w)
 //  int OFFSET_SIZE -> The number of haplotypes in the offset.
 // Returns:
 //  klist_t(WindowPtr)*, A pointer to a klist of window pointers.
-klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, ASD* asd, ThreadPool_t* pool, int WINDOW_SIZE, int HAP_SIZE, int OFFSET_SIZE);
+klist_t(WindowPtr)* slide_through_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int WINDOW_SIZE, int HAP_SIZE, int OFFSET_SIZE);
 
 #endif

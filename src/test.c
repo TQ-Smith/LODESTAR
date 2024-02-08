@@ -5,10 +5,6 @@
 
 #include "SlidingWindow.h"
 
-#include "ASD.h"
-
-#include "ThreadPool.h"
-
 #include <stdio.h>
 
 void print_window_info(Window* window) {
@@ -27,10 +23,8 @@ int main() {
 
     VCFGenotypeParser* parser = init_vcf_genotype_parser("./data/test.data.40k.vcf");
     HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> num_samples);
-    ASD* asd = init_asd(parser -> num_samples);
-    ThreadPool_t* pool = init_thread_pool(7, 10, false);
     
-    klist_t(WindowPtr)* windows = slide_through_genome(parser, encoder, asd, NULL, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE);
+    klist_t(WindowPtr)* windows = slide_through_genome(parser, encoder, WINDOW_SIZE, HAP_SIZE, OFFSET_SIZE);
     
     printf("\nHaplotype Size of %d SNPs\nOffset Size of %d Haplotypes\nWindow Size of %d Haplotypes\n", HAP_SIZE, OFFSET_SIZE, WINDOW_SIZE);
 
@@ -43,8 +37,6 @@ int main() {
     kl_destroy(WindowPtr, windows);
     destroy_vcf_genotype_parser(parser);
     destroy_haplotype_encoder(encoder);
-    destroy_asd(asd);
-    destroy_thread_pool(pool, false);
 
     return 0;
 
