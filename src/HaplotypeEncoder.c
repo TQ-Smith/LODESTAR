@@ -44,7 +44,7 @@ void add_locus(HaplotypeEncoder* encoder, int numAlleles, bool collapseMissingGe
             encoder -> leftHaplotype[i] = (LEFT_ALLELE(encoder -> genotypes[i]) + 1) * LOG_PRIMES[0];
             encoder -> rightHaplotype[i] = (RIGHT_ALLELE(encoder -> genotypes[i]) + 1) * LOG_PRIMES[0];
 
-            if (collapseMissingGenotypes && (encoder -> leftHaplotype[i] == numAlleles || encoder -> rightHaplotype[i] == numAlleles)) {
+            if (collapseMissingGenotypes && (LEFT_ALLELE(encoder -> genotypes[i]) == numAlleles || RIGHT_ALLELE(encoder -> genotypes[i]) == numAlleles)) {
                 encoder -> leftHaplotype[i] = MISSING;
                 encoder -> rightHaplotype[i] = MISSING;
             }
