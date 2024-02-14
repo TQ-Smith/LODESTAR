@@ -2,7 +2,7 @@
 // File: HaplotypeEncoder.h
 // Date: 18 Janurary 2024
 // Author: TQ Smith
-// Purpose: Track the haplotypes of each sample using a simplified arithmetic encoding.
+// Purpose: Track the haplotypes of each sample using Godel Encoding.
 
 #ifndef _HAPLOTYPE_TREE_
 #define _HAPLOTYPE_TREE_
@@ -13,13 +13,7 @@
 
 #include "VCFGenotypeParser.h"
 
-// Initialize klib hash table.
-#include "../klib/khash.h"
-KHASH_MAP_INIT_INT(32, int)
-
-// Max number of possible haplotypes before
-//  the algorithm will prune and relabel the tree.
-#define MAX_NUM_LEAVES (1 << 25)
+#define MAX_NUMBER_OF_LOCI 1000
 
 // A structure to represent the encoder.
 typedef struct {
@@ -30,8 +24,8 @@ typedef struct {
     //  Not explicitly needed, but it helps usage.
     GENOTYPE* genotypes;
     // Arrays to hold the left and right haplotype encodings for each sample.
-    unsigned int* leftHaplotype;
-    unsigned int* rightHaplotype;
+    double* leftHaplotype;
+    double* rightHaplotype;
 
     // Number of loci in the haplotye.
     int numLoci;
@@ -41,12 +35,6 @@ typedef struct {
     int startLocus;
     // The end locus of the haplotype.
     int endLocus;
-
-    // A hash table used to relabel the encodings.
-    khash_t(32)* labelMap;
-
-    // The number of leaves in the haplotype tree.
-    int numLeaves;
 
 } HaplotypeEncoder;
 
@@ -67,18 +55,13 @@ HaplotypeEncoder* init_haplotype_encoder(int numSamples);
 //  bool, Returns true if the haplotype contains HAP_SIZE loci and the next loci is on the same chromosome and EOF was not reached.
 bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, bool collapseMissingGenotypes, int HAP_SIZE);
 
-// Relabels haplotype encodings. Simplifies tree.
-// Accepts:
-//  HaplotypeEncoder* encoder -> The encoder to simplify.
-// Returns:
-//  void.
-void relabel_haplotypes(HaplotypeEncoder* encoder);
-
 // Deallocated memory used by the encoder.
 // Accepts:
 //  HaplotypeEncoder* encoder -> The encoder to deallocate.
 // Returns:
 //  void.
 void destroy_haplotype_encoder(HaplotypeEncoder* encoder);
+
+extern double LOG_PRIMES[];
 
 #endif
