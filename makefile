@@ -13,7 +13,7 @@ bin/test: src/test.o
 src/test.o: src/SlidingWindow.o
 	gcc $(CFLAGS) src/test.c -o src/test.o
 
-src/SlidingWindow.o: src/HaplotypeEncoder.o src/Window.o
+src/SlidingWindow.o: src/HaplotypeEncoder.o src/Window.o src/Matrix.o
 	gcc $(CFLAGS) src/SlidingWindow.c -o src/SlidingWindow.o
 
 src/HaplotypeEncoder.o: src/VCFGenotypeParser.o

@@ -13,6 +13,6 @@
 
 #include "Window.h"
 
-
+Window** window_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows);
 
 #endif
