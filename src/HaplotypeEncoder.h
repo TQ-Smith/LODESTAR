@@ -13,7 +13,7 @@
 
 #include "VCFGenotypeParser.h"
 
-#define MAX_NUMBER_OF_LOCI 1000
+#define MAX_NUMBER_OF_LOCI 100
 
 // A structure to represent the encoder.
 typedef struct {
