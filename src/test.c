@@ -26,7 +26,7 @@ int main() {
     VCFGenotypeParser* parser = init_vcf_genotype_parser("./data/haplotype_tree_test.vcf.gz");
     HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> num_samples);
     
-    int numWindows;
+    int numWindows = 0;
     Window** windows = window_genome(parser, encoder, HAP_SIZE, STEP_SIZE, WINDOW_SIZE, NUM_THREADS, &numWindows);
     
     destroy_vcf_genotype_parser(parser);

@@ -24,8 +24,6 @@ typedef struct {
     int HAP_SIZE;
     int STEP_SIZE;
     int WINDOW_SIZE;
-    double** overlapLeftHaps;
-    double** overlapRightHaps;
     int curNumWin;
     int curNumWinOnChrom;
     kstring_t* curChrom;
@@ -45,13 +43,11 @@ Window** window_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int
     resources -> HAP_SIZE = HAP_SIZE;
     resources -> STEP_SIZE = STEP_SIZE;
     resources -> WINDOW_SIZE = WINDOW_SIZE;
-    resources -> overlapLeftHaps = create_matrix(WINDOW_SIZE, encoder -> numSamples);
-    resources -> overlapRightHaps = create_matrix(WINDOW_SIZE, encoder -> numSamples);
     resources -> curNumWin = 1;
     resources -> curNumWinOnChrom = 1;
     resources -> curChrom = (kstring_t*) calloc(1, sizeof(kstring_t));
     kputs(ks_str(parser -> nextChromosome), resources -> curChrom);
-
+    
     pthread_t* threads = (pthread_t*) calloc(NUM_THREADS - 1, sizeof(pthread_t));
     for (int i = 0; i < NUM_THREADS - 1; i++)
         pthread_create(&threads[i], NULL, process_window, (void*) resources);
@@ -64,8 +60,6 @@ Window** window_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int
     free(threads);
     kl_destroy(WindowPtr, resources -> windowList);
     free(resources -> curChrom -> s); free(resources -> curChrom);
-    destroy_matrix(resources -> overlapLeftHaps, WINDOW_SIZE);
-    destroy_matrix(resources -> overlapRightHaps, WINDOW_SIZE);
     free(resources);
     
     return NULL;
