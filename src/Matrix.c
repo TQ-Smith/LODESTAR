@@ -5,10 +5,10 @@
 
 double** create_matrix(int n, int m) {
 
-    double** matrix = (double**) calloc(n, sizeof(double**));
+    double** matrix = (double**) calloc(n, sizeof(double*));
 
     for (int i = 0; i < n; i++)
-        matrix[i] = (double*) calloc(m, sizeof(double*));
+        matrix[i] = (double*) calloc(m, sizeof(double));
     
     return matrix;
 

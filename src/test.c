@@ -28,12 +28,15 @@ int main() {
     
     int numWindows = 0;
     Window** windows = window_genome(parser, encoder, HAP_SIZE, STEP_SIZE, WINDOW_SIZE, NUM_THREADS, &numWindows);
+
+    printf("\n");
+    for (int i = 0; i < numWindows; i++)
+        print_window_info(windows[i]);
     
     destroy_vcf_genotype_parser(parser);
     destroy_haplotype_encoder(encoder);
-    for (int i = 0; i < numWindows; i++) {
+    for (int i = 0; i < numWindows; i++)
         destroy_window(windows[i]);
-    }
     free(windows);
 
     return 0;
