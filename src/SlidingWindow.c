@@ -14,6 +14,8 @@ KLIST_INIT(WindowPtr, Window*, do_not_free_window_ptr)
 
 #include <pthread.h>
 
+#define SWAP(a, b, TEMP) TEMP = a; a = b; b = TEMP
+
 pthread_mutex_t genomeLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t listLock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -32,9 +34,9 @@ typedef struct {
     double** overlapLeftHaps;
     double** overlapRightHaps;
 
-    double** windowCalculations;
-    double** overlapCalculations;
-    double** globalCalculations;
+    double** winCalcs;
+    double** overlapCalcs;
+    double** globalCalcs;
 
     int numLociInOverlap;
     int numLociInGlobal;
@@ -48,13 +50,30 @@ typedef struct {
 Window* get_next_window(WindowRecord* record) {
 
     Window* window = init_window();
-    window -> windowNum = ++record -> curWinNum;
-    window -> windowNumOnChromosome = ++record -> curWinOnChromNum;
+    window -> winNum = ++record -> curWinNum;
+    window -> winNumOnChrom = ++record -> curWinOnChromNum;
     kputs(ks_str(record -> curChrom), window -> chromosome);
     window -> numLoci = record -> numLociInOverlap;
     
     int numHapsInOverlap = record -> numLociInOverlap / (record -> HAP_SIZE);
+    int numStartsInWin = (record -> WINDOW_SIZE - record -> STEP_SIZE) / record -> STEP_SIZE + 1;
     bool isSameChromosome = true;
+
+    double* swap = NULL;
+
+    if (record -> NUM_THREADS > 1 && (record -> STEP_SIZE != record -> WINDOW_SIZE) && window -> winNumOnChrom > 1) {
+        int overlapSize = record -> WINDOW_SIZE - record -> STEP_SIZE;
+        for (int i = 0; i < record -> encoder -> numSamples; i++) {
+            for (int j = 0; j < overlapSize; j++) {
+                record -> leftHaps[i][j] = record -> overlapLeftHaps[i][j];
+                record -> rightHaps[i][j] = record -> overlapRightHaps[i][j];
+            }
+        }
+        for (int i = 0; i < overlapSize; i++) {
+            SWAP(record -> overlapLeftHaps[i], record -> overlapLeftHaps[((overlapSize % record -> STEP_SIZE) + i) % overlapSize], swap);
+            SWAP(record -> overlapRightHaps[i], record -> overlapRightHaps[((overlapSize % record -> STEP_SIZE) + i) % overlapSize], swap);
+        }
+    }
 
     while(numHapsInOverlap < record -> WINDOW_SIZE && isSameChromosome) {
         isSameChromosome = get_next_haplotype(record -> parser, record -> encoder, true, record -> HAP_SIZE);
@@ -66,11 +85,11 @@ Window* get_next_window(WindowRecord* record) {
         }
 
         if (numHapsInOverlap % record -> STEP_SIZE == 0)
-            record -> overlapStartLoci[(window -> windowNumOnChromosome + numHapsInOverlap) % ((record -> WINDOW_SIZE - record -> STEP_SIZE) / record -> STEP_SIZE + 1)] = record -> encoder -> startLocus;
+            record -> overlapStartLoci[(window -> winNumOnChrom + numHapsInOverlap) % numStartsInWin] = record -> encoder -> startLocus;
         window -> numLoci += record -> encoder -> numLoci;
         numHapsInOverlap++;
     }
-    window -> startLocus = record -> overlapStartLoci[window -> windowNumOnChromosome % ((record -> WINDOW_SIZE - record -> STEP_SIZE) / record -> STEP_SIZE + 1)];
+    window -> startLocus = record -> overlapStartLoci[(window -> winNumOnChrom + numHapsInOverlap) % numStartsInWin];
     window -> endLocus = record -> encoder -> endLocus;
     if (isSameChromosome) {
         record -> numLociInOverlap = window -> numLoci - (record-> HAP_SIZE * record -> STEP_SIZE);
@@ -134,9 +153,7 @@ void sliding_window_single_thread(WindowRecord* record) {
             break;
         }
 
-        swap = record -> windowCalculations;
-        record -> windowCalculations = record -> overlapCalculations;
-        record -> overlapCalculations = swap;
+        SWAP(record -> winCalcs, record -> overlapCalcs, swap);
 
         window = get_next_window(record);
 
@@ -154,7 +171,7 @@ void sort_windows(Window** windows, int numWindows) {
     for (int i = 1; i < numWindows; i++) {
         temp = windows[i];
         j = i - 1;
-        while (j >= 0 && windows[j] -> windowNum > temp -> windowNum) {
+        while (j >= 0 && windows[j] -> winNum > temp -> winNum) {
             windows[j + 1] = windows[j];
             j = j - 1;
         }
@@ -176,7 +193,7 @@ Window** window_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int
 
     record -> numLociInOverlap = 0;
     record -> overlapStartLoci = (int*) calloc((WINDOW_SIZE - STEP_SIZE) / STEP_SIZE + 1, sizeof(int));
-    record -> globalCalculations = create_matrix(encoder -> numSamples, encoder -> numSamples);
+    record -> globalCalcs = create_matrix(encoder -> numSamples, encoder -> numSamples);
     record -> numLociInGlobal = 0;
 
     record -> curWinNum = 0;
@@ -189,20 +206,20 @@ Window** window_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int
     if (NUM_THREADS == 1) {
         record -> overlapLeftHaps = NULL;
         record -> overlapRightHaps = NULL;
-        record -> windowCalculations = create_matrix(encoder -> numSamples, encoder -> numSamples);
-        record -> overlapCalculations = create_matrix(encoder -> numSamples, encoder -> numSamples);
+        record -> winCalcs = create_matrix(encoder -> numSamples, encoder -> numSamples);
+        record -> overlapCalcs = create_matrix(encoder -> numSamples, encoder -> numSamples);
 
         sliding_window_single_thread(record);
 
-        destroy_matrix(record -> windowCalculations, encoder -> numSamples);
-        destroy_matrix(record -> overlapCalculations, encoder -> numSamples);
+        destroy_matrix(record -> winCalcs, encoder -> numSamples);
+        destroy_matrix(record -> overlapCalcs, encoder -> numSamples);
     } else {
-        record -> windowCalculations = NULL;
-        record -> overlapCalculations = NULL;
+        record -> winCalcs = NULL;
+        record -> overlapCalcs = NULL;
         record -> leftHaps = NULL;
         record -> rightHaps = NULL;
-        record -> overlapLeftHaps = create_matrix(WINDOW_SIZE, encoder -> numSamples);
-        record -> overlapRightHaps = create_matrix(WINDOW_SIZE, encoder -> numSamples);
+        record -> overlapLeftHaps = create_matrix(WINDOW_SIZE - STEP_SIZE, encoder -> numSamples);
+        record -> overlapRightHaps = create_matrix(WINDOW_SIZE - STEP_SIZE, encoder -> numSamples);
 
         pthread_t* threads = (pthread_t*) calloc(NUM_THREADS - 1, sizeof(pthread_t));
         for (int i = 0; i < NUM_THREADS - 1; i++)
@@ -214,8 +231,8 @@ Window** window_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int
             pthread_join(threads[i], NULL);
 
         free(threads);
-        destroy_matrix(record -> overlapLeftHaps, WINDOW_SIZE);
-        destroy_matrix(record -> overlapRightHaps, WINDOW_SIZE);
+        destroy_matrix(record -> overlapLeftHaps, WINDOW_SIZE - STEP_SIZE);
+        destroy_matrix(record -> overlapRightHaps, WINDOW_SIZE - STEP_SIZE);
     }
 
     *numWindows = record -> curWinNum;
@@ -230,7 +247,7 @@ Window** window_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int
 
     kl_destroy(WindowPtr, record -> windowList);
     free(record -> overlapStartLoci);
-    destroy_matrix(record -> globalCalculations, encoder -> numSamples);
+    destroy_matrix(record -> globalCalcs, encoder -> numSamples);
     free(record -> curChrom -> s); free(record -> curChrom);
     free(record);
 

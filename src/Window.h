@@ -9,9 +9,9 @@
 typedef struct {
 
     // The window number out of all processed windows.
-    int windowNum;
+    int winNum;
     // The window number on a griven chromosome.
-    int windowNumOnChromosome;
+    int winNumOnChrom;
     // The chromosome the window is on.
     kstring_t* chromosome;
     // The start locus of the window.

@@ -7,8 +7,8 @@ Window* init_window() {
     // Allocate the structure.
     Window* window = (Window*) calloc(1, sizeof(Window));
     // Set default numbering.
-    window -> windowNum = 1;
-    window -> windowNumOnChromosome = 1;
+    window -> winNum = 1;
+    window -> winNumOnChrom = 1;
     window -> numLoci = 0;
     // Allocate string for chromosome.
     window -> chromosome = (kstring_t*) calloc(1, sizeof(kstring_t));
