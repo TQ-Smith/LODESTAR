@@ -19,7 +19,7 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    int NUM_THREADS = 1;
+    int NUM_THREADS = 2;
 
     int HAP_SIZE = 1, STEP_SIZE = 2, WINDOW_SIZE = 3;
 
