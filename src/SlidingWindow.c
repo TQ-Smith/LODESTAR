@@ -92,7 +92,7 @@ Window* get_next_window(WindowRecord* record) {
                 }
             }
             printf("\n");
-            printf("Window:\n");
+            printf("Window %d:\n", record -> winNum);
             for (int i = 0; i < record -> encoder -> numSamples; i++) {
                 for (int j = 0; j < record -> WINDOW_SIZE; j++) {
                     printf("%5f/%5f\t", record -> leftHaps[i][j], record -> rightHaps[i][j]);
