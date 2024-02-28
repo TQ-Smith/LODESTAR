@@ -61,11 +61,11 @@ Window* get_next_window(WindowRecord* record) {
 
     double* swap = NULL;
 
-    /*
+    
     if (record -> NUM_THREADS > 1 && (record -> STEP_SIZE != record -> WINDOW_SIZE) && window -> winNumOnChrom > 1) {
         int overlapSize = record -> WINDOW_SIZE - record -> STEP_SIZE;
-        for (int i = 0; i < record -> encoder -> numSamples; i++) {
-            for (int j = 0; j < overlapSize; j++) {
+        for (int i = 0; i < overlapSize; i++) {
+            for (int j = 0; j < record -> encoder -> numSamples; j++) {
                 record -> leftHaps[i][j] = record -> overlapLeftHaps[i][j];
                 record -> rightHaps[i][j] = record -> overlapRightHaps[i][j];
             }
@@ -75,7 +75,7 @@ Window* get_next_window(WindowRecord* record) {
             SWAP(record -> overlapRightHaps[i], record -> overlapRightHaps[((overlapSize % record -> STEP_SIZE) + i) % overlapSize], swap);
         }
     }
-    */
+    
 
     while(numHapsInOverlap < record -> WINDOW_SIZE && isSameChromosome) {
         isSameChromosome = get_next_haplotype(record -> parser, record -> encoder, true, record -> HAP_SIZE);
@@ -91,21 +91,23 @@ Window* get_next_window(WindowRecord* record) {
                     record -> overlapRightHaps[numHapsInOverlap - record -> STEP_SIZE][i] = record -> rightHaps[numHapsInOverlap][i];
                 }
             }
+            /*
             printf("\n");
-            printf("Window %d:\n", record -> winNum);
-            for (int i = 0; i < record -> encoder -> numSamples; i++) {
-                for (int j = 0; j < record -> WINDOW_SIZE; j++) {
+            printf("Window %d:\n", window -> winNum);
+            for (int i = 0; i <= numHapsInOverlap; i++) {
+                for (int j = 0; j < record -> encoder -> numSamples; j++) {
                     printf("%5f/%5f\t", record -> leftHaps[i][j], record -> rightHaps[i][j]);
                 }
                 printf("\n");
             }
             printf("\nOverlap:\n");
-            for (int i = 0; i < record -> encoder -> numSamples; i++) {
-                for (int j = 0; j < record -> WINDOW_SIZE - record -> STEP_SIZE; j++) {
+            for (int i = 0; i <= numHapsInOverlap - record -> STEP_SIZE; i++) {
+                for (int j = 0; j < record -> encoder -> numSamples; j++) {
                     printf("%5f/%5f\t", record -> overlapLeftHaps[i][j], record -> overlapRightHaps[i][j]);
                 }
                 printf("\n");
             }
+            */
         }
 
         if (numHapsInOverlap % record -> STEP_SIZE == 0)
@@ -113,7 +115,8 @@ Window* get_next_window(WindowRecord* record) {
         window -> numLoci += record -> encoder -> numLoci;
         numHapsInOverlap++;
     }
-    window -> startLocus = record -> overlapStartLoci[(window -> winNumOnChrom + numHapsInOverlap) % numStartsInWin];
+    printf("Processed Window %d\n", window -> winNum);
+    window -> startLocus = record -> overlapStartLoci[window -> winNumOnChrom % numStartsInWin];
     window -> endLocus = record -> encoder -> endLocus;
     if (isSameChromosome) {
         record -> numLociInOverlap = window -> numLoci - (record-> HAP_SIZE * record -> STEP_SIZE);
