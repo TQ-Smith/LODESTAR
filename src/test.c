@@ -19,11 +19,11 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    int NUM_THREADS = 10;
+    int NUM_THREADS = 2;
 
-    int HAP_SIZE = 100, STEP_SIZE = 500, WINDOW_SIZE = 1000;
+    int HAP_SIZE = 1, STEP_SIZE = 1, WINDOW_SIZE = 3;
 
-    VCFGenotypeParser* parser = init_vcf_genotype_parser("/home/tqs5778/Documents/Data/CCDG_14151_B01_GRM_WGS_2020-08-05_chr6.filtered.shapeit2-duohmm-phased.vcf.gz");
+    VCFGenotypeParser* parser = init_vcf_genotype_parser("./data/sliding_window_test2.vcf.gz");
     HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> num_samples);
     
     int numWindows = 0;
