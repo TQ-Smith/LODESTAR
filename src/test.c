@@ -21,10 +21,10 @@ int main() {
 
     int NUM_THREADS = 2;
 
-    int HAP_SIZE = 1, STEP_SIZE = 2, WINDOW_SIZE = 3;
+    int HAP_SIZE = 1, STEP_SIZE = 1, WINDOW_SIZE = 3;
 
     VCFGenotypeParser* parser = init_vcf_genotype_parser("./data/sliding_window_test2.vcf.gz");
-    HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> num_samples);
+    HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> numSamples);
     
     int numWindows = 0;
     Window** windows = window_genome(parser, encoder, HAP_SIZE, STEP_SIZE, WINDOW_SIZE, NUM_THREADS, &numWindows);

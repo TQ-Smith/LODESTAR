@@ -8,10 +8,10 @@
 
 #include "VCFGenotypeParser.h"
 
-VCFGenotypeParser* init_vcf_genotype_parser(char* file_name) {
+VCFGenotypeParser* init_vcf_genotype_parser(char* fileName) {
 
     // Try to open file.
-    gzFile file = gzopen(file_name, "r");
+    gzFile file = gzopen(fileName, "r");
 
     // Make sure the file is in GZ format.
     int errnum;
@@ -32,45 +32,45 @@ VCFGenotypeParser* init_vcf_genotype_parser(char* file_name) {
     } while (strncmp(ks_str(buffer), "#C", 2) != 0);
     
     // Count the number of samples.
-    int num_samples = 0;
+    int numSamples = 0;
     for (int i = 0; i < ks_len(buffer); i++)
         if (buffer -> s[i] == '\t')
-            num_samples++;
-    num_samples -= 8;
+            numSamples++;
+    numSamples -= 8;
 
     // Allocate array to hold sample names and fill array.
-    kstring_t* sample_names = (kstring_t*) calloc(num_samples, sizeof(kstring_t));
-    int num_tabs = 0, prev_index;
+    kstring_t* sampleNames = (kstring_t*) calloc(numSamples, sizeof(kstring_t));
+    int numTabs = 0, prevIndex;
     for (int i = 0; i <= ks_len(buffer); i++)
         if (ks_str(buffer)[i] == '\t') {
-            if (num_tabs > 7)
-                kputsn(ks_str(buffer) + i + 1, i - prev_index, &sample_names[num_tabs - 8]);
-            prev_index = i;
-            num_tabs++;
+            if (numTabs > 7)
+                kputsn(ks_str(buffer) + i + 1, i - prevIndex, &sampleNames[numTabs - 8]);
+            prevIndex = i;
+            numTabs++;
         }
 
     // Allocate all necessary parser memory and set values.
     VCFGenotypeParser* parser = (VCFGenotypeParser*) malloc(sizeof(VCFGenotypeParser));
-    parser -> file_name = (kstring_t*) calloc(1, sizeof(kstring_t));
-    kputs(file_name, parser -> file_name);
+    parser -> fileName = (kstring_t*) calloc(1, sizeof(kstring_t));
+    kputs(fileName, parser -> fileName);
     parser -> file = file;
     parser -> stream = stream;
-    parser -> num_samples = num_samples;
-    parser -> sample_names = sample_names;
+    parser -> numSamples = numSamples;
+    parser -> sampleNames = sampleNames;
     parser -> buffer = buffer;
     parser -> isEOF = false;
-    parser -> nextChromosome = (kstring_t*) calloc(1, sizeof(kstring_t));
-    parser -> nextGenotypes = (GENOTYPE*) calloc(num_samples, sizeof(GENOTYPE));
+    parser -> nextChrom = (kstring_t*) calloc(1, sizeof(kstring_t));
+    parser -> nextGenos = (GENOTYPE*) calloc(numSamples, sizeof(GENOTYPE));
 
     // Read in first locus to prime the read.
-    get_next_locus(parser, parser -> nextChromosome, &(parser -> nextPosition), &(parser -> nextNumAlleles), &(parser -> nextGenotypes));
+    get_next_locus(parser, parser -> nextChrom, &(parser -> nextPos), &(parser -> nextNumAlleles), &(parser -> nextGenos));
 
     // Return structure.
     return parser;
 
 }
 
-void get_next_locus(VCFGenotypeParser* parser, kstring_t* chromosome, int* position, int* numOfAlleles, GENOTYPE** genotypes) {
+void get_next_locus(VCFGenotypeParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, GENOTYPE** genos) {
    
     // Exit if invalid parser or EOF.
     if (parser == NULL || parser -> isEOF)
@@ -79,17 +79,17 @@ void get_next_locus(VCFGenotypeParser* parser, kstring_t* chromosome, int* posit
     // If the pointers to nextChromosome and chromosome 
     //  are not equal, then copy the string in nextChromosome
     //  to chromosome.
-    if (parser -> nextChromosome != chromosome) {
-        chromosome -> l = 0;
-        parser -> nextChromosome -> l = 0;
-        kputs(ks_str(parser -> nextChromosome), chromosome);
+    if (parser -> nextChrom != chrom) {
+        chrom -> l = 0;
+        parser -> nextChrom -> l = 0;
+        kputs(ks_str(parser -> nextChrom), chrom);
     }
     // Copy all the values from the primed read into the arguments.
-    *position = parser -> nextPosition;
+    *pos = parser -> nextPos;
     *numOfAlleles = parser -> nextNumAlleles;
-    GENOTYPE* temp = *genotypes;
-    *genotypes = parser -> nextGenotypes;
-    parser -> nextGenotypes = temp;
+    GENOTYPE* temp = *genos;
+    *genos = parser -> nextGenos;
+    parser -> nextGenos = temp;
     
     // If EOF, set flag and exit.
     if (ks_eof(parser -> stream)) {
@@ -109,25 +109,25 @@ void get_next_locus(VCFGenotypeParser* parser, kstring_t* chromosome, int* posit
 
     // Prime the next read by parsing the record.
     //  Iterate through the buffer string.
-    int num_tabs = 0, prev_index = 0, numAlleles = 2;
+    int numTabs = 0, prevIndex = 0, numAlleles = 2;
     for (int i = 0; i <= ks_len(parser -> buffer); i++) {
         if (i == ks_len(parser -> buffer) || ks_str(parser -> buffer)[i] == '\t') {
             // In the first field, set the value of nextChromosome.
-            if (num_tabs == 0)
-                kputsn(ks_str(parser -> buffer), i - prev_index, parser -> nextChromosome);
+            if (numTabs == 0)
+                kputsn(ks_str(parser -> buffer), i - prevIndex, parser -> nextChrom);
             // If the second field, set the value of nextPosition.
-            else if (num_tabs == 1)
-                parser -> nextPosition = (int) strtol(ks_str(parser -> buffer) + prev_index + 1, (char**) NULL, 10);
+            else if (numTabs == 1)
+                parser -> nextPos = (int) strtol(ks_str(parser -> buffer) + prevIndex + 1, (char**) NULL, 10);
             // If the fifth field, count the number of alleles.
-            else if (num_tabs == 4) {
-                for (int j = prev_index + 1; ks_str(parser -> buffer)[j] != '\t'; j++)
+            else if (numTabs == 4) {
+                for (int j = prevIndex + 1; ks_str(parser -> buffer)[j] != '\t'; j++)
                     if (ks_str(parser -> buffer)[j] == ',')
                         numAlleles++;
             // If the 9th field or greater, parse each sample's genotype.
-            } else if (num_tabs > 8)
-                parser -> nextGenotypes[num_tabs - 9] = parse_genotype(ks_str(parser -> buffer) + prev_index + 1, numAlleles);
-            prev_index = i;
-            num_tabs++;
+            } else if (numTabs > 8)
+                parser -> nextGenos[numTabs - 9] = parse_genotype(ks_str(parser -> buffer) + prevIndex + 1, numAlleles);
+            prevIndex = i;
+            numTabs++;
         }
     }
 
@@ -142,17 +142,17 @@ void destroy_vcf_genotype_parser(VCFGenotypeParser* parser) {
     // Free everything sued to read in the file.
     gzclose(parser -> file);
     ks_destroy(parser -> stream);
-    free(ks_str(parser -> file_name)); free(parser -> file_name);
+    free(ks_str(parser -> fileName)); free(parser -> fileName);
     // Free all sample names array.
-    for (int i = 0; i < parser -> num_samples; i++)
-        free(parser -> sample_names[i].s);
-    free(parser -> sample_names);
+    for (int i = 0; i < parser -> numSamples; i++)
+        free(parser -> sampleNames[i].s);
+    free(parser -> sampleNames);
     // Free the buffer.
     free(ks_str(parser -> buffer)); free(parser -> buffer);
-    // Free the nextChromosome string.
-    free(ks_str(parser -> nextChromosome)); free(parser -> nextChromosome);
+    // Free the nextChrom string.
+    free(ks_str(parser -> nextChrom)); free(parser -> nextChrom);
     // Free the genotypes array array.
-    free(parser -> nextGenotypes);
+    free(parser -> nextGenos);
     // Free the structure.
     free(parser);
 }
@@ -164,35 +164,35 @@ int main() {
     VCFGenotypeParser* parser = init_vcf_genotype_parser("vcf_parser_test.vcf.gz");
 
     printf("There are %d samples with the following names:\n", parser -> num_samples);
-    for (int i = 0; i < parser -> num_samples; i++)
-        printf("%s\n", ks_str(&(parser -> sample_names[i])));
+    for (int i = 0; i < parser -> numSamples; i++)
+        printf("%s\n", ks_str(&(parser -> sampleNames[i])));
     
-    kstring_t* chromosome = (kstring_t*) calloc(1, sizeof(kstring_t));
-    int position;
+    kstring_t* chrom = (kstring_t*) calloc(1, sizeof(kstring_t));
+    int pos;
     int numOfAlleles;
-    GENOTYPE* genotypes = (GENOTYPE*) calloc(parser -> num_samples, sizeof(GENOTYPE));
+    GENOTYPE* genos = (GENOTYPE*) calloc(parser -> numSamples, sizeof(GENOTYPE));
 
     while(true) {
 
-        get_next_locus(parser, chromosome, &position, &numOfAlleles, &genotypes);
+        get_next_locus(parser, chrom, &pos, &numOfAlleles, &genos);
 
         if (parser -> isEOF)
             break;
         
         printf("\n");
-        printf("Chromosome: %s\n", ks_str(chromosome));
-        printf("Position: %d\n", position);
+        printf("Chromosome: %s\n", ks_str(chrom));
+        printf("Position: %d\n", pos);
         printf("Num Alleles: %d\n", numOfAlleles);
         printf("Genotypes:\n");
-        for (int i = 0; i < parser -> num_samples; i++)
-            printf("%x\n", genotypes[i]);
+        for (int i = 0; i < parser -> numSamples; i++)
+            printf("%x\n", genos[i]);
         printf("\n");
         
     }
 
     destroy_vcf_genotype_parser(parser);
-    free(genotypes);
-    free(ks_str(chromosome)); free(chromosome);
+    free(genos);
+    free(ks_str(chrom)); free(chrom);
     
 }
 */

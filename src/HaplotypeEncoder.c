@@ -21,12 +21,12 @@ HaplotypeEncoder* init_haplotype_encoder(int numSamples) {
 
     // Allocate memory used for arrays.
     encoder -> numSamples = numSamples;
-    encoder -> genotypes = (GENOTYPE*) calloc(numSamples, sizeof(GENOTYPE));
-    encoder -> leftHaplotype = (double*) calloc(numSamples, sizeof(double));
-    encoder -> rightHaplotype = (double*) calloc(numSamples, sizeof(double));
+    encoder -> genos = (GENOTYPE*) calloc(numSamples, sizeof(GENOTYPE));
+    encoder -> leftHaps = (double*) calloc(numSamples, sizeof(double));
+    encoder -> rightHaps = (double*) calloc(numSamples, sizeof(double));
 
     // Allocate string to hold chromosome.
-    encoder -> chromosome = (kstring_t*) calloc(1, sizeof(kstring_t));
+    encoder -> chrom = (kstring_t*) calloc(1, sizeof(kstring_t));
 
     for (int i = 0; i < MAX_NUMBER_OF_LOCI; i++) {
         LOG_PRIMES[i] = log(LOG_PRIMES[i]);
@@ -41,19 +41,19 @@ void add_locus(HaplotypeEncoder* encoder, int numAlleles, bool collapseMissingGe
 
     for (int i = 0; i < encoder -> numSamples; i++) {
         if (encoder -> numLoci == 0) {
-            encoder -> leftHaplotype[i] = (LEFT_ALLELE(encoder -> genotypes[i]) + 1) * LOG_PRIMES[0];
-            encoder -> rightHaplotype[i] = (RIGHT_ALLELE(encoder -> genotypes[i]) + 1) * LOG_PRIMES[0];
+            encoder -> leftHaps[i] = (LEFT_ALLELE(encoder -> genos[i]) + 1) * LOG_PRIMES[0];
+            encoder -> rightHaps[i] = (RIGHT_ALLELE(encoder -> genos[i]) + 1) * LOG_PRIMES[0];
 
-            if (collapseMissingGenotypes && (LEFT_ALLELE(encoder -> genotypes[i]) == numAlleles || RIGHT_ALLELE(encoder -> genotypes[i]) == numAlleles)) {
-                encoder -> leftHaplotype[i] = MISSING;
-                encoder -> rightHaplotype[i] = MISSING;
+            if (collapseMissingGenotypes && (LEFT_ALLELE(encoder -> genos[i]) == numAlleles || RIGHT_ALLELE(encoder -> genos[i]) == numAlleles)) {
+                encoder -> leftHaps[i] = MISSING;
+                encoder -> rightHaps[i] = MISSING;
             }
-        } else if (collapseMissingGenotypes && (encoder -> leftHaplotype[i] == MISSING || encoder -> rightHaplotype[i] == MISSING || LEFT_ALLELE(encoder -> genotypes[i]) == numAlleles || RIGHT_ALLELE(encoder -> genotypes[i]) == numAlleles)) {
-            encoder -> leftHaplotype[i] = MISSING;
-            encoder -> rightHaplotype[i] = MISSING;
+        } else if (collapseMissingGenotypes && (encoder -> leftHaps[i] == MISSING || encoder -> rightHaps[i] == MISSING || LEFT_ALLELE(encoder -> genos[i]) == numAlleles || RIGHT_ALLELE(encoder -> genos[i]) == numAlleles)) {
+            encoder -> leftHaps[i] = MISSING;
+            encoder -> rightHaps[i] = MISSING;
         } else {
-            encoder -> leftHaplotype[i] += (LEFT_ALLELE(encoder -> genotypes[i]) + 1) * LOG_PRIMES[encoder -> numLoci];
-            encoder -> rightHaplotype[i] += (RIGHT_ALLELE(encoder -> genotypes[i]) + 1) * LOG_PRIMES[encoder -> numLoci];
+            encoder -> leftHaps[i] += (LEFT_ALLELE(encoder -> genos[i]) + 1) * LOG_PRIMES[encoder -> numLoci];
+            encoder -> rightHaps[i] += (RIGHT_ALLELE(encoder -> genos[i]) + 1) * LOG_PRIMES[encoder -> numLoci];
         }
     }
 
@@ -68,44 +68,44 @@ bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, bo
         return false;
     
     // Set chromosome of next record from parser.
-    encoder -> chromosome -> l = 0;
-    kputs(ks_str(parser -> nextChromosome), encoder -> chromosome);
+    encoder -> chrom -> l = 0;
+    kputs(ks_str(parser -> nextChrom), encoder -> chrom);
 
     // Set start locus of next record from parser.
-    encoder -> startLocus = parser -> nextPosition;
+    encoder -> startLocus = parser -> nextPos;
 
     // Empty haplotype.
     encoder -> numLoci = 0;
 
     // Used to flag if haplotype is on the same chromosome.
-    bool isSameChromosome = true;
+    bool isSameChrom = true;
 
     // Holds number of alleles at each record.
     int numAlleles;
 
     // Create the haplotype.
-    while(!(parser -> isEOF) && (encoder -> numLoci < HAP_SIZE) && isSameChromosome) {
+    while(!(parser -> isEOF) && (encoder -> numLoci < HAP_SIZE) && isSameChrom) {
         // Get the next record from the VCF file.
-        get_next_locus(parser, encoder -> chromosome, &(encoder -> endLocus), &numAlleles, &(encoder -> genotypes));
+        get_next_locus(parser, encoder -> chrom, &(encoder -> endLocus), &numAlleles, &(encoder -> genos));
         // Add locus to haplotype.
         add_locus(encoder, numAlleles, collapseMissingGenotypes);
         // Make sure the next locus is on the same haplotype.
-        isSameChromosome = strcmp(ks_str(encoder -> chromosome), ks_str(parser -> nextChromosome)) == 0;
+        isSameChrom = strcmp(ks_str(encoder -> chrom), ks_str(parser -> nextChrom)) == 0;
     }
 
     // Not EOF, complete haplotype, and next loci is on the same chromsome.
-    return !(parser -> isEOF) && encoder -> numLoci == HAP_SIZE && isSameChromosome;
+    return !(parser -> isEOF) && encoder -> numLoci == HAP_SIZE && isSameChrom;
 
 }
 
 void destroy_haplotype_encoder(HaplotypeEncoder* encoder) {
 
     // Free memory used by arrays.
-    free(encoder -> genotypes);
-    free(encoder -> leftHaplotype);
-    free(encoder -> rightHaplotype);
+    free(encoder -> genos);
+    free(encoder -> leftHaps);
+    free(encoder -> rightHaps);
     // Free chromosome string.
-    free(ks_str(encoder -> chromosome)); free(encoder -> chromosome);
+    free(ks_str(encoder -> chrom)); free(encoder -> chrom);
     // Free structure.
     free(encoder);
 
@@ -129,13 +129,13 @@ double LOG_PRIMES[] = {
 
 /*
 void print_encoder_info(HaplotypeEncoder* encoder) {
-    printf("Chromosome: %s\n", ks_str(encoder -> chromosome));
+    printf("Chromosome: %s\n", ks_str(encoder -> chrom));
     printf("Start locus: %d\n", encoder -> startLocus);
     printf("End locus: %d\n", encoder -> endLocus);
     printf("Number of loci: %d\n", encoder -> numLoci);
     printf("Sample Haplotypes:\n");
     for (int i = 0; i < encoder -> numSamples; i++)
-        printf("Sample %d -> %lf/%lf\n", i + 1, encoder -> leftHaplotype[i], encoder -> rightHaplotype[i]);
+        printf("Sample %d -> %lf/%lf\n", i + 1, encoder -> leftHaps[i], encoder -> rightHaps[i]);
 }
 
 int main() {

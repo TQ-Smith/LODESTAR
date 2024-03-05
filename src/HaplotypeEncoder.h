@@ -22,15 +22,15 @@ typedef struct {
     int numSamples;
     // An array to hold the genotypes read in by the VCF parser.
     //  Not explicitly needed, but it helps usage.
-    GENOTYPE* genotypes;
+    GENOTYPE* genos;
     // Arrays to hold the left and right haplotype encodings for each sample.
-    double* leftHaplotype;
-    double* rightHaplotype;
+    double* leftHaps;
+    double* rightHaps;
 
     // Number of loci in the haplotye.
     int numLoci;
     // Chromosome the haplotype rests on.
-    kstring_t* chromosome;
+    kstring_t* chrom;
     // The start locus of the haplotype.
     int startLocus;
     // The end locus of the haplotype.

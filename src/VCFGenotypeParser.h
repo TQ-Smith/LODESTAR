@@ -31,7 +31,7 @@ typedef char GENOTYPE;
 // Our parser structure.
 typedef struct {
     // The name of the VCF file.
-    kstring_t* file_name;
+    kstring_t* fileName;
     // Our GZ file structure.
     gzFile file;
     // The stream we will read from the gzFile.
@@ -42,37 +42,37 @@ typedef struct {
     bool isEOF;
 
     // The number of samples in the VCF file.
-    int num_samples;
+    int numSamples;
     // The names of the samples.
-    kstring_t* sample_names;
+    kstring_t* sampleNames;
 
     // By adding a "peak" mechanism to the VCF file, such as we can do in streams,
     //  many algorithms are simplified. The stream is pointing the record after
     //  these entries.
-    kstring_t* nextChromosome;
-    int nextPosition;
+    kstring_t* nextChrom;
+    int nextPos;
     int nextNumAlleles;
-    GENOTYPE* nextGenotypes;
+    GENOTYPE* nextGenos;
 } VCFGenotypeParser;
 
 // Creates a VCFGenotypeParser.
 // Accepts:
-//  char* file_name -> The name of the file to read in.
+//  char* fileName -> The name of the file to read in.
 // Returns:
 //  The created parser or NULL if file does not exist.
-VCFGenotypeParser* init_vcf_genotype_parser(char* file_name);
+VCFGenotypeParser* init_vcf_genotype_parser(char* fileName);
 
 // Get the next record from a parser.
 // Accepts:
 //  VCFGenotypeParser* parser -> A pointer to a parser.
-//  kstring_t* chromosome -> Sets the chromosome of the record.
-//  int* position -> Sets the position of the record.
+//  kstring_t* chrom -> Sets the chromosome of the record.
+//  int* pos -> Sets the position of the record.
 //  int* numOfAlleles -> Sets the number of alleles at that locus.
-//  GENOTYPE** genotypes -> Fills an array of samples' genotypes. Is set (swapped)
+//  GENOTYPE** genos -> Fills an array of samples' genotypes. Is set (swapped)
 //                              with the nextGenotypes array in VCFGenotypeParser.
 // Returns: 
 //  void. Pointers are left unchanged when isEOF.
-void get_next_locus(VCFGenotypeParser* parser, kstring_t* chromosome, int* position, int* numOfAlleles, GENOTYPE** genotypes);
+void get_next_locus(VCFGenotypeParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, GENOTYPE** genos);
 
 // Deallocate all the memory occupied by the VCFGenotypeParser.
 // Accepts:

@@ -13,7 +13,7 @@ bin/test: src/test.o
 src/test.o: src/SlidingWindow.o
 	gcc $(CFLAGS) src/test.c -o src/test.o
 
-src/SlidingWindow.o: src/HaplotypeEncoder.o src/Window.o src/Matrix.o
+src/SlidingWindow.o: src/HaplotypeEncoder.o src/Window.o src/Matrix.o src/AlleleSharingDistance.o
 	gcc $(CFLAGS) src/SlidingWindow.c -o src/SlidingWindow.o
 
 src/HaplotypeEncoder.o: src/VCFGenotypeParser.o
@@ -27,6 +27,9 @@ src/Window.o:
 
 src/Matrix.o:
 	gcc $(CFLAGS) src/Matrix.c -o src/Matrix.o
+
+src/AlleleSharingDistance.o:
+	gcc $(CFLAGS) src/AlleleSharingDistance.c -o src/AlleleSharingDistance.o
 
 klib/kstring.o:
 	gcc $(CFLAGS) klib/kstring.c -o klib/kstring.o
