@@ -39,9 +39,10 @@ typedef struct {
     int overlapStartIndex;
     int overlapEndIndex;
 
-    double** winCalcs;
-    double** overlapCalcs;
-    double** globalCalcs;
+    double** winIBS;
+    double** overlapIBS;
+    double** globalIBS;
+    double** asdCalcs;
 
     int numLociInOverlap;
     int numLociInGlobal;
@@ -83,7 +84,7 @@ Window* get_next_window(WindowRecord* record) {
         isSameChrom = get_next_haplotype(record -> parser, record -> encoder, true, record -> HAP_SIZE);
 
         if (record -> NUM_THREADS == 1) {
-            process_haplotype_single_thread(record -> encoder -> leftHaps, record -> encoder -> rightHaps, record -> winCalcs, record -> overlapCalcs, record -> globalCalcs, record -> numSamples, numHapsInWin, isSameChrom);
+            process_haplotype_single_thread(record -> encoder, record -> winIBS, record -> overlapIBS, record -> globalIBS, record -> asdCalcs, numHapsInWin, isSameChrom, record -> STEP_SIZE, record -> WINDOW_SIZE);
         } else {
             SWAP(record -> leftHaps[numHapsInWin], record -> encoder -> leftHaps, swap);
             SWAP(record -> rightHaps[numHapsInWin], record -> encoder -> rightHaps, swap);
@@ -159,15 +160,12 @@ void* sliding_window_multi_threaded(void* arg) {
 void sliding_window_single_thread(WindowRecord* record) {
 
     Window* window;
-    double** swap;
 
     while (true) {
 
         if (record -> parser -> isEOF) {
             break;
         }
-
-        SWAP(record -> winCalcs, record -> overlapCalcs, swap);
 
         window = get_next_window(record);
 
@@ -176,6 +174,8 @@ void sliding_window_single_thread(WindowRecord* record) {
         *kl_pushp(WindowPtr, record -> windowList) = window;
 
     }
+
+    // Process global and add to list.
 
 }
 
@@ -208,7 +208,7 @@ Window** window_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int
 
     record -> numLociInOverlap = 0;
     record -> overlapStartLoci = (int*) calloc((WINDOW_SIZE - STEP_SIZE) / STEP_SIZE + 2, sizeof(int));
-    record -> globalCalcs = create_matrix(encoder -> numSamples, encoder -> numSamples);
+    record -> globalIBS = create_matrix(encoder -> numSamples, encoder -> numSamples);
     record -> numLociInGlobal = 0;
 
     record -> curWinNum = 0;
@@ -221,16 +221,18 @@ Window** window_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int
     if (NUM_THREADS == 1) {
         record -> overlapLeftHaps = NULL;
         record -> overlapRightHaps = NULL;
-        record -> winCalcs = create_matrix(encoder -> numSamples, encoder -> numSamples);
-        record -> overlapCalcs = create_matrix(encoder -> numSamples, encoder -> numSamples);
+        record -> winIBS = create_matrix(encoder -> numSamples, encoder -> numSamples);
+        record -> overlapIBS = create_matrix(encoder -> numSamples, encoder -> numSamples);
+        record -> asdCalcs = create_matrix(encoder -> numSamples, encoder -> numSamples);
 
         sliding_window_single_thread(record);
 
-        destroy_matrix(record -> winCalcs, encoder -> numSamples);
-        destroy_matrix(record -> overlapCalcs, encoder -> numSamples);
+        destroy_matrix(record -> winIBS, encoder -> numSamples);
+        destroy_matrix(record -> overlapIBS, encoder -> numSamples);
+        destroy_matrix(record -> asdCalcs, encoder -> numSamples);
     } else {
-        record -> winCalcs = NULL;
-        record -> overlapCalcs = NULL;
+        record -> winIBS = NULL;
+        record -> overlapIBS = NULL;
         record -> leftHaps = NULL;
         record -> rightHaps = NULL;
         record -> overlapLeftHaps = create_matrix(WINDOW_SIZE - STEP_SIZE, encoder -> numSamples);
@@ -264,7 +266,7 @@ Window** window_genome(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, int
 
     kl_destroy(WindowPtr, record -> windowList);
     free(record -> overlapStartLoci);
-    destroy_matrix(record -> globalCalcs, encoder -> numSamples);
+    destroy_matrix(record -> globalIBS, encoder -> numSamples);
     free(record -> curChrom -> s); free(record -> curChrom);
     free(record);
 

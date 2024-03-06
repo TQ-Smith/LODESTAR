@@ -12,8 +12,6 @@
 #define LEFT_ALLELE(a) (a >> 4)
 #define RIGHT_ALLELE(a) (a & 0x0F)
 
-#define MISSING (NAN)
-
 HaplotypeEncoder* init_haplotype_encoder(int numSamples) {
 
     // Allocate the structure's memory.

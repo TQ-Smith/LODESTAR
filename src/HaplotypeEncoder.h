@@ -15,6 +15,8 @@
 
 #define MAX_NUMBER_OF_LOCI 100
 
+#define MISSING (NAN)
+
 // A structure to represent the encoder.
 typedef struct {
 

@@ -6,10 +6,30 @@
 
 #include "AlleleSharingDistance.h"
 
-void process_haplotype_single_thread(double* leftHaps, double* rightHaps, double** winCalcs, double** overlapCalcs, double** globalCalcs, int numSamples, int numHapsInWin, bool isSameChrom) {
-    for (int i = 0; i < numSamples; i++) {
-        for (int j = 0; j < numSamples; j++) {
-
+void process_haplotype_single_thread(HaplotypeEncoder* encoder, double** winIBS, double** overlapIBS, double** globalIBS, double** asdCalcs, int numHapsInWin, bool isSameChrom, int STEP_SIZE, int WINDOW_SIZE) {
+    int ibs;
+    for (int i = 0; i < encoder -> numSamples; i++) {
+        for (int j = 0; j < encoder -> numSamples; j++) {
+            if (encoder -> leftHaps[i] != MISSING && encoder -> leftHaps[j] != MISSING) {
+                ibs = IBS(encoder -> leftHaps[i], encoder -> rightHaps[i], encoder -> leftHaps[j], encoder -> rightHaps[j]);
+                winIBS[i][j] += ibs;
+                winIBS[j][i]++;
+                globalIBS[i][j] += ibs;
+                globalIBS[j][i]++;
+                if (numHapsInWin >= STEP_SIZE) {
+                    overlapIBS[i][j] += ibs;
+                    overlapIBS[j][i]++;
+                }
+            }
+            if (!isSameChrom || numHapsInWin == WINDOW_SIZE - 1) {
+                asdCalcs[i][j] = asdCalcs[j][i] = 1 - (winIBS[i][j] / (2 * winIBS[j][i]));
+                asdCalcs[i][i] = 0;
+                winIBS[i][j] = overlapIBS[i][j];
+                winIBS[j][i] = overlapIBS[j][i];
+                overlapIBS[i][j] = overlapIBS[j][i] = 0;
+                if (!isSameChrom)
+                    winIBS[i][j] = winIBS[j][i] = 0;
+            }
         }
     }
 }
