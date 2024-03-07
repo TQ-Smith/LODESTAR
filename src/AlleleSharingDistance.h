@@ -16,15 +16,20 @@
 #define IS_EQUAL(A, B) (fabs(A - B) < EPS)
 
 static inline int IBS(double left1, double right1, double left2, double right2) {
-    if (IS_EQUAL(left1, left2) || IS_EQUAL(left1, right2)) {
-        if (IS_EQUAL(right1, right2) || IS_EQUAL(right1, left2))
+    if (IS_EQUAL(left1, left2)) {
+        if (IS_EQUAL(right1, right2))
             return 2;
         else
+            return 1;
+    } else if (IS_EQUAL(left1, right2)) {
+        if (IS_EQUAL(right1, left2)) 
+            return 2;
+        else 
             return 1;
     } else {
         if (IS_EQUAL(right1, right2))
             return 1;
-        else if (IS_EQUAL(right2, left2))
+        else if (IS_EQUAL(right1, left2))
             return 1;
         else
             return 0;

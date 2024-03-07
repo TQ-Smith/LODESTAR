@@ -85,6 +85,14 @@ Window* get_next_window(WindowRecord* record) {
 
         if (record -> NUM_THREADS == 1) {
             process_haplotype_single_thread(record -> encoder, record -> winIBS, record -> overlapIBS, record -> globalIBS, record -> asdCalcs, numHapsInWin, isSameChrom, record -> STEP_SIZE, record -> WINDOW_SIZE);
+            printf("Win:\n");
+            for (int i = 0; i < record -> numSamples; i++) {
+                for (int j = 0; j < record -> numSamples; j++) {
+                    printf("%5f\t", record -> winIBS[i][j]);
+                }
+                printf("\n");
+            }
+            printf("\n");
         } else {
             SWAP(record -> leftHaps[numHapsInWin], record -> encoder -> leftHaps, swap);
             SWAP(record -> rightHaps[numHapsInWin], record -> encoder -> rightHaps, swap);
@@ -170,12 +178,34 @@ void sliding_window_single_thread(WindowRecord* record) {
         window = get_next_window(record);
 
         // Process window.
+        printf("Window %d ASD Matrix:\n", window -> winNum);
+        for (int i = 0; i < record -> numSamples; i++) {
+            for (int j = 0; j < record -> numSamples; j++) {
+                printf("%5f\t", record -> asdCalcs[i][j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
 
         *kl_pushp(WindowPtr, record -> windowList) = window;
 
     }
 
     // Process global and add to list.
+    for (int i = 0; i < record -> numSamples; i++) {
+        for (int j = i + 1; j < record -> numSamples; j++) {
+            record -> asdCalcs[i][j] = record -> asdCalcs[j][i] = 1 - (record -> globalIBS[i][j] / (2 * record -> globalIBS[j][i]));
+        }
+    }
+
+    printf("Global ASD Matrix:\n");
+    for (int i = 0; i < record -> numSamples; i++) {
+        for (int j = 0; j < record -> numSamples; j++) {
+            printf("%5f\t", record -> asdCalcs[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
 
 }
 

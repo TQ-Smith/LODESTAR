@@ -9,9 +9,10 @@
 void process_haplotype_single_thread(HaplotypeEncoder* encoder, double** winIBS, double** overlapIBS, double** globalIBS, double** asdCalcs, int numHapsInWin, bool isSameChrom, int STEP_SIZE, int WINDOW_SIZE) {
     int ibs;
     for (int i = 0; i < encoder -> numSamples; i++) {
-        for (int j = 0; j < encoder -> numSamples; j++) {
+        for (int j = i + 1; j < encoder -> numSamples; j++) {
             if (encoder -> leftHaps[i] != MISSING && encoder -> leftHaps[j] != MISSING) {
                 ibs = IBS(encoder -> leftHaps[i], encoder -> rightHaps[i], encoder -> leftHaps[j], encoder -> rightHaps[j]);
+                printf("%5f/%5f and %5f/%5f is IBS = %d\n", encoder -> leftHaps[i], encoder -> rightHaps[i], encoder -> leftHaps[j], encoder -> rightHaps[j], ibs);
                 winIBS[i][j] += ibs;
                 winIBS[j][i]++;
                 globalIBS[i][j] += ibs;
@@ -22,13 +23,15 @@ void process_haplotype_single_thread(HaplotypeEncoder* encoder, double** winIBS,
                 }
             }
             if (!isSameChrom || numHapsInWin == WINDOW_SIZE - 1) {
-                asdCalcs[i][j] = asdCalcs[j][i] = 1 - (winIBS[i][j] / (2 * winIBS[j][i]));
+                asdCalcs[i][j] = asdCalcs[j][i] = 1.0 - (winIBS[i][j] / (2.0 * winIBS[j][i]));
                 asdCalcs[i][i] = 0;
-                winIBS[i][j] = overlapIBS[i][j];
-                winIBS[j][i] = overlapIBS[j][i];
-                overlapIBS[i][j] = overlapIBS[j][i] = 0;
-                if (!isSameChrom)
+                if (!isSameChrom) {
                     winIBS[i][j] = winIBS[j][i] = 0;
+                } else {
+                    winIBS[i][j] = overlapIBS[i][j];
+                    winIBS[j][i] = overlapIBS[j][i];
+                }
+                overlapIBS[i][j] = overlapIBS[j][i] = 0;
             }
         }
     }
