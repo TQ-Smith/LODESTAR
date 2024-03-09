@@ -6,32 +6,27 @@
 
 #include "AlleleSharingDistance.h"
 
-void process_haplotype_single_thread(HaplotypeEncoder* encoder, double** winIBS, double** overlapIBS, double** globalIBS, double** asdCalcs, int numHapsInWin, bool isSameChrom, int STEP_SIZE, int WINDOW_SIZE) {
+void process_haplotype_multi_thread(double* leftHaps, double* rightHaps, double** winIBS, double** globalIBS, int numSamples, int STEP_SIZE, int numHapsInWin, bool isSameChrom, int curHap) {
     int ibs;
-    for (int i = 0; i < encoder -> numSamples; i++) {
-        for (int j = i + 1; j < encoder -> numSamples; j++) {
-            if (encoder -> leftHaps[i] != MISSING && encoder -> leftHaps[j] != MISSING) {
-                ibs = IBS(encoder -> leftHaps[i], encoder -> rightHaps[i], encoder -> leftHaps[j], encoder -> rightHaps[j]);
-                printf("%5f/%5f and %5f/%5f is IBS = %d\n", encoder -> leftHaps[i], encoder -> rightHaps[i], encoder -> leftHaps[j], encoder -> rightHaps[j], ibs);
+    for (int i = 0; i < numSamples; i++) {
+        for (int j = i + 1; j < numSamples; j++) {
+            if (curHap == 0) {
+                winIBS[i][j] = 0;
+                winIBS[j][i] = 0;
+            }
+            if (!IS_EQUAL(leftHaps[i], MISSING) && !IS_EQUAL(leftHaps[j], MISSING)) {
+                ibs = IBS(leftHaps[i], rightHaps[i], leftHaps[j], rightHaps[j]);
                 winIBS[i][j] += ibs;
                 winIBS[j][i]++;
-                globalIBS[i][j] += ibs;
-                globalIBS[j][i]++;
-                if (numHapsInWin >= STEP_SIZE) {
-                    overlapIBS[i][j] += ibs;
-                    overlapIBS[j][i]++;
+                if (!isSameChrom || curHap < STEP_SIZE) {
+                    globalIBS[i][j] += ibs;
+                    globalIBS[j][i]++;
                 }
             }
-            if (!isSameChrom || numHapsInWin == WINDOW_SIZE - 1) {
-                asdCalcs[i][j] = asdCalcs[j][i] = 1.0 - (winIBS[i][j] / (2.0 * winIBS[j][i]));
-                asdCalcs[i][i] = 0;
-                if (!isSameChrom) {
-                    winIBS[i][j] = winIBS[j][i] = 0;
-                } else {
-                    winIBS[i][j] = overlapIBS[i][j];
-                    winIBS[j][i] = overlapIBS[j][i];
-                }
-                overlapIBS[i][j] = overlapIBS[j][i] = 0;
+            if (curHap == numHapsInWin - 1) {
+                winIBS[i][j] = 1.0 - (winIBS[i][j] / (2.0 * winIBS[j][i]));
+                winIBS[j][i] = winIBS[i][j];
+                winIBS[i][i] = 0;
             }
         }
     }
