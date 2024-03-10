@@ -6,6 +6,15 @@
 
 #include "AlleleSharingDistance.h"
 
+void process_haplotype_single_thread(double* leftHaps, double* rightHaps, double** winIBS, double** offsetIBS, double** winASD, double** globalIBS, int numSamples, int STEP_SIZE, int numHapsInWin, bool isSameChrom, int curHap) {
+    int ibs;
+    for (int i = 0; i < numSamples; i++) {
+        for (int j = i + 1; j < numSamples; j++) {
+            
+        }
+    }
+}
+
 void process_haplotype_multi_thread(double* leftHaps, double* rightHaps, double** winIBS, double** globalIBS, int numSamples, int STEP_SIZE, int numHapsInWin, bool isSameChrom, int curHap) {
     int ibs;
     for (int i = 0; i < numSamples; i++) {

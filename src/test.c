@@ -19,9 +19,9 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    int NUM_THREADS = 2;
+    int NUM_THREADS = 1;
 
-    int HAP_SIZE = 1, STEP_SIZE = 2, WINDOW_SIZE = 3;
+    int HAP_SIZE = 1, STEP_SIZE = 1, WINDOW_SIZE = 3;
 
     VCFGenotypeParser* parser = init_vcf_genotype_parser("./data/sliding_window_test2.vcf.gz");
     HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> numSamples);

@@ -36,6 +36,8 @@ static inline int IBS(double left1, double right1, double left2, double right2) 
     }
 }
 
+void process_haplotype_single_thread(double* leftHaps, double* rightHaps, double** winIBS, double** offsetIBS, double** winASD, double** globalIBS, int numSamples, int STEP_SIZE, int numHapsInWin, bool isSameChrom, int curHap);
+
 void process_haplotype_multi_thread(double* leftHaps, double* rightHaps, double** winIBS, double** globalIBS, int numSamples, int STEP_SIZE, int numHapsInWin, bool isSameChrom, int curHap);
 
 #endif

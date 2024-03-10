@@ -151,18 +151,20 @@ void* sliding_window_multi_thread(void* arg) {
         isSameChrom = record -> isSameChrom;
         pthread_mutex_unlock(&genomeLock);
 
-        for (int i = 0; i < ceil(window -> numLoci / record -> HAP_SIZE); i++) {
-            process_haplotype_multi_thread(leftHaps[i], rightHaps[i], winIBS, globalIBS, record -> numSamples, record -> STEP_SIZE, ceil(window -> numLoci / record -> HAP_SIZE), isSameChrom, i);
+        int numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
+        
+        for (int i = 0; i < numHapsInWin; i++) {
+            process_haplotype_multi_thread(leftHaps[i], rightHaps[i], winIBS, globalIBS, record -> numSamples, record -> STEP_SIZE, numHapsInWin, isSameChrom, i);
         }
 
         if (isSameChrom) {
             globalNumLoci += record -> STEP_SIZE;
         } else {
-            globalNumLoci += ceil(window -> numLoci / record -> HAP_SIZE);
+            globalNumLoci += numHapsInWin;
         }
 
         printf("Window %d Contents:\n", window -> winNum);
-        for (int i = 0; i < ceil(window -> numLoci / record -> HAP_SIZE); i++) {
+        for (int i = 0; i < numHapsInWin; i++) {
             for (int j = 0; j < record -> numSamples; j++) {
                 printf("%5f/%5f\t", leftHaps[i][j], rightHaps[i][j]);
             }
@@ -207,6 +209,9 @@ void sliding_window_single_thread(WindowRecord* record) {
 
     double** leftHaps = create_matrix(record -> WINDOW_SIZE, record -> numSamples);
     double** rightHaps = create_matrix(record -> WINDOW_SIZE, record -> numSamples);
+    double** winIBS = create_matrix(record -> numSamples, record -> numSamples);
+    double** offsetIBS = create_matrix(record -> numSamples, record -> numSamples);
+    double** winASD = create_matrix(record -> numSamples, record -> numSamples);
     record -> leftHaps = leftHaps;
     record -> rightHaps = rightHaps;
 
@@ -220,12 +225,51 @@ void sliding_window_single_thread(WindowRecord* record) {
 
         window = get_next_window(record);
 
+        int numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
+
+        if (window -> winNumOnChrom == 1) {
+            start = record -> startIndex;
+            for (int i = 0; i < numHapsInWin; i++) {
+                process_haplotype_single_thread(leftHaps[start], rightHaps[start], winIBS, offsetIBS, winASD, record -> globalIBS, record -> numSamples, record -> STEP_SIZE, numHapsInWin, record -> isSameChrom, i);
+                start = (start + 1) % record -> WINDOW_SIZE;
+            }
+        } else {
+
+        }
+
+        if (record -> isSameChrom) {
+            record -> globalNumLoci += record -> STEP_SIZE;
+        } else {
+            record -> globalNumLoci += numHapsInWin;
+        }
+
+        printf("Window %d Contents:\n", window -> winNum);
+        start = record -> startIndex;
+        for (int i = 0; i < numHapsInWin; i++) {
+            for (int j = 0; j < record -> numSamples; j++) {
+                printf("%5f/%5f\t", leftHaps[start][j], rightHaps[start][j]);
+            }
+            printf("\n");
+            start = (start + 1) % record -> WINDOW_SIZE;
+        }
+        printf("Window %d ASD:\n", window -> winNum);
+        for (int i = 0; i < record -> numSamples; i++) {
+            for (int j = 0; j < record -> numSamples; j++) {
+                printf("%5f\t", winIBS[i][j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+
         *kl_pushp(WindowPtr, record -> windowList) = window;
 
     }
 
     destroy_matrix(leftHaps, record -> WINDOW_SIZE);
     destroy_matrix(rightHaps, record -> WINDOW_SIZE);
+    destroy_matrix(winIBS, record -> numSamples);
+    destroy_matrix(offsetIBS, record -> numSamples);
+    destroy_matrix(winASD, record -> numSamples);
 
 }
 
