@@ -4,44 +4,46 @@
 // Author: TQ Smith
 // Purpose: 
 
-#ifndef _HAPLOTYPE_TREE_
-#define _HAPLOTYPE_TREE_
+#ifndef _HAPLOTYPE_ENCODER_H_
+#define _HAPLOTYPE_ENCODER_H_
 
 #include <stdlib.h>
 
 #include <stdbool.h>
 
-#include "VCFGenotypeParser.h"
+#include "VCFLocusParser.h"
 
-#define MAX_NUMBER_OF_LOCI 100
+#define MISSING 0xFFFFFFFFFFFFFFFF
 
-#define MISSING (-1)
+typedef unsigned long Haplotype;
+
+#include "../klib/khash.h"
+KHASH_MAP_INIT_INT64(64, Haplotype)
+
+typedef struct {
+    Haplotype left;
+    Haplotype right;
+} Genotype;
 
 typedef struct {
 
     int numSamples;
-
-    GENOTYPE* genos;
-
-    double* leftHaps;
-    double* rightHaps;
-
-    int numLoci;
+    Locus* locus;
+    Genotype* genotypes;
 
     kstring_t* chrom;
-
     int startLocus;
-
     int endLocus;
+    int numLoci;
+
+    unsigned long numLeaves;
+    khash_t(64)* labelMap;
 
 } HaplotypeEncoder;
 
-
 HaplotypeEncoder* init_haplotype_encoder(int numSamples);
 
-
-bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, bool collapseMissingGenotypes, int HAP_SIZE);
-
+bool get_next_haplotype(VCFLocusParser* parser, HaplotypeEncoder* encoder, bool collapseMissingGenotypes, int HAP_SIZE);
 
 void destroy_haplotype_encoder(HaplotypeEncoder* encoder);
 

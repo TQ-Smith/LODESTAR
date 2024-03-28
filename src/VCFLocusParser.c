@@ -52,15 +52,15 @@ VCFLocusParser* init_vcf_locus_parser(char* fileName) {
     parser -> buffer = buffer;
     parser -> isEOF = false;
     parser -> nextChrom = (kstring_t*) calloc(1, sizeof(kstring_t));
-    parser -> nextLoci = (Locus*) calloc(numSamples, sizeof(Locus));
+    parser -> nextLocus = (Locus*) calloc(numSamples, sizeof(Locus));
 
-    get_next_locus(parser, parser -> nextChrom, &(parser -> nextPos), &(parser -> nextNumAlleles), &(parser -> nextLoci));
+    get_next_locus(parser, parser -> nextChrom, &(parser -> nextPos), &(parser -> nextNumAlleles), &(parser -> nextLocus));
 
     return parser;
 
 }
 
-void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, Locus** loci) {
+void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, Locus** locus) {
    
     if (parser == NULL || parser -> isEOF)
         return;
@@ -73,9 +73,9 @@ void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* num
 
     *pos = parser -> nextPos;
     *numOfAlleles = parser -> nextNumAlleles;
-    Locus* temp = *loci;
-    *loci = parser -> nextLoci;
-    parser -> nextLoci = temp;
+    Locus* temp = *locus;
+    *locus = parser -> nextLocus;
+    parser -> nextLocus = temp;
     
     if (ks_eof(parser -> stream)) {
         parser -> isEOF = true;
@@ -102,7 +102,7 @@ void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* num
                     if (ks_str(parser -> buffer)[j] == ',')
                         numAlleles++;
             } else if (numTabs > 8)
-                parser -> nextLoci[numTabs - 9] = parse_locus(ks_str(parser -> buffer) + prevIndex + 1, numAlleles);
+                parser -> nextLocus[numTabs - 9] = parse_locus(ks_str(parser -> buffer) + prevIndex + 1, numAlleles);
             prevIndex = i;
             numTabs++;
         }
@@ -124,6 +124,6 @@ void destroy_vcf_locus_parser(VCFLocusParser* parser) {
     free(parser -> sampleNames);
     free(ks_str(parser -> buffer)); free(parser -> buffer);
     free(ks_str(parser -> nextChrom)); free(parser -> nextChrom);
-    free(parser -> nextLoci);
+    free(parser -> nextLocus);
     free(parser);
 }

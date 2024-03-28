@@ -4,8 +4,8 @@
 // Author: TQ Smith
 // Purpose: Parse the genotypes for each record in a VCF file.
 
-#ifndef _VCF_LOCUS_PARSER_
-#define _VCF_LOCUS_PARSER_
+#ifndef _VCF_LOCUS_PARSER_H_
+#define _VCF_LOCUS_PARSER_H_
 
 #include <stdlib.h>
 
@@ -22,6 +22,9 @@ KSTREAM_INIT(gzFile, gzread, BUFFER_SIZE)
 
 typedef char Locus;
 
+#define LEFT_ALLELE(a) (a >> 4)
+#define RIGHT_ALLELE(a) (a & 0x0F)
+
 typedef struct {
     kstring_t* fileName;
     gzFile file;
@@ -35,7 +38,7 @@ typedef struct {
     kstring_t* nextChrom;
     int nextPos;
     int nextNumAlleles;
-    Locus* nextLoci;
+    Locus* nextLocus;
 } VCFLocusParser;
 
 VCFLocusParser* init_vcf_locus_parser(char* fileName);
