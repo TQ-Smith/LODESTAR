@@ -42,6 +42,7 @@ HaplotypeEncoder* init_haplotype_encoder(int numSamples);
 
 bool get_next_haplotype(VCFGenotypeParser* parser, HaplotypeEncoder* encoder, bool collapseMissingGenotypes, int HAP_SIZE);
 
+
 void destroy_haplotype_encoder(HaplotypeEncoder* encoder);
 
 #endif
