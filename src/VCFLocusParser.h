@@ -1,0 +1,59 @@
+
+// File: 
+// Date: 18 Janurary 2024
+// Author: TQ Smith
+// Purpose: Parse the genotypes for each record in a VCF file.
+
+#ifndef _VCF_LOCUS_PARSER_
+#define _VCF_LOCUS_PARSER_
+
+#include <stdlib.h>
+
+#include <stdbool.h>
+
+#include "../klib/zlib.h"
+
+#include "../klib/kstring.h"
+
+#include "../klib/kseq.h"
+
+#define BUFFER_SIZE 4096
+KSTREAM_INIT(gzFile, gzread, BUFFER_SIZE)
+
+typedef char Locus;
+
+typedef struct {
+    kstring_t* fileName;
+    gzFile file;
+    kstream_t* stream;
+    kstring_t* buffer;
+    bool isEOF;
+
+    int numSamples;
+    kstring_t* sampleNames;
+
+    kstring_t* nextChrom;
+    int nextPos;
+    int nextNumAlleles;
+    Locus* nextLoci;
+} VCFLocusParser;
+
+VCFLocusParser* init_vcf_locus_parser(char* fileName);
+
+void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, Locus** genos);
+
+void destroy_vcf_locus_parser(VCFLocusParser* parser);
+
+static inline Locus parse_locus(char* start, int numAlleles) {
+    Locus locus = (Locus) (numAlleles << 4) | numAlleles;
+    char* next = start + 1;
+    // If the left allele is not missing, then parse integer and set left genotype.
+    if (start[0] != '.')
+        locus = (strtol(start, &next, 10) << 4) | numAlleles;
+    // If there is a second, non-missing genotype, parse and set right genotype.
+    if ((next[0] == '|' || next[0] == '/') && next[1] != '.')
+        locus = (locus & 0xF0) | strtol(next + 1, (char**) NULL, 10);
+    return locus;
+}
+
+#endif
