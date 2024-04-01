@@ -6,23 +6,14 @@
 
 #include <stdlib.h>
 
-#define MATRIX_INIT(TYPE, PRINT) \
-    TYPE** create_##TYPE##_matrix(int n, int m) { \
+#define MATRIX_INIT(NAME, TYPE) \
+    TYPE** create_##NAME##_matrix(int n, int m) { \
         TYPE** matrix = (TYPE**) calloc(n, sizeof(TYPE*)); \
         for (int i = 0; i < n; i++) \
             matrix[i] = (TYPE*) calloc(m, sizeof(TYPE)); \
         return matrix; \
     } \
-    void print_##TYPE##_matrix(TYPE** matrix, int n, int m) { \
-        for (int i = 0; i < n; i++) { \
-            for (int j = 0; j < m; j++) { \
-                PRINT(matrix[i][j]); \
-                printf("\t"); \
-            } \
-            printf("\n"); \
-        } \
-    } \
-    void destroy_##TYPE##_matrix(TYPE** matrix, int n) { \
+    void destroy_##NAME##_matrix(TYPE** matrix, int n) { \
         if (matrix == NULL) \
             return; \
         for (int i = 0; i < n; i++) \

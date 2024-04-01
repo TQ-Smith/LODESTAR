@@ -9,7 +9,13 @@
 
 #include "HaplotypeEncoder.h"
 
-static inline int IBS(Genotype s1, Genotype s2) {
+typedef struct {
+    unsigned int ibs0;
+    unsigned int ibs1;
+    unsigned int ibs2;
+} IBS;
+
+static inline int num_shared_alleles(Genotype s1, Genotype s2) {
     if (s1.left == s2.left) {
         if (s1.right == s2.right)
             return 2;
@@ -29,5 +35,11 @@ static inline int IBS(Genotype s1, Genotype s2) {
             return 0;
     }
 }
+
+static inline double ibs_to_asd(IBS ibs) {
+    return 1.0 - (ibs.ibs1 + (2.0 * ibs.ibs2)) / (ibs.ibs0 + ibs.ibs1 + ibs.ibs2);
+}
+
+void pairwise_ibs(IBS** ibs, Genotype* genotypes, int numSamples);
 
 #endif

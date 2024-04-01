@@ -62,7 +62,7 @@ VCFLocusParser* init_vcf_locus_parser(char* fileName) {
 
 void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, Locus** locus) {
    
-    if (parser == NULL || parser -> isEOF)
+    if (parser == NULL)
         return;
     
     if (parser -> nextChrom != chrom) {
@@ -127,3 +127,40 @@ void destroy_vcf_locus_parser(VCFLocusParser* parser) {
     free(parser -> nextLocus);
     free(parser);
 }
+
+// Used to test the parser.
+/*
+int main() {
+    
+    VCFLocusParser* parser = init_vcf_locus_parser("../data/vcf_parser_test.vcf.gz");
+
+    printf("There are %d samples with the following names:\n", parser -> numSamples);
+    for (int i = 0; i < parser -> numSamples; i++)
+        printf("%s\n", ks_str(&(parser -> sampleNames[i])));
+    
+    kstring_t* chromosome = (kstring_t*) calloc(1, sizeof(kstring_t));
+    int position;
+    int numOfAlleles;
+    Locus* locus = (Locus*) calloc(parser -> numSamples, sizeof(Locus));
+
+    while(!parser -> isEOF) {
+
+        get_next_locus(parser, chromosome, &position, &numOfAlleles, &locus);
+        
+        printf("\n");
+        printf("Chromosome: %s\n", ks_str(chromosome));
+        printf("Position: %d\n", position);
+        printf("Num Alleles: %d\n", numOfAlleles);
+        printf("Genotypes:\n");
+        for (int i = 0; i < parser -> numSamples; i++)
+            printf("%x\n", locus[i]);
+        printf("\n");
+        
+    }
+
+    destroy_vcf_locus_parser(parser);
+    free(locus);
+    free(ks_str(chromosome)); free(chromosome);
+    
+}
+*/

@@ -27,7 +27,7 @@ HaplotypeEncoder* init_haplotype_encoder(int numSamples) {
 
 void relabel_haplotypes(HaplotypeEncoder* encoder) {
 
-    kh_clear(64, encoder -> labelMap);
+    //kh_clear(64, encoder -> labelMap);
     
     int ret, newLabel = 0;
 
@@ -42,26 +42,33 @@ void relabel_haplotypes(HaplotypeEncoder* encoder) {
         right = encoder -> genotypes[i].right;
 
         if (kh_get(64, encoder -> labelMap, left) == kh_end(encoder -> labelMap)) {
+            printf("%ld\n", left);
             k = kh_put(64, encoder -> labelMap, left, &ret);
-            kh_value(encoder -> labelMap, k) = newLabel++;
+            kh_value(encoder -> labelMap, k) = newLabel;
+            newLabel++;
         }
 
         if (kh_get(64, encoder -> labelMap, right) == kh_end(encoder -> labelMap)) {
+            printf("%ld\n", right);
             k = kh_put(64, encoder -> labelMap, right, &ret);
-            kh_value(encoder -> labelMap, k) = newLabel++;
+            kh_value(encoder -> labelMap, k) = newLabel;
+            newLabel++;
         }
         
         encoder -> genotypes[i].left = kh_value(encoder -> labelMap, kh_get(64, encoder -> labelMap, left));
         encoder -> genotypes[i].right = kh_value(encoder -> labelMap, kh_get(64, encoder -> labelMap, right));
     }
 
-    encoder -> numLeaves = newLabel + 1;
+    encoder -> numLeaves = newLabel;
 
 }
 
 void add_locus(HaplotypeEncoder* encoder, int numAlleles, bool collapseMissingGenotypes) {
 
-    if (encoder -> numLeaves * numAlleles == MISSING || (encoder -> numLeaves * numAlleles) / numAlleles != encoder -> numLeaves)
+    //if (encoder -> numLeaves * numAlleles == MISSING || (encoder -> numLeaves * numAlleles) / numAlleles != encoder -> numLeaves)
+        //relabel_haplotypes(encoder);
+    
+    if (encoder -> numLeaves >= 2)
         relabel_haplotypes(encoder);
 
     for (int i = 0; i < encoder -> numSamples; i++) {
@@ -76,12 +83,12 @@ void add_locus(HaplotypeEncoder* encoder, int numAlleles, bool collapseMissingGe
             encoder -> genotypes[i].left = MISSING;
             encoder -> genotypes[i].right = MISSING;
         } else {
-            encoder -> genotypes[i].left = encoder -> genotypes[i].left * (numAlleles + 1) + LEFT_ALLELE(encoder -> locus[i]);
-            encoder -> genotypes[i].right = encoder -> genotypes[i].right * (numAlleles + 1) + RIGHT_ALLELE(encoder -> locus[i]);
+            encoder -> genotypes[i].left = encoder -> genotypes[i].left * numAlleles + LEFT_ALLELE(encoder -> locus[i]);
+            encoder -> genotypes[i].right = encoder -> genotypes[i].right * numAlleles + RIGHT_ALLELE(encoder -> locus[i]);
         }
     }
     
-    encoder -> numLeaves = (encoder -> numLeaves) * (numAlleles + 1);
+    encoder -> numLeaves = (encoder -> numLeaves) * numAlleles;
 
 }
 
@@ -107,6 +114,7 @@ bool get_next_haplotype(VCFLocusParser* parser, HaplotypeEncoder* encoder, bool 
         get_next_locus(parser, encoder -> chrom, &(encoder -> endLocus), &numAlleles, &(encoder -> locus));
         add_locus(encoder, numAlleles, collapseMissingGenotypes);
         isSameChrom = strcmp(ks_str(encoder -> chrom), ks_str(parser -> nextChrom)) == 0;
+        encoder -> numLoci++;
     }
 
     return !(parser -> isEOF) && encoder -> numLoci == HAP_SIZE && isSameChrom;
@@ -121,4 +129,76 @@ void destroy_haplotype_encoder(HaplotypeEncoder* encoder) {
     free(ks_str(encoder -> chrom)); free(encoder -> chrom);
     kh_destroy(64, encoder -> labelMap);
     free(encoder);
+}
+
+// Used to test the haplotype encoder.
+
+
+void print_encoder_info(HaplotypeEncoder* encoder) {
+    printf("Chromosome: %s\n", ks_str(encoder -> chrom));
+    printf("Start locus: %d\n", encoder -> startLocus);
+    printf("End locus: %d\n", encoder -> endLocus);
+    printf("Number of loci: %d\n", encoder -> numLoci);
+    printf("Sample Haplotypes:\n");
+    for (int i = 0; i < encoder -> numSamples; i++)
+        printf("Sample %d -> %ld/%ld\n", i + 1, encoder -> genotypes[i].left, encoder -> genotypes[i].right);
+}
+
+int main() {
+
+    VCFLocusParser* parser = init_vcf_locus_parser("./data/haplotype_encoder_test.vcf.gz");
+    HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> numSamples);
+    printf("\nTest 1\n");
+    printf("---------\n");
+    printf("Read in whole chromosomes:\n\n");
+    get_next_haplotype(parser, encoder, true, 10);
+    printf("First Haplotype:\n");
+    print_encoder_info(encoder);
+    get_next_haplotype(parser, encoder, true, 10);
+    printf("\nSecond Haplotype:\n");
+    print_encoder_info(encoder);
+    destroy_vcf_locus_parser(parser);
+
+    printf("\n");
+    parser = init_vcf_locus_parser("./data/haplotype_encoder_test.vcf.gz");
+    printf("\nTest 2\n");
+    printf("---------\n");
+    printf("Read in 2-loci haplotypes:\n\n");
+    get_next_haplotype(parser, encoder, true, 2);
+    printf("First Haplotype:\n");
+    print_encoder_info(encoder);
+    get_next_haplotype(parser, encoder, true, 2);
+    printf("\nSecond Haplotype:\n");
+    print_encoder_info(encoder);
+    get_next_haplotype(parser, encoder, true, 2);
+    printf("\nThird Haplotype:\n");
+    print_encoder_info(encoder);
+    destroy_vcf_locus_parser(parser);
+
+    printf("\n");
+    parser = init_vcf_locus_parser("./data/haplotype_encoder_test.vcf.gz");
+    printf("\nTest 3\n");
+    printf("---------\n");
+    printf("Read in 1-locus haplotypes:\n\n");
+    get_next_haplotype(parser, encoder, true, 1);
+    printf("First Haplotype:\n");
+    print_encoder_info(encoder);
+    get_next_haplotype(parser, encoder, true, 1);
+    printf("\nSecond Haplotype:\n");
+    print_encoder_info(encoder);
+    get_next_haplotype(parser, encoder, true, 1);
+    printf("\nThird Haplotype:\n");
+    print_encoder_info(encoder);
+    get_next_haplotype(parser, encoder, true, 1);
+    printf("\nFourth Haplotype:\n");
+    print_encoder_info(encoder);
+    get_next_haplotype(parser, encoder, true, 1);
+    printf("\nFifth Haplotype:\n");
+    print_encoder_info(encoder);
+    destroy_vcf_locus_parser(parser);
+
+    printf("\n");
+
+    destroy_haplotype_encoder(encoder);
+
 }

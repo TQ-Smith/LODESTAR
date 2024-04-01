@@ -13,8 +13,8 @@
 
 #include "Window.h"
 
-Window** window_genome(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows);
+Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows);
 
-Window* global(VCFLocusParser* parser, HaplotypeEncoder* encoder, int NUM_THREADS);
+Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int NUM_THREADS);
 
 #endif
