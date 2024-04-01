@@ -25,19 +25,6 @@ int main() {
 
     VCFGenotypeParser* parser = init_vcf_genotype_parser("./data/sliding_window_test2.vcf.gz");
     HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> numSamples);
-    
-    int numWindows = 0;
-    Window** windows = window_genome(parser, encoder, HAP_SIZE, STEP_SIZE, WINDOW_SIZE, NUM_THREADS, &numWindows);
-
-    printf("\n");
-    for (int i = 0; i < numWindows; i++)
-        print_window_info(windows[i]);
-    
-    destroy_vcf_genotype_parser(parser);
-    destroy_haplotype_encoder(encoder);
-    for (int i = 0; i < numWindows; i++)
-        destroy_window(windows[i]);
-    free(windows);
 
     return 0;
 

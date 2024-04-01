@@ -1,43 +1,33 @@
 
 // File: AlleleSharingDistance.h
-// Date: 5 March 2024
+// Date: 
 // Author: TQ Smith
-// Purpose: Defines the processing of a haplotype and ASD calculations.
+// Purpose: 
 
-#ifndef _ALLELE_SHARING_DISTANCE_
-#define _ALLELE_SHARING_DISTANCE_
+#ifndef _ALLELE_SHARING_DISTANCE_H_
+#define _ALLELE_SHARING_DISTANCE_H_
 
 #include "HaplotypeEncoder.h"
 
-#include <math.h>
-
-#define EPS 1e-10
-
-#define IS_EQUAL(A, B) (fabs(A - B) < EPS)
-
-static inline int IBS(double left1, double right1, double left2, double right2) {
-    if (IS_EQUAL(left1, left2)) {
-        if (IS_EQUAL(right1, right2))
+static inline int IBS(Genotype s1, Genotype s2) {
+    if (s1.left == s2.left) {
+        if (s1.right == s2.right)
             return 2;
         else
             return 1;
-    } else if (IS_EQUAL(left1, right2)) {
-        if (IS_EQUAL(right1, left2)) 
+    } else if (s1.left == s2.right) {
+        if (s1.right == s2.left) 
             return 2;
         else 
             return 1;
     } else {
-        if (IS_EQUAL(right1, right2))
+        if (s1.right == s2.right)
             return 1;
-        else if (IS_EQUAL(right1, left2))
+        else if (s1.right == s2.left)
             return 1;
         else
             return 0;
     }
 }
-
-void process_haplotype_single_thread(double* leftHaps, double* rightHaps, double** winIBS, double** offsetIBS, double** winASD, double** globalIBS, int numSamples, int STEP_SIZE, int numHapsInWin, bool isSameChrom, int curHap);
-
-void process_haplotype_multi_thread(double* leftHaps, double* rightHaps, double** winIBS, double** globalIBS, int numSamples, int STEP_SIZE, int numHapsInWin, bool isSameChrom, int curHap);
 
 #endif
