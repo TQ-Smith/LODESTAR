@@ -18,7 +18,7 @@
 typedef unsigned long Haplotype;
 
 #include "../klib/khash.h"
-KHASH_MAP_INIT_INT64(64, Haplotype)
+KHASH_MAP_INIT_INT64(int64, Haplotype)
 
 typedef struct {
     Haplotype left;
@@ -37,7 +37,7 @@ typedef struct {
     int numLoci;
 
     unsigned long numLeaves;
-    khash_t(64)* labelMap;
+    khash_t(int64)* labelMap;
 
 } HaplotypeEncoder;
 

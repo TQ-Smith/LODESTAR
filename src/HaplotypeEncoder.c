@@ -19,7 +19,10 @@ HaplotypeEncoder* init_haplotype_encoder(int numSamples) {
     encoder -> chrom = (kstring_t*) calloc(1, sizeof(kstring_t));
 
     encoder -> numLeaves = 1;
-    encoder -> labelMap = kh_init(64);
+
+    encoder -> labelMap = kh_init(int64);
+    khint_t k = kh_put(int64, encoder -> labelMap, MISSING, &ret);
+    kh_value(encoder -> labelMap, k) = MISSING;
 
     return encoder;
 
@@ -27,36 +30,14 @@ HaplotypeEncoder* init_haplotype_encoder(int numSamples) {
 
 void relabel_haplotypes(HaplotypeEncoder* encoder) {
 
-    //kh_clear(64, encoder -> labelMap);
-    
+    khint_t k;
     int ret, newLabel = 0;
-
-    khiter_t k = kh_put(64, encoder -> labelMap, MISSING, &ret);
-    kh_value(encoder -> labelMap, k) = MISSING;
-
-    Haplotype left, right;
+    
+    for (k = kh_begin(encoder -> labelMap); k != kh_end(encoder -> labelMap); k++)
+        kh_value(encoder -> labelMap, k) = MISSING;
 
     for (int i = 0; i < encoder -> numSamples; i++) {
 
-        left = encoder -> genotypes[i].left;
-        right = encoder -> genotypes[i].right;
-
-        if (kh_get(64, encoder -> labelMap, left) == kh_end(encoder -> labelMap)) {
-            printf("%ld\n", left);
-            k = kh_put(64, encoder -> labelMap, left, &ret);
-            kh_value(encoder -> labelMap, k) = newLabel;
-            newLabel++;
-        }
-
-        if (kh_get(64, encoder -> labelMap, right) == kh_end(encoder -> labelMap)) {
-            printf("%ld\n", right);
-            k = kh_put(64, encoder -> labelMap, right, &ret);
-            kh_value(encoder -> labelMap, k) = newLabel;
-            newLabel++;
-        }
-        
-        encoder -> genotypes[i].left = kh_value(encoder -> labelMap, kh_get(64, encoder -> labelMap, left));
-        encoder -> genotypes[i].right = kh_value(encoder -> labelMap, kh_get(64, encoder -> labelMap, right));
     }
 
     encoder -> numLeaves = newLabel;
@@ -127,7 +108,7 @@ void destroy_haplotype_encoder(HaplotypeEncoder* encoder) {
     free(encoder -> locus);
     free(encoder -> genotypes);
     free(ks_str(encoder -> chrom)); free(encoder -> chrom);
-    kh_destroy(64, encoder -> labelMap);
+    kh_destroy(int64, encoder -> labelMap);
     free(encoder);
 }
 
