@@ -21,8 +21,6 @@ HaplotypeEncoder* init_haplotype_encoder(int numSamples) {
     encoder -> numLeaves = 1;
 
     encoder -> labelMap = kh_init(int64);
-    khint_t k = kh_put(int64, encoder -> labelMap, MISSING, &ret);
-    kh_value(encoder -> labelMap, k) = MISSING;
 
     return encoder;
 
