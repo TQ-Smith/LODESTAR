@@ -37,7 +37,7 @@ static inline int num_shared_alleles(Genotype s1, Genotype s2) {
 }
 
 static inline double ibs_to_asd(IBS ibs) {
-    return 1.0 - (ibs.ibs1 + (2.0 * ibs.ibs2)) / (ibs.ibs0 + ibs.ibs1 + ibs.ibs2);
+    return 1.0 - (ibs.ibs1 + (2.0 * ibs.ibs2)) / (2.0 * (ibs.ibs0 + ibs.ibs1 + ibs.ibs2));
 }
 
 void pairwise_ibs(IBS** ibs, Genotype* genotypes, int numSamples);

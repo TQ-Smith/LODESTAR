@@ -21,4 +21,7 @@
         free(matrix); \
     }
 
+#define create_matrix(NAME, N, M) create_##NAME##_matrix(N, M)
+#define destroy_matrix(NAME, MATRIX, N) destroy_##NAME##_matrix(MATRIX, N)
+
 #endif

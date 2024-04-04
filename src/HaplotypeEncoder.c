@@ -20,18 +20,11 @@ HaplotypeEncoder* init_haplotype_encoder(int numSamples) {
 
     encoder -> numLeaves = 1;
 
-    encoder -> labelMap = kh_init(int64);
-
     return encoder;
 
 }
 
 void relabel_haplotypes(HaplotypeEncoder* encoder) {
-
-    khint_t k;
-    int ret, newLabel = 0;
-
-    
 
 }
 
@@ -96,13 +89,12 @@ void destroy_haplotype_encoder(HaplotypeEncoder* encoder) {
     free(encoder -> locus);
     free(encoder -> genotypes);
     free(ks_str(encoder -> chrom)); free(encoder -> chrom);
-    kh_destroy(int64, encoder -> labelMap);
     free(encoder);
 }
 
 // Used to test the haplotype encoder.
 
-
+/*
 void print_encoder_info(HaplotypeEncoder* encoder) {
     printf("Chromosome: %s\n", ks_str(encoder -> chrom));
     printf("Start locus: %d\n", encoder -> startLocus);
@@ -185,3 +177,4 @@ int main() {
     destroy_haplotype_encoder(encoder);
 
 }
+*/

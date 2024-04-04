@@ -11,11 +11,11 @@
 
 #include <stdbool.h>
 
-#include "../klib/zlib.h"
+#include "../lib/zlib.h"
 
-#include "../klib/kstring.h"
+#include "../lib/kstring.h"
 
-#include "../klib/kseq.h"
+#include "../lib/kseq.h"
 
 #define BUFFER_SIZE 4096
 KSTREAM_INIT(gzFile, gzread, BUFFER_SIZE)

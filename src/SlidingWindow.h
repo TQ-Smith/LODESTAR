@@ -1,8 +1,8 @@
 
-// File: SlidingWindow.h
-// Date: 18 Janurary 2024
-// Author: TQ Smith
-// Purpose: Slides a window along the contents of a VCF file.
+// File: 
+// Date: 
+// Author: 
+// Purpose: 
 
 #ifndef _SLIDING_WINDOW_H_
 #define _SLIDING_WINDOW_H_

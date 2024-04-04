@@ -6,7 +6,7 @@
 
 #include "SlidingWindow.h"
 
-#include "../klib/klist.h"
+#include "../lib/klist.h"
 #define do_not_free_window_ptr(w)
 KLIST_INIT(WindowPtr, Window*, do_not_free_window_ptr)
 
@@ -15,8 +15,9 @@ KLIST_INIT(WindowPtr, Window*, do_not_free_window_ptr)
 #include "AlleleSharingDistance.h"
 
 #include "Matrix.h"
-MATRIX_INIT(doubles, double)
+MATRIX_INIT(double, double)
 MATRIX_INIT(ibs, IBS)
+MATRIX_INIT(geno, Genotype)
 
 #define SWAP(a, b, TEMP) TEMP = a; a = b; b = TEMP
 
@@ -24,8 +25,45 @@ pthread_mutex_t genomeLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t windowListLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t globalLock = PTHREAD_MUTEX_INITIALIZER;
 
-Window* get_next_window() {
-    return NULL;
+typedef struct {
+    VCFLocusParser* parser;
+    HaplotypeEncoder* encoder;
+    klist_t(WindowPtr)* winList;
+
+    int HAP_SIZE;
+    int STEP_SIZE;
+    int WINDOW_SIZE;
+    int numSamples;
+
+    int NUM_THREADS;
+    Genotype** winGeno;
+    Genotype** winGenoThread;
+    int numHapInOverlap;
+    int winStartIndex;
+    int winEndIndex;
+    int* winStartLoci;
+
+    int curWinNum;
+    int curWinOnChromNum;
+    kstring_t* curChrom;
+} WindowRecord;
+
+Window* get_next_window(WindowRecord* record) {
+
+    Window* window = init_window();
+    window -> winNum = ++record -> curWinNum;
+    window -> winNumOnChrom = ++record -> curWinOnChromNum;
+    kputs(ks_str(record -> curChrom), window -> chromosome);
+    window -> numLoci = record -> numHapInOverlap * record -> HAP_SIZE;
+
+    int numStartsInWin = (record -> WINDOW_SIZE - record -> STEP_SIZE) / record -> STEP_SIZE + 2;
+    bool isSameChrom = true;
+    Genotype* temp;
+
+    
+
+    return window;
+
 }
 
 void* sliding_window_multi_thread(void* arg) {
@@ -36,14 +74,93 @@ void sliding_window_single_thread() {
 
 }
 
+void sort_windows(Window** windows, int numWindows) {
+    Window* temp;
+    int j;
+    for (int i = 1; i < numWindows; i++) {
+        temp = windows[i];
+        j = i - 1;
+        while (j >= 0 && windows[j] -> winNum > temp -> winNum) {
+            windows[j + 1] = windows[j];
+            j = j - 1;
+        }
+        windows[j + 1] = temp;
+    }
+}
+
 Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows) {
-    return NULL;
+    
+    WindowRecord* record = (WindowRecord*) calloc(1, sizeof(WindowRecord));
+    record -> parser = parser;
+    record -> encoder = encoder;
+    record -> winList = kl_init(WindowPtr);
+
+    record -> HAP_SIZE = HAP_SIZE;
+    record -> STEP_SIZE = STEP_SIZE;
+    record -> WINDOW_SIZE = WINDOW_SIZE;
+    record -> numSamples = encoder -> numSamples;
+
+    record -> NUM_THREADS = NUM_THREADS;
+    record -> winGeno = create_matrix(geno, WINDOW_SIZE, encoder -> numSamples);
+    record -> winGenoThread = NULL;
+    record -> numHapInOverlap = 0;
+    record -> winStartIndex = 0;
+    record -> winEndIndex = 0;
+    record -> winStartLoci = (int*) calloc((WINDOW_SIZE - STEP_SIZE) / STEP_SIZE + 2, sizeof(int));
+
+    record -> curWinNum = 0;
+    record -> curWinOnChromNum = 0;
+    record -> curChrom = (kstring_t*) calloc(1, sizeof(kstring_t));
+    kputs(ks_str(parser -> nextChrom), record -> curChrom);
+
+    Window** windows;
+
+    if (NUM_THREADS == 1) {
+        sliding_window_single_thread(record);
+    } else {
+        pthread_t* threads = (pthread_t*) calloc(NUM_THREADS - 1, sizeof(pthread_t));
+        for (int i = 0; i < NUM_THREADS - 1; i++)
+            pthread_create(&threads[i], NULL, sliding_window_multi_thread, (void*) record);
+    
+        sliding_window_multi_thread((void*) record);
+
+        for (int i = 0; i < NUM_THREADS - 1; i++)
+            pthread_join(threads[i], NULL);
+        free(threads);
+    }
+    
+    Window* global = init_window();
+    global -> winNum = 0;
+    global -> winNumOnChrom = 0;
+    global -> startLocus = 0;
+    global -> endLocus = 0;
+    
+    *numWindows = record -> curWinNum;
+    windows = (Window**) malloc((*numWindows + 1) * sizeof(Window*));
+    int i = 0;
+    for (kliter_t(WindowPtr)* it = kl_begin(record -> winList); it != kl_end(record -> winList); it = kl_next(it)) {
+        windows[i] = kl_val(it);
+        i++;
+    }
+    windows[*numWindows] = global;
+    *numWindows = *numWindows + 1;
+    if (NUM_THREADS > 1)
+        sort_windows(windows, *numWindows);
+    
+    kl_destroy(WindowPtr, record -> winList);
+    destroy_matrix(geno, record -> winGeno, WINDOW_SIZE);
+    free(record -> winStartLoci);
+    free(record -> curChrom -> s); free(record -> curChrom);
+    free(record);
+
+    return windows;
+
 }
 
 typedef struct {
     VCFLocusParser* parser;
     HaplotypeEncoder* encoder;
-    IBS** ibs;
+    IBS** alleleCounts;
     int numLoci;
     int HAP_SIZE;
 } GlobalWindowRecord;
@@ -52,7 +169,7 @@ void* global_window_multi_thread(void* arg) {
     GlobalWindowRecord* record = (GlobalWindowRecord*) arg;
     int numSamples = record -> encoder -> numSamples;
 
-    IBS** ibs = create_ibs_matrix(numSamples, numSamples);
+    IBS** alleleCounts = create_matrix(ibs, numSamples, numSamples);
     Genotype* genotypes = (Genotype*) calloc(numSamples, sizeof(Genotype));
     Genotype* temp;
 
@@ -63,29 +180,29 @@ void* global_window_multi_thread(void* arg) {
         SWAP(genotypes, record -> encoder -> genotypes, temp);
         pthread_mutex_unlock(&genomeLock);
 
-        pairwise_ibs(ibs, genotypes, numSamples);
+        pairwise_ibs(alleleCounts, genotypes, numSamples);
     }
     pthread_mutex_unlock(&genomeLock);
 
     pthread_mutex_lock(&globalLock);
     for (int i = 0; i < numSamples; i++) {
         for (int j = i + 1; j < numSamples; j++) {
-            record -> ibs[i][j].ibs0 += ibs[i][j].ibs0;
-            record -> ibs[i][j].ibs1 += ibs[i][j].ibs1;
-            record -> ibs[i][j].ibs2 += ibs[i][j].ibs2;
+            record -> alleleCounts[i][j].ibs0 += alleleCounts[i][j].ibs0;
+            record -> alleleCounts[i][j].ibs1 += alleleCounts[i][j].ibs1;
+            record -> alleleCounts[i][j].ibs2 += alleleCounts[i][j].ibs2;
         }
     }
     pthread_mutex_unlock(&globalLock);
 
-    destroy_ibs_matrix(ibs, numSamples);
+    destroy_matrix(ibs, alleleCounts, numSamples);
     free(genotypes);
     return NULL;
 }
 
 Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int NUM_THREADS) {
 
-    IBS** ibs = create_ibs_matrix(encoder -> numSamples, encoder -> numSamples);
-    double** asd = create_doubles_matrix(encoder -> numSamples, encoder -> numSamples);
+    IBS** alleleCounts = create_matrix(ibs, encoder -> numSamples, encoder -> numSamples);
+    double** asd = create_matrix(double, encoder -> numSamples, encoder -> numSamples);
 
     Window* window = init_window();
     window -> winNum = 0;
@@ -98,13 +215,13 @@ Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP
         while (!parser -> isEOF) {
             get_next_haplotype(parser, encoder, true, HAP_SIZE);
             window -> numLoci += encoder -> numLoci;
-            pairwise_ibs(ibs, encoder -> genotypes, encoder -> numSamples);
+            pairwise_ibs(alleleCounts, encoder -> genotypes, encoder -> numSamples);
         }
     } else {
         GlobalWindowRecord* record = (GlobalWindowRecord*) calloc(1, sizeof(GlobalWindowRecord));
         record -> parser = parser;
         record -> encoder = encoder;
-        record -> ibs = ibs;
+        record -> alleleCounts = alleleCounts;
         record -> numLoci = 0;
         record -> HAP_SIZE = HAP_SIZE;
 
@@ -123,16 +240,14 @@ Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP
         free(record);
     }
 
-    printf("Global ASD:\n");
     for (int i = 0; i < encoder -> numSamples; i++) {
         for (int j = i + 1; j < encoder -> numSamples; j++) {
-            printf("%5lf\t", ibs_to_asd(ibs[i][j]));
+            asd[i][j] = asd[j][i] = ibs_to_asd(alleleCounts[i][j]);
         }
-        printf("\n");
     }
 
-    destroy_ibs_matrix(ibs, encoder -> numSamples);
-    destroy_doubles_matrix(asd, encoder -> numSamples);
+    destroy_matrix(ibs, alleleCounts, encoder -> numSamples);
+    destroy_matrix(double, asd, encoder -> numSamples);
 
     return window;
 

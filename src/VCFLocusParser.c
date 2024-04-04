@@ -76,16 +76,11 @@ void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* num
     Locus* temp = *locus;
     *locus = parser -> nextLocus;
     parser -> nextLocus = temp;
-    
-    if (ks_eof(parser -> stream)) {
-        parser -> isEOF = true;
-        return;
-    }
 
     int dret;
     ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret);
 
-    if (ks_len(parser -> buffer) == 0) {
+    if (ks_eof(parser -> stream) || ks_len(parser -> buffer) == 0) {
         parser -> isEOF = true;
         return;
     }
