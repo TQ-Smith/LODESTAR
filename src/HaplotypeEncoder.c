@@ -30,25 +30,15 @@ void relabel_haplotypes(HaplotypeEncoder* encoder) {
 
     khint_t k;
     int ret, newLabel = 0;
+
     
-    for (k = kh_begin(encoder -> labelMap); k != kh_end(encoder -> labelMap); k++)
-        kh_value(encoder -> labelMap, k) = MISSING;
-
-    for (int i = 0; i < encoder -> numSamples; i++) {
-
-    }
-
-    encoder -> numLeaves = newLabel;
 
 }
 
 void add_locus(HaplotypeEncoder* encoder, int numAlleles, bool collapseMissingGenotypes) {
 
     //if (encoder -> numLeaves * numAlleles == MISSING || (encoder -> numLeaves * numAlleles) / numAlleles != encoder -> numLeaves)
-        //relabel_haplotypes(encoder);
-    
-    if (encoder -> numLeaves >= 2)
-        relabel_haplotypes(encoder);
+    //    relabel_haplotypes(encoder);
 
     for (int i = 0; i < encoder -> numSamples; i++) {
         if (encoder -> numLeaves == 1) {
@@ -175,6 +165,20 @@ int main() {
     printf("\nFifth Haplotype:\n");
     print_encoder_info(encoder);
     destroy_vcf_locus_parser(parser);
+
+    printf("\n");
+    parser = init_vcf_locus_parser("./data/haplotype_encoder_test2.vcf.gz");
+    printf("\nTest 4\n");
+    printf("---------\n");
+    printf("Read in 3-locus haplotypes:\n\n");
+    get_next_haplotype(parser, encoder, true, 10);
+    printf("First Haplotype:\n");
+    print_encoder_info(encoder);
+    printf("\nRelabeled:\n");
+    relabel_haplotypes(encoder);
+    print_encoder_info(encoder);
+    destroy_vcf_locus_parser(parser);
+
 
     printf("\n");
 
