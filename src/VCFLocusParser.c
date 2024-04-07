@@ -62,7 +62,7 @@ VCFLocusParser* init_vcf_locus_parser(char* fileName) {
 
 void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, Locus** locus) {
    
-    if (parser == NULL)
+    if (parser == NULL || parser -> isEOF)
         return;
     
     if (parser -> nextChrom != chrom) {

@@ -35,32 +35,62 @@ typedef struct {
     int WINDOW_SIZE;
     int numSamples;
 
-    int NUM_THREADS;
     Genotype** winGeno;
-    Genotype** winGenoThread;
-    int numHapInOverlap;
+    int numHapsInOverlap;
     int winStartIndex;
     int winEndIndex;
     int* winStartLoci;
+
+    int globalNumHaps;
 
     int curWinNum;
     int curWinOnChromNum;
     kstring_t* curChrom;
 } WindowRecord;
 
-Window* get_next_window(WindowRecord* record) {
+Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
 
     Window* window = init_window();
-    window -> winNum = ++record -> curWinNum;
-    window -> winNumOnChrom = ++record -> curWinOnChromNum;
+    window -> winNum = record -> curWinNum++;
+    window -> winNumOnChrom = record -> curWinOnChromNum++;
     kputs(ks_str(record -> curChrom), window -> chromosome);
-    window -> numLoci = record -> numHapInOverlap * record -> HAP_SIZE;
+    window -> numLoci = record -> numHapsInOverlap * record -> HAP_SIZE;
 
-    int numStartsInWin = (record -> WINDOW_SIZE - record -> STEP_SIZE) / record -> STEP_SIZE + 2;
     bool isSameChrom = true;
     Genotype* temp;
 
-    
+    if (window -> winNumOnChrom != 1)
+        record -> winStartIndex = (record -> winStartIndex + record -> STEP_SIZE) % record -> WINDOW_SIZE;
+
+    while(record -> numHapsInOverlap < record -> WINDOW_SIZE && isSameChrom) {
+        isSameChrom = get_next_haplotype(record -> parser, record -> encoder, true, record -> HAP_SIZE);
+        if (threadGeno == NULL) {
+            SWAP(record -> winGeno[record -> winEndIndex], record -> encoder -> genotypes, temp);
+        } else {
+            SWAP(record -> winGeno[record -> numHapsInOverlap], record -> encoder -> genotypes, temp);
+            if (isSameChrom && record -> numHapsInOverlap >= record -> STEP_SIZE)
+                for (int i = 0; i < record -> numSamples; i++)
+                    threadGeno[record -> numHapsInOverlap][i] = record -> winGeno[record -> winEndIndex][i];
+        }
+        record -> winEndIndex = (record -> winEndIndex + 1) % record -> WINDOW_SIZE;
+        if (record -> numHapsInOverlap % record -> STEP_SIZE == 0)
+            record -> winStartLoci[(window -> winNumOnChrom + record -> numHapsInOverlap / record -> STEP_SIZE) % (record -> WINDOW_SIZE / record -> STEP_SIZE + 1)] = record -> encoder -> startLocus;
+        window -> numLoci += record -> encoder -> numLoci;
+        record -> numHapsInOverlap++;
+    }
+
+    window -> startLocus = record -> winStartLoci[window -> winNumOnChrom % (record -> WINDOW_SIZE / record -> STEP_SIZE + 1)];
+    window -> endLocus = record -> encoder -> endLocus;
+    if (isSameChrom) {
+        record -> numHapsInOverlap = record -> WINDOW_SIZE - record -> STEP_SIZE;
+    } else {
+        record -> curChrom -> l = 0;
+        kputs(ks_str(record -> parser -> nextChrom), record -> curChrom);
+        record -> numHapsInOverlap = 0;
+        record -> curWinOnChromNum = 1;
+        record -> winStartIndex = 0;
+        record -> winEndIndex = 0;
+    }
 
     return window;
 
@@ -70,7 +100,33 @@ void* sliding_window_multi_thread(void* arg) {
     return NULL;
 }
 
-void sliding_window_single_thread() {
+void sliding_window_single_thread(WindowRecord* record) {
+
+    Window* window;
+
+    while (!(record -> parser -> isEOF)) {
+
+        window = get_next_window(record, NULL);
+
+        if (record -> curWinOnChromNum == 1)
+            record -> globalNumHaps += window -> numLoci / record -> HAP_SIZE;
+        else
+            record -> globalNumHaps += record -> STEP_SIZE;
+
+        printf("Window %d Contents:\n", window -> winNum);
+        int start = record -> winStartIndex;
+        for (int i = 0; i < record -> WINDOW_SIZE; i++) {
+            for (int j = 0; j < record -> numSamples; j++) {
+                printf("%3ld/%-3ld\t", record -> winGeno[start][j].left, record -> winGeno[start][j].right);
+            }
+            printf("\n");
+            start = (start + 1) % record -> WINDOW_SIZE;
+        }
+        printf("\n");
+
+        *kl_pushp(WindowPtr, record -> winList) = window;
+
+    }
 
 }
 
@@ -100,16 +156,16 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
     record -> WINDOW_SIZE = WINDOW_SIZE;
     record -> numSamples = encoder -> numSamples;
 
-    record -> NUM_THREADS = NUM_THREADS;
     record -> winGeno = create_matrix(geno, WINDOW_SIZE, encoder -> numSamples);
-    record -> winGenoThread = NULL;
-    record -> numHapInOverlap = 0;
+    record -> numHapsInOverlap = 0;
     record -> winStartIndex = 0;
     record -> winEndIndex = 0;
-    record -> winStartLoci = (int*) calloc((WINDOW_SIZE - STEP_SIZE) / STEP_SIZE + 2, sizeof(int));
+    record -> winStartLoci = (int*) calloc(WINDOW_SIZE / STEP_SIZE + 1, sizeof(int));
 
-    record -> curWinNum = 0;
-    record -> curWinOnChromNum = 0;
+    record -> globalNumHaps = 0;
+
+    record -> curWinNum = 1;
+    record -> curWinOnChromNum = 1;
     record -> curChrom = (kstring_t*) calloc(1, sizeof(kstring_t));
     kputs(ks_str(parser -> nextChrom), record -> curChrom);
 
@@ -130,23 +186,24 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
     }
     
     Window* global = init_window();
+    kputs("Global", global -> chromosome);
     global -> winNum = 0;
     global -> winNumOnChrom = 0;
     global -> startLocus = 0;
     global -> endLocus = 0;
+    global -> numLoci = record -> globalNumHaps;
     
     *numWindows = record -> curWinNum;
-    windows = (Window**) malloc((*numWindows + 1) * sizeof(Window*));
-    int i = 0;
+    windows = (Window**) malloc(*numWindows * sizeof(Window*));
+    int i = 1;
     for (kliter_t(WindowPtr)* it = kl_begin(record -> winList); it != kl_end(record -> winList); it = kl_next(it)) {
         windows[i] = kl_val(it);
         i++;
     }
-    windows[*numWindows] = global;
-    *numWindows = *numWindows + 1;
+    windows[0] = global;
     if (NUM_THREADS > 1)
         sort_windows(windows, *numWindows);
-    
+
     kl_destroy(WindowPtr, record -> winList);
     destroy_matrix(geno, record -> winGeno, WINDOW_SIZE);
     free(record -> winStartLoci);
