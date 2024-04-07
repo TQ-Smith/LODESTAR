@@ -19,6 +19,8 @@ MATRIX_INIT(double, double)
 MATRIX_INIT(ibs, IBS)
 MATRIX_INIT(geno, Genotype)
 
+#include <math.h>
+
 #define SWAP(a, b, TEMP) TEMP = a; a = b; b = TEMP
 
 pthread_mutex_t genomeLock = PTHREAD_MUTEX_INITIALIZER;
@@ -41,6 +43,7 @@ typedef struct {
     int winEndIndex;
     int* winStartLoci;
 
+    IBS** globalAlleleCounts;
     int globalNumHaps;
 
     int curWinNum;
@@ -67,10 +70,9 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
         if (threadGeno == NULL) {
             SWAP(record -> winGeno[record -> winEndIndex], record -> encoder -> genotypes, temp);
         } else {
-            SWAP(record -> winGeno[record -> numHapsInOverlap], record -> encoder -> genotypes, temp);
-            if (isSameChrom && record -> numHapsInOverlap >= record -> STEP_SIZE)
-                for (int i = 0; i < record -> numSamples; i++)
-                    threadGeno[record -> numHapsInOverlap][i] = record -> winGeno[record -> winEndIndex][i];
+            SWAP(record -> winGeno[record -> winEndIndex], record -> encoder -> genotypes, temp);
+            for (int i = 0; i < record -> numSamples; i++)
+                threadGeno[record -> numHapsInOverlap][i] = record -> winGeno[record -> winEndIndex][i];
         }
         record -> winEndIndex = (record -> winEndIndex + 1) % record -> WINDOW_SIZE;
         if (record -> numHapsInOverlap % record -> STEP_SIZE == 0)
@@ -97,36 +99,123 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
 }
 
 void* sliding_window_multi_thread(void* arg) {
+
+    WindowRecord* record = (WindowRecord*) arg;
+
+    Window* window;
+
+    Genotype** threadGeno = create_matrix(geno, record -> WINDOW_SIZE, record -> numSamples);
+    IBS** winAlleleCounts = create_matrix(ibs, record -> numSamples, record -> numSamples);
+    double** asd = create_matrix(double, record -> numSamples, record -> numSamples);
+
+    int start, numHapsInWin;
+    bool isLastWinOnChrom;
+
+    while (true) {
+
+        pthread_mutex_lock(&genomeLock);
+        if (record -> parser -> isEOF) {
+            pthread_mutex_unlock(&genomeLock);
+            break;
+        }
+
+        if (record -> curWinOnChromNum != 1) {
+            start = (record -> winStartIndex + record -> STEP_SIZE) % record -> WINDOW_SIZE;
+            for (int i = 0; i < record -> WINDOW_SIZE - record -> STEP_SIZE; i++) {
+                for (int j = 0; j < record -> numSamples; j++)
+                    threadGeno[i][j] = record -> winGeno[start][j];
+                start = (start + 1) % record -> WINDOW_SIZE;
+            }
+        }
+
+        window = get_next_window(record, threadGeno);
+
+        isLastWinOnChrom = record -> curWinOnChromNum == 1;
+        if (isLastWinOnChrom)
+            record -> globalNumHaps += window -> numLoci / record -> HAP_SIZE;
+        else
+            record -> globalNumHaps += record -> STEP_SIZE;
+        
+        pthread_mutex_unlock(&genomeLock);
+
+        numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
+        for (int i = 0; i < numHapsInWin; i++) {
+            process_haplotype_multi_thread(threadGeno[i], winAlleleCounts, asd, i, numHapsInWin, isLastWinOnChrom, record -> numSamples, record -> STEP_SIZE);
+        }
+
+        printf("Window %d ASD:\n", window -> winNum);
+        printf("%d\n", numHapsInWin);
+        for (int i = 0; i < record -> numSamples; i++) {
+            for (int j = 0; j < record -> numSamples; j++) {
+                printf("%5f\t", asd[i][j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+
+        pthread_mutex_lock(&windowListLock);
+        *kl_pushp(WindowPtr, record -> winList) = window;
+        pthread_mutex_unlock(&windowListLock);
+
+    }
+
+    pthread_mutex_lock(&globalLock);
+    for (int i = 0; i < record -> numSamples; i++) {
+        for (int j = i + 1; j < record -> numSamples; j++) {
+            record -> globalAlleleCounts[i][j].ibs0 += alleleCounts[j][i].ibs0;
+            record -> globalAlleleCounts[i][j].ibs1 += alleleCounts[j][i].ibs1;
+            record -> globalAlleleCounts[i][j].ibs2 += alleleCounts[j][i].ibs2;
+        }
+    }
+    pthread_mutex_unlock(&globalLock);
+
+    destroy_matrix(geno, threadGeno, record -> WINDOW_SIZE);
+    destroy_matrix(ibs, alleleCounts, record -> numSamples);
+    destroy_matrix(double, asd, record -> numSamples);
+
     return NULL;
+
 }
 
 void sliding_window_single_thread(WindowRecord* record) {
 
     Window* window;
 
+    IBS** winAlleleCounts = create_matrix(ibs, record -> numSamples, record -> numSamples);
+    double** asd = create_matrix(double, record -> numSamples, record -> numSamples);
+
+    int start, numHapsInWin;
+    bool isLastWinOnChrom;
+
     while (!(record -> parser -> isEOF)) {
 
         window = get_next_window(record, NULL);
 
-        if (record -> curWinOnChromNum == 1)
+        isLastWinOnChrom = record -> curWinOnChromNum == 1;
+        if (isLastWinOnChrom)
             record -> globalNumHaps += window -> numLoci / record -> HAP_SIZE;
         else
             record -> globalNumHaps += record -> STEP_SIZE;
 
-        printf("Window %d Contents:\n", window -> winNum);
-        int start = record -> winStartIndex;
-        for (int i = 0; i < record -> WINDOW_SIZE; i++) {
+        numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
+        
+        
+        printf("Window %d ASD:\n", window -> winNum);
+        printf("%d\n", numHapsInWin);
+        for (int i = 0; i < record -> numSamples; i++) {
             for (int j = 0; j < record -> numSamples; j++) {
-                printf("%3ld/%-3ld\t", record -> winGeno[start][j].left, record -> winGeno[start][j].right);
+                printf("%5f\t", asd[i][j]);
             }
             printf("\n");
-            start = (start + 1) % record -> WINDOW_SIZE;
         }
         printf("\n");
 
         *kl_pushp(WindowPtr, record -> winList) = window;
 
     }
+
+    destroy_matrix(ibs, winAlleleCounts, record -> numSamples);
+    destroy_matrix(double, asd, record -> numSamples);
 
 }
 
@@ -162,6 +251,7 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
     record -> winEndIndex = 0;
     record -> winStartLoci = (int*) calloc(WINDOW_SIZE / STEP_SIZE + 1, sizeof(int));
 
+    record -> globalAlleleCounts = create_matrix(ibs, encoder -> numSamples, encoder -> numSamples);
     record -> globalNumHaps = 0;
 
     record -> curWinNum = 1;
@@ -175,11 +265,12 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
         sliding_window_single_thread(record);
     } else {
         pthread_t* threads = (pthread_t*) calloc(NUM_THREADS - 1, sizeof(pthread_t));
+
         for (int i = 0; i < NUM_THREADS - 1; i++)
             pthread_create(&threads[i], NULL, sliding_window_multi_thread, (void*) record);
     
         sliding_window_multi_thread((void*) record);
-
+        
         for (int i = 0; i < NUM_THREADS - 1; i++)
             pthread_join(threads[i], NULL);
         free(threads);
@@ -192,6 +283,15 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
     global -> startLocus = 0;
     global -> endLocus = 0;
     global -> numLoci = record -> globalNumHaps;
+
+    printf("Global ASD:\n");
+    for (int i = 0; i < record -> numSamples; i++) {
+        for (int j = 0; j < record -> numSamples; j++) {
+            printf("%5f\t", ibs_to_asd(record -> globalAlleleCounts[i][j]));
+        }
+        printf("\n");
+    }
+    printf("\n");
     
     *numWindows = record -> curWinNum;
     windows = (Window**) malloc(*numWindows * sizeof(Window*));
@@ -207,6 +307,7 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
     kl_destroy(WindowPtr, record -> winList);
     destroy_matrix(geno, record -> winGeno, WINDOW_SIZE);
     free(record -> winStartLoci);
+    destroy_matrix(ibs, record -> globalAlleleCounts, encoder -> numSamples);
     free(record -> curChrom -> s); free(record -> curChrom);
     free(record);
 
