@@ -1,10 +1,11 @@
 
-#ifndef _MATRIX_
-#define _MATRIX_
-
-#include <stdio.h>
+#ifndef _MATRIX_H_
+#define _MATRIX_H_
 
 #include <stdlib.h>
+
+#define PACKED_SIZE(N) ((N * (N + 1)) / 2)
+#define INDEX(i, j) (i + j * (j - 1) / 2)
 
 #define MATRIX_INIT(NAME, TYPE) \
     TYPE** create_##NAME##_matrix(int n, int m) { \
