@@ -1,6 +1,54 @@
 
 #include "RealSymEigen.h"
 
+extern void dsyevr_(char *JOBZp, char *RANGEp, char *UPLOp, 
+                        int *Np, double *A, int *LDAp, double *VLp, 
+                        double *VUp, int *ILp, int *IUp, double *ABSTOLp, 
+                        int *Mp, double *W, double *Z, int *LDZp, int *ISUPPZ, 
+                        double *WORK, int *LWORKp, int *IWORK, int *LIWORKp, int *INFOp);
+
+extern double dlamch_(char *CMACHp);
+
+int dsyevr(
+    char JOBZ, 
+    char RANGE, 
+    char UPLO, 
+    int N,
+    double *A, 
+    int LDA, 
+    double VL, 
+    double VU,
+    int IL, 
+    int IU, 
+    double ABSTOL, 
+    int *M,
+    double *W, 
+    double *Z, 
+    int LDZ, 
+    int *ISUPPZ,
+    double *WORK, 
+    int LWORK, 
+    int *IWORK, 
+    int LIWORK
+) {
+
+    int INFO;
+
+    dsyevr_(&JOBZ, &RANGE, &UPLO, 
+            &N, A, &LDA, &VL, 
+            &VU, &IL, &IU, &ABSTOL,
+            M, W, Z, &LDZ, ISUPPZ, 
+            WORK, &LWORK, IWORK, &LIWORK, &INFO);
+    
+    return INFO;
+
+}
+
+double dlamch(char CMACH) {
+  return dlamch_(&CMACH);
+}
+
+
 RealSymEigen* init_real_sym_eigen(int N) {
     RealSymEigen* eigen = malloc(sizeof(RealSymEigen));
     eigen -> A = malloc(N * N * sizeof(double));

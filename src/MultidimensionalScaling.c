@@ -1,45 +1,65 @@
-
 #include "MultidimensionalScaling.h"
 
-/*
-int
-main()
-{
-  double *A, *B, *W, *Z, *WORK;
-  int *ISUPPZ, *IWORK;
-  int  i, j;
-  int  M;
+#include <math.h>
 
-  A = malloc(N*N*sizeof(double));
-  A[0] = 1; A[1] = 2; A[2] = 3; A[3] = 2; A[4] = 1; A[5] = 2; A[6] = 3; A[7] = 2; A[8] = 1;
+#include <stdio.h>
 
-  printf("A:\n");
-  for (i=0; i<N; ++i) {
-    for (j= i; j< N; ++j) {
-      printf("%lf\t", A[INDEX(i, j)]);
+#define INDEX(i, j, N) (i <= j ? i + j * (j + 1) / 2 : j + i * (i + 1) / 2)
+
+int compute_classical_mds(RealSymEigen* eigen, double* packedDistanceMatrix, int k, double** X) {
+
+    int N = eigen -> N;
+
+    for (int i = 0; i < N; i++)
+        eigen -> WORK[i] = 0;
+
+    double grand_mean = 0;
+
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            if (i <= j)
+                packedDistanceMatrix[INDEX(i, j, N)] *= packedDistanceMatrix[INDEX(i, j, N)];
+            eigen -> WORK[i] += packedDistanceMatrix[INDEX(i, j, N)];
+            grand_mean += packedDistanceMatrix[INDEX(i, j, N)];
+        }
+    }
+
+    printf("Squared D:\n");
+    for (int i = 0; i < N; i++) {
+        for (int j = i; j < N; j++) {
+            printf("%lf\t", packedDistanceMatrix[i + j * (j + 1) / 2 ]);
+        }
+        printf("\n");
     }
     printf("\n");
-  }
 
-  W = malloc(N*sizeof(double));
-  Z = malloc(N*N*sizeof(double));
-  ISUPPZ = malloc(2*N*sizeof(int));
-  WORK = malloc(26*N*sizeof(double));
-  IWORK = malloc(10*N*sizeof(int));
+    printf("Row Sums:\n");
+    for (int i = 0; i < N; i++)
+        printf("%lf\n", eigen -> WORK[i]);
+    printf("\n");
 
-  dsyevr('V', 'I', 'U', N, A, N, 0, 0, 2, 3, dlamch('S'), &M,
-         W, Z, N, ISUPPZ, WORK, 26*N, IWORK, 10*N);
+    printf("Grand Sum: %lf\n\n", grand_mean);
 
-  
-  printf("%6.2f\t", Z[0]); printf("%6.2f\t", Z[3]); printf("%6.2f\t\n", Z[6]);
-  printf("%6.2f\t", Z[1]); printf("%6.2f\t", Z[4]); printf("%6.2f\t\n", Z[7]);
-  printf("%6.2f\t", Z[2]); printf("%6.2f\t", Z[5]); printf("%6.2f\t\n", Z[8]);
+    printf("Centered Matrix stored in eigen -> A:\n");
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) {
+            eigen -> A[i * N + j] = -0.5 * (packedDistanceMatrix[INDEX(i, j, N)] - (eigen -> WORK[i] / N) - (eigen -> WORK[j] / N) + (grand_mean / (N * N)));
+            printf("%lf\t", eigen -> A[i * N + j]);
+        }
+        printf("\n");
+    }
+    
+    int INFO = compute_k_eigenpairs(eigen, k);
 
-  printf("Eigenvalues:\n");
-  for (i = 0; i < N; i++)
-    printf("%6.2f\t", W[i]);
-  printf("\n");
+    if (INFO != 0)
+        return INFO;
+    
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < k; j++) {
+            X[i][j] = eigen -> Z[(k - j - 1) * N + i] * sqrt(eigen -> W[k - j - 1]);
+        }
+    }
 
-  return 0;
+    return 0;
+
 }
-*/
