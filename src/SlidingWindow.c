@@ -139,7 +139,7 @@ void* sliding_window_multi_thread(void* arg) {
 
         numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
         for (int i = 0; i < numHapsInWin; i++) {
-            process_haplotype_multi_thread(threadGeno[i], winAlleleCounts, globalAlleleCounts asd, i, numHapsInWin, isLastWinOnChrom, record -> numSamples, record -> STEP_SIZE);
+            process_haplotype_multi_thread(threadGeno[i], winAlleleCounts, globalAlleleCounts, asd, i, numHapsInWin, isLastWinOnChrom, record -> numSamples, record -> STEP_SIZE);
         }
 
         printf("Window %d ASD:\n", window -> winNum);
@@ -215,7 +215,7 @@ void sliding_window_single_thread(WindowRecord* record) {
     }
 
     free(winAlleleCounts);
-    fee(asd);
+    free(asd);
 
 }
 
@@ -318,7 +318,7 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
 typedef struct {
     VCFLocusParser* parser;
     HaplotypeEncoder* encoder;
-    IBS** alleleCounts;
+    IBS* alleleCounts;
     int numLoci;
     int HAP_SIZE;
 } GlobalWindowRecord;
@@ -327,7 +327,7 @@ void* global_window_multi_thread(void* arg) {
     GlobalWindowRecord* record = (GlobalWindowRecord*) arg;
     int numSamples = record -> encoder -> numSamples;
 
-    IBS* alleleCounts = (IBS*) calloc(PACKED_SIZE(record -> numSamples), sizeof(IBS));
+    IBS* alleleCounts = (IBS*) calloc(PACKED_SIZE(numSamples), sizeof(IBS));
     Genotype* genotypes = (Genotype*) calloc(numSamples, sizeof(Genotype));
     Genotype* temp;
 
@@ -359,8 +359,8 @@ void* global_window_multi_thread(void* arg) {
 
 Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int NUM_THREADS) {
 
-    IBS* alleleCounts = (IBS*) calloc(PACKED_SIZE(record -> numSamples), sizeof(IBS));
-    double* asd = (double*) calloc(PACKED_SIZE(record -> numSamples), sizeof(double));
+    IBS* alleleCounts = (IBS*) calloc(PACKED_SIZE(encoder -> numSamples), sizeof(IBS));
+    double* asd = (double*) calloc(PACKED_SIZE(encoder -> numSamples), sizeof(double));
 
     Window* window = init_window();
     window -> winNum = 0;

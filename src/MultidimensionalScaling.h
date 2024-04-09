@@ -1,0 +1,5 @@
+
+#ifndef _MULTIDIMENSIONAL_SCALING_H_
+#define _MULTIDIMENSIONAL_SCALING_H_
+
+#endif

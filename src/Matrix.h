@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 #define PACKED_SIZE(N) ((N * (N + 1)) / 2)
-#define INDEX(i, j) (i + j * (j - 1) / 2)
+#define INDEX(i, j) (i + j * (j + 1) / 2)
 
 #define MATRIX_INIT(NAME, TYPE) \
     TYPE** create_##NAME##_matrix(int n, int m) { \

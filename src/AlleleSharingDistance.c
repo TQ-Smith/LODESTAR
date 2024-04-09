@@ -40,7 +40,7 @@ void pairwise_ibs(IBS* alleleCounts, Genotype* genotypes, int numSamples) {
         for (int j = i + 1; j < numSamples; j++) {
             if (genotypes[i].left != MISSING && genotypes[j].left != MISSING) {
                 numSharedAlleles = num_shared_alleles(genotypes[i], genotypes[j]);
-                increment_ibs_value(alleleCounts[i][j], numSharedAlleles);
+                increment_ibs_value(alleleCounts[INDEX(i, j)], numSharedAlleles);
             }
         }
     }
