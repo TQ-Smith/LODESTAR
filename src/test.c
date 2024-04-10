@@ -8,6 +8,7 @@
 #include "MultidimensionalScaling.h"
 
 #include <stdio.h>
+
 #include "Matrix.h"
 MATRIX_INIT(double, double)
 
@@ -23,7 +24,7 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    /*
+    
     int NUM_THREADS = 2;
     int HAP_SIZE = 1, STEP_SIZE = 1, WINDOW_SIZE = 3;
 
@@ -41,37 +42,6 @@ int main() {
     for (int i = 0; i < numWindows; i++)
         destroy_window(windows[i]);
     free(windows);
-    */
-
-    int N = 4;
-    int k = 2;
-    int v;
-    RealSymEigen* eigen = init_real_sym_eigen(N);
-    double* D = malloc(PACKED_SIZE(N) * sizeof(double));
-    printf("D:\n");
-    for (int i = 0; i < N; i++) {
-        v = 1;
-        for (int j = i; j < N; j++) {
-            D[INDEX(i, j)] = v++;
-            printf("%lf\t", D[INDEX(i, j)]);
-        }
-        printf("\n");
-    }
-
-    double** X = create_matrix(double, N, k);
-
-    compute_classical_mds(eigen, D, k, X);
-
-    printf("X:\n");
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < k; j++) {
-            printf("%3.2f\t", X[i][j]);
-        }
-        printf("\n");
-    }
-
-    destroy_matrix(double, X, N);
-    destroy_real_sym_eigen(eigen);
 
     return 0;
 

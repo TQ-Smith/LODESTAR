@@ -24,41 +24,19 @@ int compute_classical_mds(RealSymEigen* eigen, double* packedDistanceMatrix, int
         }
     }
 
-    printf("Squared D:\n");
-    for (int i = 0; i < N; i++) {
-        for (int j = i; j < N; j++) {
-            printf("%lf\t", packedDistanceMatrix[i + j * (j + 1) / 2 ]);
-        }
-        printf("\n");
-    }
-    printf("\n");
-
-    printf("Row Sums:\n");
-    for (int i = 0; i < N; i++)
-        printf("%lf\n", eigen -> WORK[i]);
-    printf("\n");
-
-    printf("Grand Sum: %lf\n\n", grand_mean);
-
-    printf("Centered Matrix stored in eigen -> A:\n");
-    for(int i = 0; i < N; i++) {
-        for(int j = 0; j < N; j++) {
-            eigen -> A[i * N + j] = -0.5 * (packedDistanceMatrix[INDEX(i, j, N)] - (eigen -> WORK[i] / N) - (eigen -> WORK[j] / N) + (grand_mean / (N * N)));
-            printf("%lf\t", eigen -> A[i * N + j]);
-        }
-        printf("\n");
-    }
+    for(int i = 0; i < N; i++)
+        for(int j = 0; j < N; j++)
+            eigen -> A[j * N + i] = -0.5 * (packedDistanceMatrix[INDEX(i, j, N)] - (eigen -> WORK[i] / N) - (eigen -> WORK[j] / N) + (grand_mean / (N * N)));
+    
     
     int INFO = compute_k_eigenpairs(eigen, k);
 
     if (INFO != 0)
         return INFO;
     
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < k; j++) {
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < k; j++)
             X[i][j] = eigen -> Z[(k - j - 1) * N + i] * sqrt(eigen -> W[k - j - 1]);
-        }
-    }
 
     return 0;
 

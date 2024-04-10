@@ -146,7 +146,7 @@ void* sliding_window_multi_thread(void* arg) {
         printf("%d\n", numHapsInWin);
         for (int i = 0; i < record -> numSamples; i++) {
             for (int j = i + 1; j < record -> numSamples; j++) {
-                printf("%5f\t", asd[INDEX(i, j)]);
+                printf("%5f\t", asd[PACKED_INDEX(i, j)]);
             }
             printf("\n");
         }
@@ -161,9 +161,9 @@ void* sliding_window_multi_thread(void* arg) {
     pthread_mutex_lock(&globalLock);
     for (int i = 0; i < record -> numSamples; i++) {
         for (int j = i + 1; j < record -> numSamples; j++) {
-            record -> globalAlleleCounts[INDEX(i, j)].ibs0 += globalAlleleCounts[INDEX(i, j)].ibs0;
-            record -> globalAlleleCounts[INDEX(i, j)].ibs1 += globalAlleleCounts[INDEX(i, j)].ibs1;
-            record -> globalAlleleCounts[INDEX(i, j)].ibs2 += globalAlleleCounts[INDEX(i, j)].ibs2;
+            record -> globalAlleleCounts[PACKED_INDEX(i, j)].ibs0 += globalAlleleCounts[PACKED_INDEX(i, j)].ibs0;
+            record -> globalAlleleCounts[PACKED_INDEX(i, j)].ibs1 += globalAlleleCounts[PACKED_INDEX(i, j)].ibs1;
+            record -> globalAlleleCounts[PACKED_INDEX(i, j)].ibs2 += globalAlleleCounts[PACKED_INDEX(i, j)].ibs2;
         }
     }
     pthread_mutex_unlock(&globalLock);
@@ -204,7 +204,7 @@ void sliding_window_single_thread(WindowRecord* record) {
         printf("%d\n", numHapsInWin);
         for (int i = 0; i < record -> numSamples; i++) {
             for (int j = i + 1; j < record -> numSamples; j++) {
-                printf("%5f\t", asd[INDEX(i, j)]);
+                printf("%5f\t", asd[PACKED_INDEX(i, j)]);
             }
             printf("\n");
         }
@@ -287,7 +287,7 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
     printf("Global ASD:\n");
     for (int i = 0; i < record -> numSamples; i++) {
         for (int j = i + 1; j < record -> numSamples; j++) {
-            printf("%5f\t", ibs_to_asd(record -> globalAlleleCounts[INDEX(i, j)]));
+            printf("%5f\t", ibs_to_asd(record -> globalAlleleCounts[PACKED_INDEX(i, j)]));
         }
         printf("\n");
     }
@@ -345,9 +345,9 @@ void* global_window_multi_thread(void* arg) {
     pthread_mutex_lock(&globalLock);
     for (int i = 0; i < numSamples; i++) {
         for (int j = i + 1; j < numSamples; j++) {
-            record -> alleleCounts[INDEX(i, j)].ibs0 += alleleCounts[INDEX(i, j)].ibs0;
-            record -> alleleCounts[INDEX(i, j)].ibs1 += alleleCounts[INDEX(i, j)].ibs1;
-            record -> alleleCounts[INDEX(i, j)].ibs2 += alleleCounts[INDEX(i, j)].ibs2;
+            record -> alleleCounts[PACKED_INDEX(i, j)].ibs0 += alleleCounts[PACKED_INDEX(i, j)].ibs0;
+            record -> alleleCounts[PACKED_INDEX(i, j)].ibs1 += alleleCounts[PACKED_INDEX(i, j)].ibs1;
+            record -> alleleCounts[PACKED_INDEX(i, j)].ibs2 += alleleCounts[PACKED_INDEX(i, j)].ibs2;
         }
     }
     pthread_mutex_unlock(&globalLock);
@@ -400,7 +400,7 @@ Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP
 
     for (int i = 0; i < encoder -> numSamples; i++) {
         for (int j = i + 1; j < encoder -> numSamples; j++) {
-            asd[INDEX(i, j)] = ibs_to_asd(alleleCounts[INDEX(i, j)]);
+            asd[PACKED_INDEX(i, j)] = ibs_to_asd(alleleCounts[PACKED_INDEX(i, j)]);
         }
     }
 
