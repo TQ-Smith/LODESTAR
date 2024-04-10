@@ -29,12 +29,32 @@ void process_haplotype_multi_thread(Genotype* genotypes, IBS* winAlleleCounts, I
     }
 }
 
-void pairwise_ibs_single_thread() {
-
+void process_window_multi_thread(Genotype** winGeno, IBS* winAlleleCounts, IBS* globalAlleleCounts, double* asd, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE) {
+    for (int i = 0; i < numHapsInWin; i++) {
+        process_haplotype_multi_thread(winGeno[i], winAlleleCounts, globalAlleleCounts, asd, i, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE);
+    }
 }
 
+void process_haplotype_single_thread(Genotype** winGeno, IBS* winAlleleCounts, IBS* stepAlleleCounts, IBS* globalAlleleCounts, double* asd, int curHap, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE) {
+    for (int i = 0; i < numSamples; i++) {
+        for (int j = i + 1; j < numSamples; j++) {
+            
+        }
+    }
+}
 
-void pairwise_ibs(IBS* alleleCounts, Genotype* genotypes, int numSamples) {
+void process_window_single_thread(Genotype** winGeno, IBS* winAlleleCounts, IBS* stepAlleleCounts, IBS* globalAlleleCounts, double* asd, int numHapsInWin,  bool isFirstWinOnChrom, bool isLastWinOnChrom, int numSamples, int STEP_SIZE) {
+    int start;
+    if (isFirstWinOnChrom)
+        start = 0;
+    else
+        start = numHapsInWin - STEP_SIZE - 1;
+    for (int i = start; i < numHapsInWin; i++) {
+        process_haplotype_single_thread(winGeno, winAlleleCounts, stepAlleleCounts, globalAlleleCounts, asd, i, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE);
+    }
+}
+
+void pairwise_ibs(Genotype* genotypes, IBS* alleleCounts, int numSamples) {
     int numSharedAlleles;
     for (int i = 0; i < numSamples; i++) {
         for (int j = i + 1; j < numSamples; j++) {

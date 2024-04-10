@@ -45,7 +45,7 @@ typedef struct {
     int globalNumHaps;
 
     int curWinNum;
-    int curWinOnChromNum;
+    int curWinNumOnChrom;
     kstring_t* curChrom;
 } WindowRecord;
 
@@ -53,7 +53,7 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
 
     Window* window = init_window();
     window -> winNum = record -> curWinNum++;
-    window -> winNumOnChrom = record -> curWinOnChromNum++;
+    window -> winNumOnChrom = record -> curWinNumOnChrom++;
     kputs(ks_str(record -> curChrom), window -> chromosome);
     window -> numLoci = record -> numHapsInOverlap * record -> HAP_SIZE;
 
@@ -82,12 +82,14 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
     window -> startLocus = record -> winStartLoci[window -> winNumOnChrom % (record -> WINDOW_SIZE / record -> STEP_SIZE + 1)];
     window -> endLocus = record -> encoder -> endLocus;
     if (isSameChrom) {
+        record -> globalNumHaps += record -> STEP_SIZE;
         record -> numHapsInOverlap = record -> WINDOW_SIZE - record -> STEP_SIZE;
     } else {
+        record -> globalNumHaps += window -> numLoci / record -> HAP_SIZE;
         record -> curChrom -> l = 0;
         kputs(ks_str(record -> parser -> nextChrom), record -> curChrom);
         record -> numHapsInOverlap = 0;
-        record -> curWinOnChromNum = 1;
+        record -> curWinNumOnChrom = 1;
         record -> winStartIndex = 0;
         record -> winEndIndex = 0;
     }
@@ -118,7 +120,7 @@ void* sliding_window_multi_thread(void* arg) {
             break;
         }
 
-        if (record -> curWinOnChromNum != 1) {
+        if (record -> curWinNumOnChrom != 1) {
             start = (record -> winStartIndex + record -> STEP_SIZE) % record -> WINDOW_SIZE;
             for (int i = 0; i < record -> WINDOW_SIZE - record -> STEP_SIZE; i++) {
                 for (int j = 0; j < record -> numSamples; j++)
@@ -129,18 +131,13 @@ void* sliding_window_multi_thread(void* arg) {
 
         window = get_next_window(record, threadGeno);
 
-        isLastWinOnChrom = record -> curWinOnChromNum == 1;
-        if (isLastWinOnChrom)
-            record -> globalNumHaps += window -> numLoci / record -> HAP_SIZE;
-        else
-            record -> globalNumHaps += record -> STEP_SIZE;
+        isLastWinOnChrom = record -> curWinNumOnChrom == 1;
         
         pthread_mutex_unlock(&genomeLock);
 
         numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
-        for (int i = 0; i < numHapsInWin; i++) {
-            process_haplotype_multi_thread(threadGeno[i], winAlleleCounts, globalAlleleCounts, asd, i, numHapsInWin, isLastWinOnChrom, record -> numSamples, record -> STEP_SIZE);
-        }
+
+        process_window_multi_thread(threadGeno, winAlleleCounts, globalAlleleCounts, asd, numHapsInWin, isLastWinOnChrom, record -> numSamples, record -> STEP_SIZE);
 
         printf("Window %d ASD:\n", window -> winNum);
         printf("%d\n", numHapsInWin);
@@ -182,23 +179,18 @@ void sliding_window_single_thread(WindowRecord* record) {
     Window* window;
 
     IBS* winAlleleCounts = (IBS*) calloc(PACKED_SIZE(record -> numSamples), sizeof(IBS));
+    IBS* stepAlleleCounts = (IBS*) calloc(PACKED_SIZE(record -> numSamples), sizeof(IBS));
     double* asd = (double*) calloc(PACKED_SIZE(record -> numSamples), sizeof(double));
 
-    int start, numHapsInWin;
-    bool isLastWinOnChrom;
+    int numHapsInWin;
 
     while (!(record -> parser -> isEOF)) {
 
         window = get_next_window(record, NULL);
-
-        isLastWinOnChrom = record -> curWinOnChromNum == 1;
-        if (isLastWinOnChrom)
-            record -> globalNumHaps += window -> numLoci / record -> HAP_SIZE;
-        else
-            record -> globalNumHaps += record -> STEP_SIZE;
-
-        numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
         
+        numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
+
+        process_window_single_thread(record -> winGeno, winAlleleCounts, stepAlleleCounts, record -> globalAlleleCounts, asd, numHapsInWin, window -> winNumOnChrom == 1, record -> curWinNumOnChrom == 1, record -> numSamples, record -> STEP_SIZE);
         
         printf("Window %d ASD:\n", window -> winNum);
         printf("%d\n", numHapsInWin);
@@ -215,6 +207,7 @@ void sliding_window_single_thread(WindowRecord* record) {
     }
 
     free(winAlleleCounts);
+    free(stepAlleleCounts);
     free(asd);
 
 }
@@ -255,7 +248,7 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
     record -> globalNumHaps = 0;
 
     record -> curWinNum = 1;
-    record -> curWinOnChromNum = 1;
+    record -> curWinNumOnChrom = 1;
     record -> curChrom = (kstring_t*) calloc(1, sizeof(kstring_t));
     kputs(ks_str(parser -> nextChrom), record -> curChrom);
 
@@ -338,7 +331,7 @@ void* global_window_multi_thread(void* arg) {
         SWAP(genotypes, record -> encoder -> genotypes, temp);
         pthread_mutex_unlock(&genomeLock);
 
-        pairwise_ibs(alleleCounts, genotypes, numSamples);
+        pairwise_ibs(genotypes, alleleCounts, numSamples);
     }
     pthread_mutex_unlock(&genomeLock);
 
@@ -373,7 +366,7 @@ Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP
         while (!parser -> isEOF) {
             get_next_haplotype(parser, encoder, true, HAP_SIZE);
             window -> numLoci += encoder -> numLoci;
-            pairwise_ibs(alleleCounts, encoder -> genotypes, encoder -> numSamples);
+            pairwise_ibs(encoder -> genotypes, alleleCounts, encoder -> numSamples);
         }
     } else {
         GlobalWindowRecord* record = (GlobalWindowRecord*) calloc(1, sizeof(GlobalWindowRecord));

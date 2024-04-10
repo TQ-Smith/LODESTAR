@@ -46,10 +46,10 @@ static inline double ibs_to_asd(IBS ibs) {
     return 1.0 - (ibs.ibs1 + (2.0 * ibs.ibs2)) / (2.0 * (ibs.ibs0 + ibs.ibs1 + ibs.ibs2));
 }
 
-void process_haplotype_multi_thread(Genotype* genotypes, IBS* winAlleleCounts, IBS* globalAlleleCounts, double* asd, int curHap, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE);
+void process_window_multi_thread(Genotype** winGeno, IBS* winAlleleCounts, IBS* globalAlleleCounts, double* asd, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE);
 
-void pairwise_ibs_single_thread();
+void process_window_single_thread(Genotype** winGeno, IBS* winAlleleCounts, IBS* stepAlleleCounts, IBS* globalAlleleCounts, double* asd, int numHapsInWin, bool isFirstWinOnChrom, bool isLastWinOnChrom, int numSamples, int STEP_SIZE);
 
-void pairwise_ibs(IBS* alleleCounts, Genotype* genotypes, int numSamples);
+void pairwise_ibs(Genotype* genotypes, IBS* alleleCounts, int numSamples);
 
 #endif
