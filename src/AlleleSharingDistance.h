@@ -21,6 +21,18 @@ static inline void reset_ibs(IBS* ibs) {
     ibs -> ibs2 = 0;
 }
 
+static inline void increment_ibs(IBS* left, IBS* right) {
+    left -> ibs0 += right -> ibs0;
+    left -> ibs1 += right -> ibs1;
+    left -> ibs2 += right -> ibs2;
+}
+
+static inline void decrement_ibs(IBS* left, IBS* right) {
+    left -> ibs0 -= right -> ibs0;
+    left -> ibs1 -= right -> ibs1;
+    left -> ibs2 -= right -> ibs2;
+}
+
 static inline int num_shared_alleles(Genotype s1, Genotype s2) {
     if (s1.left == s2.left) {
         if (s1.right == s2.right)
@@ -48,8 +60,8 @@ static inline double ibs_to_asd(IBS ibs) {
 
 void process_window_multi_thread(Genotype** winGeno, IBS* winAlleleCounts, IBS* globalAlleleCounts, double* asd, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE);
 
-void process_window_single_thread(Genotype** winGeno, IBS* winAlleleCounts, IBS* stepAlleleCounts, IBS* globalAlleleCounts, double* asd, int numHapsInWin, bool isFirstWinOnChrom, bool isLastWinOnChrom, int numSamples, int STEP_SIZE);
+void process_window_single_thread();
 
-void pairwise_ibs(Genotype* genotypes, IBS* alleleCounts, int numSamples);
+void pairwise_ibs(Genotype* geno, IBS* alleleCounts, int numSamples);
 
 #endif

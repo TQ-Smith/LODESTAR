@@ -4,7 +4,7 @@
 # Author: TQ Smith
 # Purpose: 
 
-CC = gcc-13
+CC = gcc
 CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 
@@ -36,7 +36,7 @@ src/VCFLocusParser.o:
 	$(CC) $(CFLAGS) src/VCFLocusParser.c -o src/VCFLocusParser.o
 
 lib/lapack:
-	$(CC) $(CFLAGS) lib/lapack/*.f
+	$(CC) $(CFLAGS) lib/lapack/*.f -o lib/lapack
 
 .PHONY: clean
 clean:
