@@ -64,7 +64,7 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
         record -> winStartIndex = (record -> winStartIndex + record -> STEP_SIZE) % record -> WINDOW_SIZE;
 
     while(record -> numHapsInOverlap < record -> WINDOW_SIZE && isSameChrom) {
-        isSameChrom = get_next_haplotype(record -> parser, record -> encoder, true, record -> HAP_SIZE);
+        isSameChrom = get_next_haplotype(record -> parser, record -> encoder, record -> HAP_SIZE);
         if (threadGeno == NULL) {
             SWAP(record -> winGeno[record -> winEndIndex], record -> encoder -> genotypes, temp);
         } else {
@@ -189,7 +189,7 @@ void sliding_window_single_thread(WindowRecord* record) {
         
         numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
 
-        process_window_single_thread(record -> winGeno, record -> winStartIndex, winAlleleCounts, stepAlleleCounts, record -> globalAlleleCounts, asd, numHapsInWin, window -> winNumOnChrom == 1, record -> curWinNumOnChrom == 1, record -> numSamples, record -> STEP_SIZE, record -> WINDOW_SIZE);
+        process_window_single_thread();
         
         printf("Window %d ASD:\n", window -> winNum);
         for (int i = 0; i < record -> numSamples; i++) {
@@ -324,7 +324,7 @@ void* global_window_multi_thread(void* arg) {
 
     pthread_mutex_lock(&genomeLock);
     while (!record -> parser -> isEOF) {
-        get_next_haplotype(record -> parser, record -> encoder, true, record -> HAP_SIZE);
+        get_next_haplotype(record -> parser, record -> encoder, record -> HAP_SIZE);
         record -> numLoci += record -> encoder -> numLoci;
         SWAP(genotypes, record -> encoder -> genotypes, temp);
         pthread_mutex_unlock(&genomeLock);
@@ -336,9 +336,7 @@ void* global_window_multi_thread(void* arg) {
     pthread_mutex_lock(&globalLock);
     for (int i = 0; i < numSamples; i++) {
         for (int j = i + 1; j < numSamples; j++) {
-            record -> alleleCounts[PACKED_INDEX(i, j)].ibs0 += alleleCounts[PACKED_INDEX(i, j)].ibs0;
-            record -> alleleCounts[PACKED_INDEX(i, j)].ibs1 += alleleCounts[PACKED_INDEX(i, j)].ibs1;
-            record -> alleleCounts[PACKED_INDEX(i, j)].ibs2 += alleleCounts[PACKED_INDEX(i, j)].ibs2;
+            increment_ibs(&(record -> alleleCounts[PACKED_INDEX(i, j)]), &alleleCounts[PACKED_INDEX(i, j)]);
         }
     }
     pthread_mutex_unlock(&globalLock);
@@ -362,7 +360,7 @@ Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP
 
     if (NUM_THREADS == 1) {
         while (!parser -> isEOF) {
-            get_next_haplotype(parser, encoder, true, HAP_SIZE);
+            get_next_haplotype(parser, encoder, HAP_SIZE);
             window -> numLoci += encoder -> numLoci;
             pairwise_ibs(encoder -> genotypes, alleleCounts, encoder -> numSamples);
         }
