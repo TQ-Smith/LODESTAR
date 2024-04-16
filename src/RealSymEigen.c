@@ -70,6 +70,13 @@ int compute_k_eigenpairs(RealSymEigen* eigen, int k) {
 }
 
 int compute_k_eigenvalues(RealSymEigen* eigen, int k) {
+    if (k == eigen -> N)
+        return dsyevr('N', 'A', 'U', eigen -> N, eigen -> A, eigen -> N, 
+                    0, 0, eigen -> N - k + 1, eigen -> N, dlamch('S'), 
+                    &(eigen -> M), eigen -> W, eigen -> Z, eigen -> N, 
+                    eigen -> ISUPPZ, eigen -> WORK, 26 * eigen -> N, 
+                    eigen -> IWORK, 10 * eigen -> N);
+    
     return dsyevr('N', 'I', 'U', eigen -> N, eigen -> A, eigen -> N, 
                     0, 0, eigen -> N - k + 1, eigen -> N, dlamch('S'), 
                     &(eigen -> M), eigen -> W, eigen -> Z, eigen -> N, 

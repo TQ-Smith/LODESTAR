@@ -11,10 +11,13 @@ LFLAGS = -g -o
 bin/test: src/test.o
 	$(CC) $(LFLAGS) bin/test src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
 
-src/test.o: src/SlidingWindow.o src/MultidimensionalScaling.o
+src/test.o: src/SlidingWindow.o src/ProcrustesAnalysis.o
 	$(CC) $(CFLAGS) src/test.c -o src/test.o
 
-src/SlidingWindow.o: src/HaplotypeEncoder.o src/Window.o src/AlleleSharingDistance.o
+src/ProcrustesAnalysis.o: src/RealSymEigen.o
+	$(CC) $(CFLAGS) src/ProcrustesAnalysis.c -o src/ProcrustesAnalysis.o
+
+src/SlidingWindow.o: src/HaplotypeEncoder.o src/Window.o src/AlleleSharingDistance.o src/MultidimensionalScaling.o
 	$(CC) $(CFLAGS) src/SlidingWindow.c -o src/SlidingWindow.o
 
 src/MultidimensionalScaling.o: src/RealSymEigen.o

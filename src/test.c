@@ -7,6 +7,8 @@
 
 #include "MultidimensionalScaling.h"
 
+#include "ProcrustesAnalysis.h"
+
 #include <stdio.h>
 
 #include "Matrix.h"
@@ -24,7 +26,7 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    
+    /*
     int NUM_THREADS = 1;
     int HAP_SIZE = 1, STEP_SIZE = 1, WINDOW_SIZE = 2;
 
@@ -42,6 +44,23 @@ int main() {
     for (int i = 0; i < numWindows; i++)
         destroy_window(windows[i]);
     free(windows);
+    */
+
+    int n = 3;
+    int k = 2;
+    bool transform = false;
+    bool similarity = false;
+    RealSymEigen* eigen = init_real_sym_eigen(k);
+    double** X = create_matrix(double, n, k);
+    X[0][0] = 1; X[0][1] = 1; X[1][0] = 2; X[1][1] = 3; X[2][0] = 4; X[2][1] = 7;
+    double** Y = create_matrix(double, n, k);
+    Y[0][0] = 2; Y[0][1] = 7; Y[1][0] = 1; Y[1][1] = 4; Y[2][0] = 1; Y[2][1] = 1;
+
+    procrustes_statistic(X, NULL, Y, NULL, eigen, n, k, transform, similarity);
+
+    destroy_real_sym_eigen(eigen);
+    destroy_matrix(double, X, n);
+    destroy_matrix(double, Y, n);
 
     return 0;
 
