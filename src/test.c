@@ -48,13 +48,15 @@ int main() {
 
     int n = 3;
     int k = 2;
-    bool transform = false;
+    bool transform = true;
     bool similarity = false;
     RealSymEigen* eigen = init_real_sym_eigen(k);
     double** X = create_matrix(double, n, k);
-    X[0][0] = 1; X[0][1] = 1; X[1][0] = 2; X[1][1] = 3; X[2][0] = 4; X[2][1] = 7;
+    X[0][0] = 1; X[0][1] = 2; X[1][0] = 3; X[1][1] = 4; X[2][0] = 5; X[2][1] = 6;
+    // X[0][0] = 1; X[0][1] = 2; X[0][2] = 3; X[1][0] = 4; X[1][1] = 5; X[1][2] = 6; X[2][0] = 2; X[2][1] = 4; X[2][2] = 6; X[3][0] = 8; X[3][1] = 10; X[3][2] = 12;
     double** Y = create_matrix(double, n, k);
-    Y[0][0] = 2; Y[0][1] = 7; Y[1][0] = 1; Y[1][1] = 4; Y[2][0] = 1; Y[2][1] = 1;
+    Y[0][0] = 3; Y[0][1] = 5; Y[1][0] = 7; Y[1][1] = 11; Y[2][0] = 13; Y[2][1] = 15;
+    // Y[0][0] = 7; Y[0][1] = 8; Y[0][2] = 9; Y[1][0] = 10; Y[1][1] = 11; Y[1][2] = 12; Y[2][0] = 3; Y[2][1] = 5; Y[2][2] = 7; Y[3][0] = 9; Y[3][1] = 11; Y[3][2] = 13;
 
     procrustes_statistic(X, NULL, Y, NULL, eigen, n, k, transform, similarity);
 
