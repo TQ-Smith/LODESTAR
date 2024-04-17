@@ -4,7 +4,7 @@
 # Author: TQ Smith
 # Purpose: 
 
-CC = gcc
+CC = gcc-13
 CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 

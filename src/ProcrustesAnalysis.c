@@ -3,13 +3,13 @@
 
 #include <math.h>
 
-#define INDEX(i, j, N) (i <= j ? i + j * (j + 1) / 2 : j + i * (i + 1) / 2)
-
 #include <stdio.h>
+
+#define COL_MAJOR(i, j, K) (j * K + i)
 
 double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, RealSymEigen* eigen, int N, int K, bool transform, bool similarity) {
 
-    double trX = 0, trY = 0;
+    double trX = 0, trY = 0, trLambda = 0;
 
     for (int i = 0; i < K; i++) {
         for (int j = 0; j < N; j++) {
@@ -23,25 +23,58 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
 
     for (int i = 0; i < K; i++) {
         for (int j = 0; j < K; j++) {
-            C[INDEX(i, j, K)] = 0;
+            C[COL_MAJOR(i, j, K)] = 0;
             for (int k = 0; k < N; k++)
-                C[INDEX(i, j, K)] += Yc[k][i] * Xc[k][j];
+                C[COL_MAJOR(i, j, K)] += Yc[k][i] * Xc[k][j];
         }
     }
 
     for (int i = 0; i < K; i++) {
         for (int j = 0; j < K; j++) {
-            covC[INDEX(i, j, K)] = 0;
+            covC[COL_MAJOR(i, j, K)] = 0;
             for (int k = 0; k < K; k++)
-                covC[INDEX(i, j, K)] += C[INDEX(k, i, K)] * C[INDEX(k, j, K)];
+                covC[COL_MAJOR(i, j, K)] += C[COL_MAJOR(k, i, K)] * C[COL_MAJOR(k, j, K)];
         }
     }
 
-    for (int i = 0; i < K; i++) {
-        for (int j = 0; j < K; j++) {
-            printf("%5f\t", covC[INDEX(i, j, K)]);
+    if (!transform) {
+        double a0, a1, a2, b, c, det, q, r, theta, root1, root2, root3;
+        switch (K) {
+            case 1:
+                trLambda += covC[COL_MAJOR(0, 0, K)];
+                break;
+            case 2:
+                b = -(covC[COL_MAJOR(0, 0, K)] + covC[COL_MAJOR(1, 1, K)]);
+                c = (covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(1, 1, K)]) - (covC[COL_MAJOR(0, 1, K)] * covC[COL_MAJOR(1, 0, K)]);
+                
+                det = sqrt(b * b - 4 * c);
+                q = b < 0 ? -0.5 * (b - det) : -0.5 * (b + det);
+
+                trLambda += sqrt(q) + sqrt(c / q);
+                break;
+            case 3:
+                a2 = -(covC[COL_MAJOR(0, 0, K)] + covC[COL_MAJOR(1, 1, K)] + covC[COL_MAJOR(2, 2, K)]);
+                a1 = ((covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(1, 2, K)] * covC[COL_MAJOR(2, 1, K)]))
+                    + ((covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(0, 2, K)] * covC[COL_MAJOR(2, 0, K)]))
+                    + ((covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(1, 1, K)]) - (covC[COL_MAJOR(0, 1, K)] * covC[COL_MAJOR(1, 0, K)]));
+                a0 = -(covC[COL_MAJOR(0, 0, K)] * ((covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(2, 1, K)] * covC[COL_MAJOR(1, 2, K)])) 
+                    - covC[COL_MAJOR(0, 1, K)] * ((covC[COL_MAJOR(1, 0, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(1, 2, K)] * covC[COL_MAJOR(2, 0, K)])) 
+                    + covC[COL_MAJOR(0, 2, K)] * ((covC[COL_MAJOR(1, 0, K)] * covC[COL_MAJOR(2, 1, K)]) - (covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 0, K)])));
+                q = a1 / 3 - (a2 * a2) / 9;
+                r = (a1 * a2 - 3 * a0) / 6 - (a2 * a2 * a2) / 27;
+                theta = (q == 0) ? 0 : acos(r / sqrt(-q * -q * -q));
+                root1 = 2 * sqrt(-q) * cos(theta / 3) - (a2 / 3);
+                root2 = 2 * sqrt(-q) * cos((theta / 3) - (2 * M_PI / 3)) - (a2 / 3);
+                root3 = 2 * sqrt(-q) * cos((theta / 3) + (2 * M_PI / 3)) - (a2 / 3);
+
+                trLambda += sqrt(abs(root1)) + sqrt(abs(root2)) + sqrt(abs(root3));
+                break;
+            default:
+                break;
         }
-        printf("\n");
+
+    } else {
+
     }
 
     return 0;
