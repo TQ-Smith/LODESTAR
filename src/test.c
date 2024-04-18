@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 
+#include <time.h>
+
 #include "Matrix.h"
 MATRIX_INIT(double, double)
 
@@ -48,21 +50,45 @@ int main() {
 
     int n = 3;
     int k = 2;
-    bool transform = true;
+    bool transform = false;
     bool similarity = false;
     RealSymEigen* eigen = init_real_sym_eigen(k);
     double** X = create_matrix(double, n, k);
+    double* x0 = (double*) calloc(k, sizeof(double));
     X[0][0] = 1; X[0][1] = 2; X[1][0] = 3; X[1][1] = 4; X[2][0] = 5; X[2][1] = 6;
-    // X[0][0] = 1; X[0][1] = 2; X[0][2] = 3; X[1][0] = 4; X[1][1] = 5; X[1][2] = 6; X[2][0] = 2; X[2][1] = 4; X[2][2] = 6; X[3][0] = 8; X[3][1] = 10; X[3][2] = 12;
+    x0[0] = 1; x0[1] = 2;
     double** Y = create_matrix(double, n, k);
+    double* y0 = (double*) calloc(k, sizeof(double));
     Y[0][0] = 3; Y[0][1] = 5; Y[1][0] = 7; Y[1][1] = 11; Y[2][0] = 13; Y[2][1] = 15;
-    // Y[0][0] = 7; Y[0][1] = 8; Y[0][2] = 9; Y[1][0] = 10; Y[1][1] = 11; Y[1][2] = 12; Y[2][0] = 3; Y[2][1] = 5; Y[2][2] = 7; Y[3][0] = 9; Y[3][1] = 11; Y[3][2] = 13;
+    y0[0] = 5; y0[1] = 10;
 
-    procrustes_statistic(X, NULL, Y, NULL, eigen, n, k, transform, similarity);
+    double t = procrustes_statistic(X, x0, Y, y0, eigen, n, k, transform, similarity);
+
+    /*
+    printf("Transformed X:\n");
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            printf("%lf\t", X[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\nDissimilarity: %lf\n\n", t);
+    */
+
+    double** shuffleX = create_matrix(double, n, k);
+
+    srand(time(NULL));
+
+    double p = permutation_test(X, Y, shuffleX, eigen, n, k, similarity, t, 10000);
+
+    printf("p-value: %lf\n", p);
 
     destroy_real_sym_eigen(eigen);
     destroy_matrix(double, X, n);
     destroy_matrix(double, Y, n);
+    destroy_matrix(double, shuffleX, n);
+    free(x0);
+    free(y0);
 
     return 0;
 

@@ -5,20 +5,7 @@
 
 #include <stdio.h>
 
-#include <stdlib.h>
-
 #define COL_MAJOR(i, j, K) (j * K + i)
-
-void shuffle_real_matrix(double** matrix, int m) {
-    double* temp = NULL;
-    int j;
-    for (int i = m - 1; i > 0; i--) {
-        j = (rand() % (i + 1));
-        temp = matrix[j];
-        matrix[j] = matrix[i];
-        matrix[i] = temp;
-    }
-}
 
 double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, RealSymEigen* eigen, int N, int K, bool transform, bool similarity) {
 
@@ -102,6 +89,17 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
 
         double rho = trLambda / trX;
 
+        printf("\nEigenvectors:\n");
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < K; j++)
+                printf("%lf\t", V[COL_MAJOR(K - i - 1, j, K)]);
+            printf("\n");
+        }
+        printf("\nEigenvalues:\n");
+        for (int i = 0; i < K; i++)
+            printf("%lf\t", sqrt(eigen -> W[K - i - 1]));
+        printf("\n");
+
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < K; j++) {
                 eigen -> WORK[j] = 0;
@@ -114,6 +112,13 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                     U[COL_MAJOR(i, j, K)] += eigen -> WORK[k] * V[COL_MAJOR(K - j - 1, k, K)];
                 U[COL_MAJOR(i, j, K)] *= (1 / sqrt(eigen -> W[K - j - 1]));
             }
+        }
+
+        printf("\nU:\n");
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < K; j++)
+                printf("%lf\t", U[COL_MAJOR(i, j, K)]);
+            printf("\n");
         }
 
         for (int i = 0; i < K; i++) {
@@ -130,6 +135,23 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             shift[i] = y0[i] - rho * shift[i];
         }
 
+        printf("\nA^T:\n");
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < K; j++)
+                printf("%lf\t", U[COL_MAJOR(i, j, K)]);
+            printf("\n");
+        }
+
+        printf("\nrho: %lf\n", rho);
+        printf("\ntrX: %lf\n", trX);
+        printf("\ntrY: %lf\n", trY);
+        printf("\ntrLambda: %lf\n", trLambda);
+
+        printf("\nShift:\n");
+        for (int i = 0; i < K; i++)
+            printf("%lf\t", shift[i]);
+        printf("\n\n");
+
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < K; j++) {
                 eigen -> WORK[j] = 0;
@@ -145,25 +167,5 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
     double statistic = 1 - (trLambda * trLambda) / (trX * trY);
 
     return similarity ? sqrt(1 - statistic) : sqrt(statistic);
-
-}
-
-double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEigen* eigen, int n, int k, bool similarity, double t0, int NUM_PERMS) {
-
-    for (int i = 0; i < n; i++)
-        for (int j = 0; j < k; j++)
-            shuffleX[i][j] = Xc[i][j];
-
-    double t;
-    int numSig = 1;
-
-    for (int i = 0; i < NUM_PERMS; i++) {
-        shuffle_real_matrix(shuffleX, n);
-        t = procrustes_statistic(shuffleX, NULL, Yc, NULL, eigen, n, k, false, similarity);
-        if (t > t0)
-            numSig++;
-    }
-
-    return ((double) numSig) / (NUM_PERMS + 1);
 
 }
