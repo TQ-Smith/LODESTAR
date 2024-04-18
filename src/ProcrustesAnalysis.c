@@ -36,8 +36,6 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                 covC[COL_MAJOR(i, j, K)] += C[COL_MAJOR(k, i, K)] * C[COL_MAJOR(k, j, K)];
         }
     }
-
-    int INFO;
     
     if (!transform) {
         double a0, a1, a2, b, c, det, q, r, theta, root1, root2, root3;
@@ -71,45 +69,16 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                 trLambda += root1 + root2 + root3;
                 break;
             default:
-                INFO = compute_k_eigenvalues(eigen, K);
+                compute_k_eigenvalues(eigen, K);
                 for (int i = 0; i < K; i++)
                     trLambda += eigen -> W[i];
 
                 break;
         }
+
     } else {
 
-        printf("C:\n");
-        for (int i = 0; i < K; i++) {
-            for (int j = 0; j < K; j++) {
-                printf("%lf\t", C[COL_MAJOR(i, j, K)]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-        printf("covC:\n");
-        for (int i = 0; i < K; i++) {
-            for (int j = 0; j < K; j++) {
-                printf("%lf\t", covC[COL_MAJOR(i, j, K)]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-
-        INFO = compute_k_eigenpairs(eigen, K);
-
-        printf("Eigenvalues:\n");
-        for (int i = 0; i < K; i++)
-            printf("%lf\t", eigen -> W[i]);
-        printf("\n\n");
-        printf("Eigenvectors:\n");
-        for (int i = 0; i < K; i++) {
-            for (int j = 0; j < K; j++) {
-                printf("%lf\t", eigen -> Z[COL_MAJOR(i, j, K)]);
-            }
-            printf("\n");
-        }
-        printf("\n");
+        compute_k_eigenpairs(eigen, K);
 
         for (int i = 0; i < K; i++)
             trLambda += eigen -> W[i];
@@ -126,10 +95,6 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                 for (int k = 0; k < N; k++)
                     eigen -> WORK[j] += Yc[k][i] * Xc[k][j];
             }
-            printf("Work: ");
-            for (int k = 0; k < K; k++)
-                printf("%lf\t", eigen -> WORK[k]);
-            printf("\n");
             for (int j = 0; j < K; j++) {
                 U[COL_MAJOR(i, j, K)] = 0;
                 for (int k = 0; k < K; k++)
@@ -138,12 +103,18 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             }
         }
 
-
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < K; j++) {
-                printf("%lf\t", U[COL_MAJOR(i, j, K)]);
+                eigen -> WORK[j] = 0;
+                for (int k = 0; k < K; k++)
+                    eigen -> WORK[j] += U[COL_MAJOR(i, k, K)] * V[COL_MAJOR(K - k - 1, j, K)];
             }
-            printf("\n");
+            for (int j = 0; j < K; j++)
+                U[COL_MAJOR(i, j, K)] = eigen -> WORK[j];
+        }
+
+        for (int i = 0; i < N; i++) {
+            
         }
 
     }
