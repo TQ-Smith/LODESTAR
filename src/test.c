@@ -28,7 +28,7 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    /*
+    
     int NUM_THREADS = 1;
     int HAP_SIZE = 1, STEP_SIZE = 1, WINDOW_SIZE = 2;
 
@@ -46,8 +46,9 @@ int main() {
     for (int i = 0; i < numWindows; i++)
         destroy_window(windows[i]);
     free(windows);
-    */
+    
 
+    /*
     int n = 3;
     int k = 2;
     bool transform = false;
@@ -64,7 +65,7 @@ int main() {
 
     double t = procrustes_statistic(X, x0, Y, y0, eigen, n, k, transform, similarity);
 
-    /*
+    
     printf("Transformed X:\n");
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < k; j++) {
@@ -73,7 +74,7 @@ int main() {
         printf("\n");
     }
     printf("\nDissimilarity: %lf\n\n", t);
-    */
+    
 
     double** shuffleX = create_matrix(double, n, k);
 
@@ -89,6 +90,7 @@ int main() {
     destroy_matrix(double, shuffleX, n);
     free(x0);
     free(y0);
+    */
 
     return 0;
 
