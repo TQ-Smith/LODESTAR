@@ -121,18 +121,22 @@ bool query_locus(RegionFilter* filter, kstring_t* chrom, unsigned int locus) {
 bool query_overlap(RegionFilter* filter, kstring_t* chrom, unsigned int startLocus, unsigned int endLocus) {
     khint_t k = kh_get(region, filter -> regions, ks_str(chrom));
     if (k != kh_end(filter -> regions)) {
-        Region* leftRegion = kh_value(filter -> regions, k);
-        while (leftRegion != NULL && startLocus >= leftRegion -> startLocus)
+        Region* leftRegion = NULL;
+        Region* rightRegion = NULL;
+        leftRegion = kh_value(filter -> regions, k);
+        while (leftRegion != NULL && startLocus >= leftRegion -> startLocus) {
+            if (startLocus <= leftRegion -> endLocus)
+                return filter -> takeComplement ^ true;
             leftRegion = leftRegion -> next;
+        }
 
-        Region* rightRegion = leftRegion;
-        while (rightRegion != NULL && endLocus >= rightRegion -> endLocus)
+        rightRegion = leftRegion;
+        while (rightRegion != NULL && endLocus >= rightRegion -> startLocus) {
+            if (startLocus <= rightRegion -> endLocus || endLocus <= rightRegion -> endLocus)
+                return filter -> takeComplement ^ true;
             rightRegion = rightRegion -> next;
-
-        if (leftRegion == NULL || (startLocus > leftRegion -> endLocus && endLocus < rightRegion -> startLocus))
-            return filter -> takeComplement ^ false;
-        else 
-            return filter -> takeComplement ^ true;
+        }
+        
     }
     return filter -> takeComplement ^ false;
 }
@@ -159,7 +163,7 @@ void destroy_region_filter(RegionFilter* filter) {
     free(filter);
 }
 
-/*
+
 int main() {
     kstring_t* s = (kstring_t*) calloc(1, sizeof(kstring_t));
     kstring_t* s1 = (kstring_t*) calloc(1, sizeof(kstring_t));
@@ -181,7 +185,9 @@ int main() {
     printf("Query overlap chr1:900-2200: %d\n", query_overlap(filter, s4, 900, 2200));
     printf("Query overlap chr1:150-250: %d\n", query_overlap(filter, s4, 150, 250));
     printf("Query overlap chr1:50-150: %d\n", query_overlap(filter, s4, 50, 150));
+    printf("Query overlap chr1:110-150: %d\n", query_overlap(filter, s4, 110, 150));
     printf("Query overlap chr1:3000-4000: %d\n", query_overlap(filter, s4, 3000, 4000));
+    printf("Query overlap chr1:1-2: %d\n", query_overlap(filter, s4, 1, 2));
     printf("\n");
     printf("Free Regions\n");
     free((char*) ks_release(s)); free(s);
@@ -191,4 +197,3 @@ int main() {
     free((char*) ks_release(s4)); free(s4);
     destroy_region_filter(filter);
 }
-*/
