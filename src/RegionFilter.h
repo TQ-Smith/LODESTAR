@@ -25,7 +25,7 @@ RegionFilter* create_region_filter(kstring_t* inputRegions, bool takeComplement)
 
 bool query_locus(RegionFilter* filter, kstring_t* chrom, unsigned int locus);
 
-bool query_region(RegionFilter* filter, kstring_t* chrom, unsigned int startLocus, unsigned int endLocus);
+bool query_overlap(RegionFilter* filter, kstring_t* chrom, unsigned int startLocus, unsigned int endLocus);
 
 void destroy_region_filter(RegionFilter* filter);
 

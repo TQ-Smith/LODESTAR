@@ -35,8 +35,11 @@ src/Window.o:
 src/HaplotypeEncoder.o: src/VCFLocusParser.o
 	$(CC) $(CFLAGS) src/HaplotypeEncoder.c -o src/HaplotypeEncoder.o
 
-src/VCFLocusParser.o:
+src/VCFLocusParser.o: src/RegionFilter.o
 	$(CC) $(CFLAGS) src/VCFLocusParser.c -o src/VCFLocusParser.o
+
+src/RegionFilter.o:
+	$(CC) $(CFLAGS) src/RegionFilter.c -o src/RegionFilter.o
 
 lib/lapack:
 	$(CC) $(CFLAGS) lib/lapack/*.f -o lib/lapack
