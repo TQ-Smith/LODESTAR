@@ -37,7 +37,7 @@ void process_haplotype_single_thread() {
     
 }
 
-void process_window_single_thread() {
+void process_window_single_thread(Genotype** winGeno, int winStartIndex, IBS* winAlleleCounts, IBS* stepAlleleCounts, IBS* globalAlleleCounts, double* asd, int numHapsInWin, bool isFirstWinOnChrom, int numSamples, int STEP_SIZE) {
     
 }
 

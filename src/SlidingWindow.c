@@ -155,13 +155,9 @@ void* sliding_window_multi_thread(void* arg) {
     }
 
     pthread_mutex_lock(&globalLock);
-    for (int i = 0; i < record -> numSamples; i++) {
-        for (int j = i + 1; j < record -> numSamples; j++) {
-            record -> globalAlleleCounts[PACKED_INDEX(i, j)].ibs0 += globalAlleleCounts[PACKED_INDEX(i, j)].ibs0;
-            record -> globalAlleleCounts[PACKED_INDEX(i, j)].ibs1 += globalAlleleCounts[PACKED_INDEX(i, j)].ibs1;
-            record -> globalAlleleCounts[PACKED_INDEX(i, j)].ibs2 += globalAlleleCounts[PACKED_INDEX(i, j)].ibs2;
-        }
-    }
+    for (int i = 0; i < record -> numSamples; i++)
+        for (int j = i + 1; j < record -> numSamples; j++) 
+            add_ibs(record -> globalAlleleCounts[PACKED_INDEX(i, j)], globalAlleleCounts[PACKED_INDEX(i, j)]);
     pthread_mutex_unlock(&globalLock);
 
     destroy_matrix(geno, threadGeno, record -> WINDOW_SIZE);
@@ -334,11 +330,9 @@ void* global_window_multi_thread(void* arg) {
     pthread_mutex_unlock(&genomeLock);
 
     pthread_mutex_lock(&globalLock);
-    for (int i = 0; i < numSamples; i++) {
-        for (int j = i + 1; j < numSamples; j++) {
-            increment_ibs(&(record -> alleleCounts[PACKED_INDEX(i, j)]), &alleleCounts[PACKED_INDEX(i, j)]);
-        }
-    }
+    for (int i = 0; i < numSamples; i++)
+        for (int j = i + 1; j < numSamples; j++)
+            add_ibs(&(record -> alleleCounts[PACKED_INDEX(i, j)]), &alleleCounts[PACKED_INDEX(i, j)]);
     pthread_mutex_unlock(&globalLock);
 
     free(alleleCounts);
