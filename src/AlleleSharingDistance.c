@@ -22,9 +22,8 @@ void process_haplotype_multi_thread(Genotype* genotypes, IBS* winAlleleCounts, I
                 if (curHapInWin < STEP_SIZE || isLastWinOnChrom)
                     increment_ibs_value(globalAlleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
             }
-            if (curHapInWin == numHapsInWin - 1) {
+            if (curHapInWin == numHapsInWin - 1)
                 asd[PACKED_INDEX(i, j)] = ibs_to_asd(winAlleleCounts[PACKED_INDEX(i, j)]);
-            }
         }
     }
 }
@@ -44,12 +43,10 @@ void process_window_single_thread() {
 
 void pairwise_ibs(Genotype* geno, IBS* alleleCounts, int numSamples) {
     int numSharedAlleles;
-    for (int i = 0; i < numSamples; i++) {
-        for (int j = i + 1; j < numSamples; j++) {
+    for (int i = 0; i < numSamples; i++) 
+        for (int j = i + 1; j < numSamples; j++) 
             if (geno[i].left != MISSING && geno[j].left != MISSING) {
                 numSharedAlleles = num_shared_alleles(geno[i], geno[j]);
                 increment_ibs_value(alleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
             }
-        }
-    }
 }

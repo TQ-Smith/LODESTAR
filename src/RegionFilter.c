@@ -163,7 +163,7 @@ void destroy_region_filter(RegionFilter* filter) {
     free(filter);
 }
 
-
+/*
 int main() {
     kstring_t* s = (kstring_t*) calloc(1, sizeof(kstring_t));
     kstring_t* s1 = (kstring_t*) calloc(1, sizeof(kstring_t));
@@ -197,3 +197,4 @@ int main() {
     free((char*) ks_release(s4)); free(s4);
     destroy_region_filter(filter);
 }
+*/
