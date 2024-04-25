@@ -30,9 +30,9 @@ int main() {
 
     
     int NUM_THREADS = 1;
-    int HAP_SIZE = 1, STEP_SIZE = 1, WINDOW_SIZE = 2;
+    int HAP_SIZE = 1, STEP_SIZE = 3, WINDOW_SIZE = 4;
 
-    VCFLocusParser* parser = init_vcf_locus_parser("./data/sliding_window_test.vcf.gz");
+    VCFLocusParser* parser = init_vcf_locus_parser("./data/sliding_window_test2.vcf.gz");
     HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> numSamples);
 
     int numWindows;

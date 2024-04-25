@@ -60,7 +60,9 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
     bool isSameChrom = true;
     Genotype* temp;
 
-    if (window -> winNumOnChrom != 1)
+    if (window -> winNumOnChrom == 1)
+        record -> winStartIndex = 0;
+    else
         record -> winStartIndex = (record -> winStartIndex + record -> STEP_SIZE) % record -> WINDOW_SIZE;
 
     while(record -> numHapsInOverlap < record -> WINDOW_SIZE && isSameChrom) {
@@ -90,7 +92,6 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
         kputs(ks_str(record -> parser -> nextChrom), record -> curChrom);
         record -> numHapsInOverlap = 0;
         record -> curWinNumOnChrom = 1;
-        record -> winStartIndex = 0;
         record -> winEndIndex = 0;
     }
 
@@ -101,6 +102,9 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
 void* sliding_window_multi_thread(void* arg) {
 
     WindowRecord* record = (WindowRecord*) arg;
+    int numSamples = record -> numSamples;
+    int HAP_SIZE = record -> HAP_SIZE;
+    int STEP_SIZE = record -> STEP_SIZE;
 
     Window* window;
 
@@ -132,12 +136,12 @@ void* sliding_window_multi_thread(void* arg) {
         window = get_next_window(record, threadGeno);
 
         isLastWinOnChrom = record -> curWinNumOnChrom == 1;
-        
+
         pthread_mutex_unlock(&genomeLock);
 
-        numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
+        numHapsInWin = (int) ceil((double) window -> numLoci / HAP_SIZE);
 
-        process_window_multi_thread(threadGeno, winAlleleCounts, globalAlleleCounts, asd, numHapsInWin, isLastWinOnChrom, record -> numSamples, record -> STEP_SIZE);
+        process_window_multi_thread(threadGeno, winAlleleCounts, globalAlleleCounts, asd, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE);
 
         printf("Window %d ASD:\n", window -> winNum);
         for (int i = 0; i < record -> numSamples; i++) {
@@ -157,7 +161,7 @@ void* sliding_window_multi_thread(void* arg) {
     pthread_mutex_lock(&globalLock);
     for (int i = 0; i < record -> numSamples; i++)
         for (int j = i + 1; j < record -> numSamples; j++) 
-            add_ibs(record -> globalAlleleCounts[PACKED_INDEX(i, j)], globalAlleleCounts[PACKED_INDEX(i, j)]);
+            add_ibs(&(record -> globalAlleleCounts[PACKED_INDEX(i, j)]), &globalAlleleCounts[PACKED_INDEX(i, j)]);
     pthread_mutex_unlock(&globalLock);
 
     destroy_matrix(geno, threadGeno, record -> WINDOW_SIZE);
@@ -185,7 +189,18 @@ void sliding_window_single_thread(WindowRecord* record) {
         
         numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
 
-        process_window_single_thread();
+        /*
+        printf("Window %d:\n", window -> winNum);
+        int start = record -> winStartIndex;
+        for(int i = 0; i < record -> WINDOW_SIZE; i++) {
+            for (int j = 0; j < record -> numSamples; j++)
+                printf("%lu/%lu\t", record -> winGeno[start][j].left, record -> winGeno[start][j].right);
+            start = (start + 1) % record -> WINDOW_SIZE;
+            printf("\n");
+        }
+        */
+        
+        process_window_single_thread(record -> winGeno, record -> winStartIndex, winAlleleCounts, stepAlleleCounts, record -> globalAlleleCounts, asd, numHapsInWin, window -> winNumOnChrom == 1, record -> curWinNumOnChrom == 1, record -> numSamples, record -> STEP_SIZE, record -> WINDOW_SIZE);
         
         printf("Window %d ASD:\n", window -> winNum);
         for (int i = 0; i < record -> numSamples; i++) {
@@ -195,7 +210,6 @@ void sliding_window_single_thread(WindowRecord* record) {
             printf("\n");
         }
         printf("\n");
-
         *kl_pushp(WindowPtr, record -> winList) = window;
 
     }
@@ -279,7 +293,7 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
         printf("\n");
     }
     printf("\n");
-    
+
     *numWindows = record -> curWinNum;
     windows = (Window**) malloc(*numWindows * sizeof(Window*));
     int i = 1;

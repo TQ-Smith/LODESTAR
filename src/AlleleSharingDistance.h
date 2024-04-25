@@ -60,7 +60,7 @@ static inline double ibs_to_asd(IBS ibs) {
 
 void process_window_multi_thread(Genotype** winGeno, IBS* winAlleleCounts, IBS* globalAlleleCounts, double* asd, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE);
 
-void process_window_single_thread(Genotype** winGeno, int winStartIndex, IBS* winAlleleCounts, IBS* stepAlleleCounts, IBS* globalAlleleCounts, double* asd, int numHapsInWin, bool isFirstWinOnChrom, int numSamples, int STEP_SIZE);
+void process_window_single_thread(Genotype** winGeno, int winStartIndex, IBS* winAlleleCounts, IBS* stepAlleleCounts, IBS* globalAlleleCounts, double* asd, int numHapsInWin, bool isFirstWinOnChrom, bool isLastWinOnChrom, int numSamples, int STEP_SIZE, int WINDOW_SIZE);
 
 void pairwise_ibs(Genotype* geno, IBS* alleleCounts, int numSamples);
 
