@@ -4,6 +4,8 @@
 
 #include "../lib/kstring.h"
 
+#include "AlleleSharingDistance.h"
+
 typedef struct {
 
     int winNum;
@@ -13,10 +15,14 @@ typedef struct {
     int endLocus;
     int numLoci;
 
+    double** X;
+    double* x0;
+    IBS* ibs;
+
 } Window;
 
 Window* init_window();
 
-void destroy_window(Window* window);
+void destroy_window(Window* window, int n);
 
 #endif

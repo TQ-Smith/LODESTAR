@@ -13,8 +13,12 @@
 
 #include "Window.h"
 
-Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows);
+#include "RealSymEigen.h"
 
-Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int NUM_THREADS);
+void perform_mds_on_window(Window* window, RealSymEigen* eigen, double* asd, int k);
+
+Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int k, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows);
+
+Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int k, int HAP_SIZE, int NUM_THREADS);
 
 #endif

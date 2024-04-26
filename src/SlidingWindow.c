@@ -16,8 +16,11 @@ KLIST_INIT(WindowPtr, Window*, do_not_free_window_ptr)
 
 #include "Matrix.h"
 MATRIX_INIT(geno, Genotype)
+MATRIX_INIT(double, double)
 
 #include <math.h>
+
+#include "MultidimensionalScaling.h"
 
 #define SWAP(a, b, TEMP) TEMP = a; a = b; b = TEMP
 
@@ -28,7 +31,9 @@ pthread_mutex_t globalLock = PTHREAD_MUTEX_INITIALIZER;
 typedef struct {
     VCFLocusParser* parser;
     HaplotypeEncoder* encoder;
+    RealSymEigen* eigen;
     klist_t(WindowPtr)* winList;
+    int k;
 
     int HAP_SIZE;
     int STEP_SIZE;
@@ -48,6 +53,26 @@ typedef struct {
     int curWinNumOnChrom;
     kstring_t* curChrom;
 } WindowRecord;
+
+void perform_mds_on_window(Window* window, RealSymEigen* eigen, double* asd, int k) {
+    double** X = create_matrix(double, eigen -> N, k);
+    int INFO = compute_classical_mds(eigen, asd, k, X);
+    if (INFO != 0) {
+        destroy_matrix(double, X, eigen -> N);
+        return;
+    }
+    double* x0 = (double*) calloc(k, sizeof(double));
+    for (int i = 0; i < k; i++) {
+        x0[i] = 0;
+        for (int j = 0; j < eigen -> N; j++)
+            x0[i] += (X[j][i] / eigen -> N);
+    }
+    for (int i = 0; i < eigen -> N; i++)
+        for (int j = 0; j < k; j++)
+            X[i][j] -= x0[j];
+    window -> X = X;
+    window -> x0 = x0;
+}
 
 Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
 
@@ -105,6 +130,7 @@ void* sliding_window_multi_thread(void* arg) {
     int numSamples = record -> numSamples;
     int HAP_SIZE = record -> HAP_SIZE;
     int STEP_SIZE = record -> STEP_SIZE;
+    int k = record -> k;
 
     Window* window;
 
@@ -112,6 +138,7 @@ void* sliding_window_multi_thread(void* arg) {
     IBS* winAlleleCounts = (IBS*) calloc(PACKED_SIZE(record -> numSamples), sizeof(IBS));
     IBS* globalAlleleCounts = (IBS*) calloc(PACKED_SIZE(record -> numSamples), sizeof(IBS));
     double* asd = (double*) calloc(PACKED_SIZE(record -> numSamples), sizeof(double));
+    RealSymEigen* eigen = init_real_sym_eigen(record -> numSamples);
 
     int start, numHapsInWin;
     bool isLastWinOnChrom;
@@ -152,6 +179,8 @@ void* sliding_window_multi_thread(void* arg) {
         }
         printf("\n");
 
+        perform_mds_on_window(window, eigen, asd, k);
+
         pthread_mutex_lock(&windowListLock);
         *kl_pushp(WindowPtr, record -> winList) = window;
         pthread_mutex_unlock(&windowListLock);
@@ -168,6 +197,7 @@ void* sliding_window_multi_thread(void* arg) {
     free(winAlleleCounts);
     free(globalAlleleCounts);
     free(asd);
+    destroy_real_sym_eigen(eigen);
 
     return NULL;
 
@@ -202,6 +232,8 @@ void sliding_window_single_thread(WindowRecord* record) {
         
         process_window_single_thread(record -> winGeno, record -> winStartIndex, winAlleleCounts, stepAlleleCounts, record -> globalAlleleCounts, asd, numHapsInWin, window -> winNumOnChrom == 1, record -> curWinNumOnChrom == 1, record -> numSamples, record -> STEP_SIZE, record -> WINDOW_SIZE);
         
+        perform_mds_on_window(window, record -> eigen, asd, record -> k);
+
         printf("Window %d ASD:\n", window -> winNum);
         for (int i = 0; i < record -> numSamples; i++) {
             for (int j = i + 1; j < record -> numSamples; j++) {
@@ -234,12 +266,15 @@ void sort_windows(Window** windows, int numWindows) {
     }
 }
 
-Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows) {
+Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int k, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows) {
     
     WindowRecord* record = (WindowRecord*) calloc(1, sizeof(WindowRecord));
     record -> parser = parser;
     record -> encoder = encoder;
+    record -> eigen = init_real_sym_eigen(encoder -> numSamples);
     record -> winList = kl_init(WindowPtr);
+
+    record -> k = k;
 
     record -> HAP_SIZE = HAP_SIZE;
     record -> STEP_SIZE = STEP_SIZE;
@@ -292,7 +327,13 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
         }
         printf("\n");
     }
-    printf("\n");
+
+    double* globalASD = (double*) malloc(PACKED_SIZE(record -> numSamples) * sizeof(double));
+    for (int i = 0; i < record -> numSamples; i++) 
+        for (int j = i + 1; j < record -> numSamples; j++)
+            globalASD[PACKED_INDEX(i, j)] = ibs_to_asd(record -> globalAlleleCounts[PACKED_INDEX(i, j)]);
+    perform_mds_on_window(global, record -> eigen, globalASD, k);
+    free(globalASD);
 
     *numWindows = record -> curWinNum;
     windows = (Window**) malloc(*numWindows * sizeof(Window*));
@@ -307,6 +348,7 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
 
     kl_destroy(WindowPtr, record -> winList);
     destroy_matrix(geno, record -> winGeno, WINDOW_SIZE);
+    destroy_real_sym_eigen(record -> eigen);
     free(record -> winStartLoci);
     free(record -> globalAlleleCounts);
     free(record -> curChrom -> s); free(record -> curChrom);
@@ -354,7 +396,7 @@ void* global_window_multi_thread(void* arg) {
     return NULL;
 }
 
-Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE, int NUM_THREADS) {
+Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int k, int HAP_SIZE, int NUM_THREADS) {
 
     IBS* alleleCounts = (IBS*) calloc(PACKED_SIZE(encoder -> numSamples), sizeof(IBS));
     double* asd = (double*) calloc(PACKED_SIZE(encoder -> numSamples), sizeof(double));
@@ -395,11 +437,13 @@ Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP
         free(record);
     }
 
-    for (int i = 0; i < encoder -> numSamples; i++) {
-        for (int j = i + 1; j < encoder -> numSamples; j++) {
+    for (int i = 0; i < encoder -> numSamples; i++)
+        for (int j = i + 1; j < encoder -> numSamples; j++)
             asd[PACKED_INDEX(i, j)] = ibs_to_asd(alleleCounts[PACKED_INDEX(i, j)]);
-        }
-    }
+
+    RealSymEigen* eigen = init_real_sym_eigen(encoder -> numSamples);
+    perform_mds_on_window(window, eigen, asd, k);
+    destroy_real_sym_eigen(eigen);
 
     free(alleleCounts);
     free(asd);

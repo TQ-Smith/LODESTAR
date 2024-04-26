@@ -13,9 +13,6 @@
 
 #include <time.h>
 
-#include "Matrix.h"
-MATRIX_INIT(double, double)
-
 void print_window_info(Window* window) {
     printf("Window Number: %d\n", window -> winNum);
     printf("Chromosome: %s\n", ks_str(window -> chromosome));
@@ -28,7 +25,7 @@ void print_window_info(Window* window) {
 
 int main() {
 
-    
+    int k = 2;
     int NUM_THREADS = 1;
     int HAP_SIZE = 1, STEP_SIZE = 3, WINDOW_SIZE = 4;
 
@@ -36,16 +33,16 @@ int main() {
     HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> numSamples);
 
     int numWindows;
-    Window** windows = sliding_window(parser, encoder, HAP_SIZE, STEP_SIZE, WINDOW_SIZE, NUM_THREADS, &numWindows);
+    Window** windows = sliding_window(parser, encoder, k, HAP_SIZE, STEP_SIZE, WINDOW_SIZE, NUM_THREADS, &numWindows);
 
     for (int i = 0; i < numWindows; i++)
         print_window_info(windows[i]);
 
+    for (int i = 0; i < numWindows; i++)
+        destroy_window(windows[i], parser -> numSamples);
+    free(windows);
     destroy_vcf_locus_parser(parser);
     destroy_haplotype_encoder(encoder);
-    for (int i = 0; i < numWindows; i++)
-        destroy_window(windows[i]);
-    free(windows);
     
 
     /*
