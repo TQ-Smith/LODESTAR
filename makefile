@@ -4,15 +4,15 @@
 # Author: TQ Smith
 # Purpose: 
 
-CC = gcc
+CC = gcc-13
 CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 
-bin/test: src/test.o
-	$(CC) $(LFLAGS) bin/test src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
+bin/lodestar: src/main.o
+	$(CC) $(LFLAGS) bin/lodestar src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
 
-src/test.o: src/SlidingWindow.o src/ProcrustesAnalysis.o
-	$(CC) $(CFLAGS) src/test.c -o src/test.o
+src/main.o: src/SlidingWindow.o src/ProcrustesAnalysis.o
+	$(CC) $(CFLAGS) src/main.c -o src/main.o
 
 src/ProcrustesAnalysis.o: src/RealSymEigen.o
 	$(CC) $(CFLAGS) src/ProcrustesAnalysis.c -o src/ProcrustesAnalysis.o

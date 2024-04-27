@@ -13,24 +13,6 @@
 
 #include <time.h>
 
-void print_window_info(Window* window, int n, int k) {
-    printf("Window Number: %d\n", window -> winNum);
-    printf("Chromosome: %s\n", ks_str(window -> chromosome));
-    printf("Window Number on Chromosome: %d\n", window -> winNumOnChrom);
-    printf("Start Position: %d\n", window -> startLocus);
-    printf("End Position: %d\n", window -> endLocus);
-    printf("Number of Loci: %d\n", window -> numLoci);
-    printf("X = \n");
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < k; j++)
-            printf("%5lf\t", window -> X[i][j]);
-        printf("\n");
-    }
-    printf("x0 = ");
-    for (int i = 0; i < k; i++)
-        printf("%5lf\t", window -> x0[i]);
-    printf("\n");
-}
 
 int main() {
 
