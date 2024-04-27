@@ -35,16 +35,18 @@ void process_window_multi_thread(Genotype** winGeno, IBS* winAlleleCounts, IBS* 
 }
 
 void process_haplotype_single_thread(Genotype* geno, Genotype* stepGeno, IBS* winAlleleCounts, IBS* stepAlleleCounts, IBS* globalAlleleCounts, double* asd, int curHapInWin, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE, int WINDOW_SIZE) {
-    /*
+
     printf("Processing Window: ");
     for (int i = 0; i < numSamples; i++)
         printf("%ld/%ld\t", geno[i].left, geno[i].right);
     printf("\n");
-    printf("Processing Offset: ");
-    for (int i = 0; i < numSamples; i++)
-        printf("%ld/%ld\t", stepGeno[i].left, stepGeno[i].right);
-    printf("\n\n");
-    */
+    if (curHapInWin >= (WINDOW_SIZE - STEP_SIZE)) {
+        printf("Processing Offset: ");
+        for (int i = 0; i < numSamples; i++)
+            printf("%ld/%ld\t", stepGeno[i].left, stepGeno[i].right);
+        printf("\n\n");
+    }
+
     int numSharedAlleles;
     for (int i = 0; i < numSamples; i++) {
         for (int j = i + 1; j < numSamples; j++) {
@@ -79,7 +81,7 @@ void process_window_single_thread(Genotype** winGeno, int winStartIndex, IBS* wi
         int stepIndex = winStartIndex;
         for (int i = 0; i < numHapsInWin; i++) {
             process_haplotype_single_thread(winGeno[(winStartIndex + i) % WINDOW_SIZE], winGeno[stepIndex], winAlleleCounts, stepAlleleCounts, globalAlleleCounts, asd, i, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE, WINDOW_SIZE);
-            if (i >= WINDOW_SIZE - STEP_SIZE)
+            if (i >= (WINDOW_SIZE - STEP_SIZE))
                 stepIndex = (stepIndex + 1) % WINDOW_SIZE;
         }
     } else {

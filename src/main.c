@@ -24,15 +24,12 @@ void print_window_info(Window* window, int n, int k) {
             printf("%5lf\t", window -> X[i][j]);
         printf("\n");
     }
-    printf("x0 = ");
-    for (int i = 0; i < k; i++)
-        printf("%5lf\t", window -> x0[i]);
-    printf("\n");
+    printf("\n\n");
 }
 
 int main () {
 
-    int k = 2;
+    int k = 1;
     int NUM_THREADS = 1;
     int HAP_SIZE = 1, STEP_SIZE = 3, WINDOW_SIZE = 4;
 

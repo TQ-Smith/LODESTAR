@@ -16,7 +16,6 @@ typedef struct {
     int numLoci;
 
     double** X;
-    double* x0;
     IBS* ibs;
 
 } Window;

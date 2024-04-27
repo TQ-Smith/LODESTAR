@@ -61,17 +61,7 @@ void perform_mds_on_window(Window* window, RealSymEigen* eigen, double* asd, int
         destroy_matrix(double, X, eigen -> N);
         return;
     }
-    double* x0 = (double*) calloc(k, sizeof(double));
-    for (int i = 0; i < k; i++) {
-        x0[i] = 0;
-        for (int j = 0; j < eigen -> N; j++)
-            x0[i] += (X[j][i] / eigen -> N);
-    }
-    for (int i = 0; i < eigen -> N; i++)
-        for (int j = 0; j < k; j++)
-            X[i][j] -= x0[j];
     window -> X = X;
-    window -> x0 = x0;
 }
 
 Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
@@ -85,10 +75,12 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
     bool isSameChrom = true;
     Genotype* temp;
 
-    if (window -> winNumOnChrom == 1)
+    if (window -> winNumOnChrom == 1) {
         record -> winStartIndex = 0;
-    else
+        record -> winEndIndex = 0;
+    } else {
         record -> winStartIndex = (record -> winStartIndex + record -> STEP_SIZE) % record -> WINDOW_SIZE;
+    }
 
     while(record -> numHapsInOverlap < record -> WINDOW_SIZE && isSameChrom) {
         isSameChrom = get_next_haplotype(record -> parser, record -> encoder, record -> HAP_SIZE);
@@ -117,7 +109,6 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
         kputs(ks_str(record -> parser -> nextChrom), record -> curChrom);
         record -> numHapsInOverlap = 0;
         record -> curWinNumOnChrom = 1;
-        record -> winEndIndex = 0;
     }
 
     return window;
@@ -232,8 +223,6 @@ void sliding_window_single_thread(WindowRecord* record) {
         
         process_window_single_thread(record -> winGeno, record -> winStartIndex, winAlleleCounts, stepAlleleCounts, record -> globalAlleleCounts, asd, numHapsInWin, window -> winNumOnChrom == 1, record -> curWinNumOnChrom == 1, record -> numSamples, record -> STEP_SIZE, record -> WINDOW_SIZE);
         
-        perform_mds_on_window(window, record -> eigen, asd, record -> k);
-
         printf("Window %d ASD:\n", window -> winNum);
         for (int i = 0; i < record -> numSamples; i++) {
             for (int j = i + 1; j < record -> numSamples; j++) {
@@ -242,6 +231,9 @@ void sliding_window_single_thread(WindowRecord* record) {
             printf("\n");
         }
         printf("\n");
+
+        perform_mds_on_window(window, record -> eigen, asd, record -> k);
+
         *kl_pushp(WindowPtr, record -> winList) = window;
 
     }

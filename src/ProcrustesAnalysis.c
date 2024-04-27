@@ -102,6 +102,19 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
 
         double rho = trLambda / trX;
 
+        /*
+        printf("\nEigenvectors:\n");
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < K; j++)
+                printf("%lf\t", V[COL_MAJOR(K - i - 1, j, K)]);
+            printf("\n");
+        }
+        printf("\nEigenvalues:\n");
+        for (int i = 0; i < K; i++)
+            printf("%lf\t", sqrt(eigen -> W[K - i - 1]));
+        printf("\n");
+        */
+
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < K; j++) {
                 eigen -> WORK[j] = 0;
@@ -116,6 +129,15 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             }
         }
 
+        /*
+        printf("\nU:\n");
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < K; j++)
+                printf("%lf\t", U[COL_MAJOR(i, j, K)]);
+            printf("\n");
+        }
+        */
+
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < K; j++) {
                 eigen -> WORK[j] = 0;
@@ -125,10 +147,31 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             shift[i] = 0;
             for (int j = 0; j < K; j++) {
                 U[COL_MAJOR(i, j, K)] = eigen -> WORK[j];
-                shift[i] += U[COL_MAJOR(i, j, K)] * x0[j];
+                if (x0 != NULL && y0 != NULL)
+                    shift[i] += U[COL_MAJOR(i, j, K)] * x0[j];
             }
-            shift[i] = y0[i] - rho * shift[i];
+            if (x0 != NULL && y0 != NULL)
+                shift[i] = y0[i] - rho * shift[i];
         }
+
+        /*
+        printf("\nA^T:\n");
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < K; j++)
+                printf("%lf\t", U[COL_MAJOR(i, j, K)]);
+            printf("\n");
+        }
+
+        printf("\nrho: %lf\n", rho);
+        printf("\ntrX: %lf\n", trX);
+        printf("\ntrY: %lf\n", trY);
+        printf("\ntrLambda: %lf\n", trLambda);
+
+        printf("\nShift:\n");
+        for (int i = 0; i < K; i++)
+            printf("%lf\t", shift[i]);
+        printf("\n\n");
+        */
 
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < K; j++) {
@@ -136,8 +179,11 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                 for (int k = 0; k < K; k++)
                     eigen -> WORK[j] += U[COL_MAJOR(j, k, K)] * Xc[i][k];
             }
-            for (int j = 0; j < K; j++)
-                Xc[i][j] = rho * eigen -> WORK[j] + shift[j];
+            for (int j = 0; j < K; j++) {
+                Xc[i][j] = rho * eigen -> WORK[j];
+                if (x0 != NULL && y0 != NULL)
+                    Xc[i][j] += shift[j];
+            }
         }
 
     }
