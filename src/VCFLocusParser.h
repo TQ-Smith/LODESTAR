@@ -40,6 +40,7 @@ typedef struct {
     RegionFilter* filter;
     double maf;
     double afMissing;
+    int alleleCounts[16];
 
     kstring_t* nextChrom;
     int nextPos;

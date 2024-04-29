@@ -67,7 +67,7 @@ bool parse_region(RegionFilter* filter, kstring_t* region, int startIndex, int e
         return false;
     }
 
-    if (newRegion -> startLocus > newRegion -> endLocus) {
+    if (colonIndex != 0 && hyphenIndex != 0 && newRegion -> startLocus > newRegion -> endLocus) {
         free(newRegion);
         return false;
     }
@@ -95,7 +95,7 @@ bool parse_regions(RegionFilter* filter, kstring_t* inputRegions) {
     return true;
 }
 
-RegionFilter* create_region_filter(kstring_t* inputRegions, bool takeComplement) {
+RegionFilter* init_region_filter(kstring_t* inputRegions, bool takeComplement) {
     RegionFilter* filter = (RegionFilter*) calloc(1, sizeof(RegionFilter));
     filter -> takeComplement = takeComplement;
     filter -> regions = kh_init(region);
@@ -106,6 +106,7 @@ RegionFilter* create_region_filter(kstring_t* inputRegions, bool takeComplement)
 }
 
 bool query_locus(RegionFilter* filter, kstring_t* chrom, unsigned int locus) {
+    printf("%s\n", ks_str(chrom));
     khint_t k = kh_get(region, filter -> regions, ks_str(chrom));
     if (k != kh_end(filter -> regions)) {
         Region* current = kh_value(filter -> regions, k);

@@ -21,7 +21,7 @@ typedef struct {
     khash_t(region)* regions;
 } RegionFilter;
 
-RegionFilter* create_region_filter(kstring_t* inputRegions, bool takeComplement);
+RegionFilter* init_region_filter(kstring_t* inputRegions, bool takeComplement);
 
 bool query_locus(RegionFilter* filter, kstring_t* chrom, unsigned int locus);
 

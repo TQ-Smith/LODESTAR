@@ -56,16 +56,83 @@ VCFLocusParser* init_vcf_locus_parser(char* fileName, RegionFilter* filter, doub
     parser -> filter = filter;
     parser -> maf = maf;
     parser -> afMissing = afMissing;
+    for (int i = 0; i < 16; i++)
+        parser -> alleleCounts[i] = 0;
 
-    // get_next_locus(parser, parser -> nextChrom, &(parser -> nextPos), &(parser -> nextNumAlleles), &(parser -> nextLocus));
+    get_next_locus(parser, parser -> nextChrom, &(parser -> nextPos), &(parser -> nextNumAlleles), &(parser -> nextLocus));
 
     return parser;
 
 }
 
-/*
+void seek(VCFLocusParser* parser) {
+
+    int dret, numTabs, prevIndex, numAlleles;
+    bool isInFilter;
+    Locus l;
+    double maf, afMissing;
+
+    while (true) {
+
+        ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret);
+
+        if (ks_eof(parser -> stream) || ks_len(parser -> buffer) == 0) {
+            parser -> isEOF = true;
+            return;
+        }
+
+        numTabs = 0, prevIndex = 0, numAlleles = 2;
+        isInFilter = true;
+        for (int i = 0; i <= ks_len(parser -> buffer) && isInFilter; i++) {
+            if (i == ks_len(parser -> buffer) || ks_str(parser -> buffer)[i] == '\t') {
+                if (numTabs == 0) {
+                    kputsn(ks_str(parser -> buffer), i, parser -> nextChrom);
+                } else if (numTabs == 1) {
+                    parser -> nextPos = (int) strtol(ks_str(parser -> buffer) + prevIndex + 1, (char**) NULL, 10);
+                    if (parser -> filter != NULL && !query_locus(parser -> filter, parser -> nextChrom, (unsigned int) parser -> nextPos))
+                        isInFilter = false;
+
+                } else if (numTabs == 4) {
+
+                    for (int j = prevIndex + 1; ks_str(parser -> buffer)[j] != '\t'; j++)
+                        if (ks_str(parser -> buffer)[j] == ',')
+                            numAlleles++;
+
+                } else if (numTabs > 8) {
+
+                    l = parse_locus(ks_str(parser -> buffer) + prevIndex + 1, numAlleles);
+                    parser -> alleleCounts[LEFT_ALLELE(l)]++;
+                    parser -> alleleCounts[RIGHT_ALLELE(l)]++;
+                    parser -> nextLocus[numTabs - 9] = l;
+
+                }
+                prevIndex = i;
+                numTabs++;
+            }
+        }
+
+        if (!isInFilter)
+            continue;
+        
+        afMissing = parser -> alleleCounts[numAlleles] / (2.0 * parser -> numSamples);
+        parser -> alleleCounts[numAlleles] = 0;
+        maf = 1;
+        for (int i = 0; i < numAlleles; i++) {
+            if (parser -> alleleCounts[i] / (2.0 * parser -> numSamples) < maf)
+                maf = parser -> alleleCounts[i] / (2.0 * parser -> numSamples);
+            parser -> alleleCounts[i] = 0;
+        }
+        
+        parser -> nextNumAlleles = numAlleles;
+
+        if (maf >= parser -> maf && afMissing < parser -> afMissing)
+            return;
+
+    }
+
+}
+
 void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, Locus** locus) {
-   
     if (parser == NULL || parser -> isEOF)
         return;
     
@@ -81,36 +148,9 @@ void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* num
     *locus = parser -> nextLocus;
     parser -> nextLocus = temp;
 
-    int dret;
-    ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret);
-
-    if (ks_eof(parser -> stream) || ks_len(parser -> buffer) == 0) {
-        parser -> isEOF = true;
-        return;
-    }
-
-    int numTabs = 0, prevIndex = 0, numAlleles = 2;
-    for (int i = 0; i <= ks_len(parser -> buffer); i++) {
-        if (i == ks_len(parser -> buffer) || ks_str(parser -> buffer)[i] == '\t') {
-            if (numTabs == 0)
-                kputsn(ks_str(parser -> buffer), i - prevIndex, parser -> nextChrom);
-            else if (numTabs == 1)
-                parser -> nextPos = (int) strtol(ks_str(parser -> buffer) + prevIndex + 1, (char**) NULL, 10);
-            else if (numTabs == 4) {
-                for (int j = prevIndex + 1; ks_str(parser -> buffer)[j] != '\t'; j++)
-                    if (ks_str(parser -> buffer)[j] == ',')
-                        numAlleles++;
-            } else if (numTabs > 8)
-                parser -> nextLocus[numTabs - 9] = parse_locus(ks_str(parser -> buffer) + prevIndex + 1, numAlleles);
-            prevIndex = i;
-            numTabs++;
-        }
-    }
-
-    parser -> nextNumAlleles = numAlleles;
-
+    seek(parser);
 }
-*/
+
 
 void destroy_vcf_locus_parser(VCFLocusParser* parser) {
     if (parser == NULL)
@@ -129,10 +169,13 @@ void destroy_vcf_locus_parser(VCFLocusParser* parser) {
 }
 
 // Used to test the parser.
-/*
+
 int main() {
     
-    VCFLocusParser* parser = init_vcf_locus_parser("../data/vcf_parser_test.vcf.gz");
+    kstring_t* intervals = (kstring_t*) calloc(1, sizeof(kstring_t));
+    kputs("1", intervals);
+    RegionFilter* filter = init_region_filter(intervals, true);
+    VCFLocusParser* parser = init_vcf_locus_parser("./data/vcf_parser_test.vcf.gz", filter, 0, 1);
 
     printf("There are %d samples with the following names:\n", parser -> numSamples);
     for (int i = 0; i < parser -> numSamples; i++)
@@ -158,9 +201,10 @@ int main() {
         
     }
 
+    destroy_region_filter(filter);
     destroy_vcf_locus_parser(parser);
     free(locus);
     free(ks_str(chromosome)); free(chromosome);
+    free(ks_str(intervals)); free(intervals);
     
 }
-*/
