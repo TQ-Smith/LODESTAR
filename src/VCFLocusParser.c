@@ -8,7 +8,7 @@
 
 #include "VCFLocusParser.h"
 
-VCFLocusParser* init_vcf_locus_parser(char* fileName) {
+VCFLocusParser* init_vcf_locus_parser(char* fileName, RegionFilter* filter, double maf, double afMissing) {
 
     gzFile file = gzopen(fileName, "r");
 
@@ -53,13 +53,17 @@ VCFLocusParser* init_vcf_locus_parser(char* fileName) {
     parser -> isEOF = false;
     parser -> nextChrom = (kstring_t*) calloc(1, sizeof(kstring_t));
     parser -> nextLocus = (Locus*) calloc(numSamples, sizeof(Locus));
+    parser -> filter = filter;
+    parser -> maf = maf;
+    parser -> afMissing = afMissing;
 
-    get_next_locus(parser, parser -> nextChrom, &(parser -> nextPos), &(parser -> nextNumAlleles), &(parser -> nextLocus));
+    // get_next_locus(parser, parser -> nextChrom, &(parser -> nextPos), &(parser -> nextNumAlleles), &(parser -> nextLocus));
 
     return parser;
 
 }
 
+/*
 void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, Locus** locus) {
    
     if (parser == NULL || parser -> isEOF)
@@ -106,6 +110,7 @@ void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* num
     parser -> nextNumAlleles = numAlleles;
 
 }
+*/
 
 void destroy_vcf_locus_parser(VCFLocusParser* parser) {
     if (parser == NULL)

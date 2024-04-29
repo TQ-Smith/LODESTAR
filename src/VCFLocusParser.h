@@ -17,6 +17,8 @@
 
 #include "../lib/kseq.h"
 
+#include "RegionFilter.h"
+
 #define BUFFER_SIZE 4096
 KSTREAM_INIT(gzFile, gzread, BUFFER_SIZE)
 
@@ -35,13 +37,17 @@ typedef struct {
     int numSamples;
     kstring_t* sampleNames;
 
+    RegionFilter* filter;
+    double maf;
+    double afMissing;
+
     kstring_t* nextChrom;
     int nextPos;
     int nextNumAlleles;
     Locus* nextLocus;
 } VCFLocusParser;
 
-VCFLocusParser* init_vcf_locus_parser(char* fileName);
+VCFLocusParser* init_vcf_locus_parser(char* fileName, RegionFilter* filter, double maf, double afMissing);
 
 void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, Locus** genos);
 
