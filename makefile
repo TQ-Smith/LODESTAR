@@ -11,7 +11,7 @@ LFLAGS = -g -o
 bin/lodestar: src/main.o
 	$(CC) $(LFLAGS) bin/lodestar src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
 
-src/main.o: src/SlidingWindow.o src/ProcrustesAnalysis.o
+src/main.o: src/Logger.o src/SlidingWindow.o src/ProcrustesAnalysis.o
 	$(CC) $(CFLAGS) src/main.c -o src/main.o
 
 src/ProcrustesAnalysis.o: src/RealSymEigen.o
@@ -40,6 +40,9 @@ src/VCFLocusParser.o: src/RegionFilter.o
 
 src/RegionFilter.o:
 	$(CC) $(CFLAGS) src/RegionFilter.c -o src/RegionFilter.o
+
+src/Logger.o:
+	$(CC) $(CFLAGS) src/Logger.c -o src/Logger.o
 
 lib/lapack:
 	$(CC) $(CFLAGS) lib/lapack/*.f -o lib/lapack

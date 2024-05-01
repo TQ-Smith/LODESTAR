@@ -8,7 +8,7 @@
 
 #include "VCFLocusParser.h"
 
-VCFLocusParser* init_vcf_locus_parser(char* fileName, RegionFilter* filter, double maf, double afMissing) {
+VCFLocusParser* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool takeComplement, double maf, double afMissing, bool dropMonomorphicSites) {
 
     gzFile file = gzopen(fileName, "r");
 
@@ -44,7 +44,7 @@ VCFLocusParser* init_vcf_locus_parser(char* fileName, RegionFilter* filter, doub
 
     VCFLocusParser* parser = (VCFLocusParser*) malloc(sizeof(VCFLocusParser));
     parser -> fileName = (kstring_t*) calloc(1, sizeof(kstring_t));
-    kputs(fileName, parser -> fileName);
+    ks_overwrite(fileName, parser -> fileName);
     parser -> file = file;
     parser -> stream = stream;
     parser -> numSamples = numSamples;
@@ -53,9 +53,13 @@ VCFLocusParser* init_vcf_locus_parser(char* fileName, RegionFilter* filter, doub
     parser -> isEOF = false;
     parser -> nextChrom = (kstring_t*) calloc(1, sizeof(kstring_t));
     parser -> nextLocus = (Locus*) calloc(numSamples, sizeof(Locus));
-    parser -> filter = filter;
+    if (regions == NULL)
+        parser -> filter = NULL;
+    else
+        parser -> filter = init_region_filter(regions, takeComplement);
     parser -> maf = maf;
     parser -> afMissing = afMissing;
+    parser -> dropMonomorphicSites = dropMonomorphicSites;
     for (int i = 0; i < 16; i++)
         parser -> alleleCounts[i] = 0;
 
@@ -70,7 +74,7 @@ void seek(VCFLocusParser* parser) {
     int dret, numTabs, prevIndex, numAlleles;
     bool isInFilter;
     Locus l;
-    double maf, afMissing;
+    double maf, afMissing, afMax, af;
 
     while (true) {
 
@@ -91,20 +95,15 @@ void seek(VCFLocusParser* parser) {
                     parser -> nextPos = (int) strtol(ks_str(parser -> buffer) + prevIndex + 1, (char**) NULL, 10);
                     if (parser -> filter != NULL && !query_locus(parser -> filter, parser -> nextChrom, (unsigned int) parser -> nextPos))
                         isInFilter = false;
-
                 } else if (numTabs == 4) {
-
                     for (int j = prevIndex + 1; ks_str(parser -> buffer)[j] != '\t'; j++)
                         if (ks_str(parser -> buffer)[j] == ',')
                             numAlleles++;
-
                 } else if (numTabs > 8) {
-
                     l = parse_locus(ks_str(parser -> buffer) + prevIndex + 1, numAlleles);
                     parser -> alleleCounts[LEFT_ALLELE(l)]++;
                     parser -> alleleCounts[RIGHT_ALLELE(l)]++;
                     parser -> nextLocus[numTabs - 9] = l;
-
                 }
                 prevIndex = i;
                 numTabs++;
@@ -117,13 +116,20 @@ void seek(VCFLocusParser* parser) {
         afMissing = parser -> alleleCounts[numAlleles] / (2.0 * parser -> numSamples);
         parser -> alleleCounts[numAlleles] = 0;
         maf = 1;
+        afMax = 0;
         for (int i = 0; i < numAlleles; i++) {
-            if (parser -> alleleCounts[i] / (2.0 * parser -> numSamples) < maf)
-                maf = parser -> alleleCounts[i] / (2.0 * parser -> numSamples);
+            af = parser -> alleleCounts[i] / (2.0 * parser -> numSamples);
+            if (af < maf)
+                maf = af;
+            if (af > afMax)
+                afMax = af;
             parser -> alleleCounts[i] = 0;
         }
         
         parser -> nextNumAlleles = numAlleles;
+
+        if (parser -> dropMonomorphicSites && afMax == 1)
+            continue;
 
         if (maf >= parser -> maf && afMissing < parser -> afMissing)
             return;
@@ -155,10 +161,11 @@ void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, unsigned int* pos,
 void destroy_vcf_locus_parser(VCFLocusParser* parser) {
     if (parser == NULL)
         return;
-
     gzclose(parser -> file);
     ks_destroy(parser -> stream);
     free(ks_str(parser -> fileName)); free(parser -> fileName);
+    if (parser -> filter != NULL)
+        destroy_region_filter(parser -> filter);
     for (int i = 0; i < parser -> numSamples; i++)
         free(parser -> sampleNames[i].s);
     free(parser -> sampleNames);
@@ -169,13 +176,12 @@ void destroy_vcf_locus_parser(VCFLocusParser* parser) {
 }
 
 // Used to test the parser.
-
+/*
 int main() {
     
     kstring_t* intervals = (kstring_t*) calloc(1, sizeof(kstring_t));
-    ks_overwrite("1", intervals);
-    RegionFilter* filter = init_region_filter(intervals, true);
-    VCFLocusParser* parser = init_vcf_locus_parser("./data/vcf_parser_test.vcf.gz", filter, 0, 1);
+    ks_overwrite("3", intervals);
+    VCFLocusParser* parser = init_vcf_locus_parser("./data/vcf_parser_test.vcf.gz", intervals, false, 0, 1, false);
 
     printf("There are %d samples with the following names:\n", parser -> numSamples);
     for (int i = 0; i < parser -> numSamples; i++)
@@ -201,10 +207,10 @@ int main() {
         
     }
 
-    destroy_region_filter(filter);
     destroy_vcf_locus_parser(parser);
     free(locus);
     free(ks_str(chromosome)); free(chromosome);
     free(ks_str(intervals)); free(intervals);
     
 }
+*/

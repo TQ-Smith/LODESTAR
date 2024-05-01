@@ -38,6 +38,7 @@ typedef struct {
     kstring_t* sampleNames;
 
     RegionFilter* filter;
+    bool dropMonomorphicSites;
     double maf;
     double afMissing;
     int alleleCounts[16];
@@ -48,7 +49,7 @@ typedef struct {
     Locus* nextLocus;
 } VCFLocusParser;
 
-VCFLocusParser* init_vcf_locus_parser(char* fileName, RegionFilter* filter, double maf, double afMissing);
+VCFLocusParser* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool takeComplement, double maf, double afMissing, bool dropMonomorphicSites);
 
 void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, unsigned int* pos, int* numOfAlleles, Locus** genos);
 
