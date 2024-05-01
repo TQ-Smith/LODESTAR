@@ -103,7 +103,7 @@ bool get_next_haplotype(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
         return false;
     
     encoder -> chrom -> l = 0;
-    kputs(ks_str(parser -> nextChrom), encoder -> chrom);
+    ks_overwrite(ks_str(parser -> nextChrom), encoder -> chrom);
 
     encoder -> startLocus = parser -> nextPos;
 

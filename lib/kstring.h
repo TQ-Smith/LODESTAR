@@ -129,6 +129,26 @@ static inline char *ks_release(kstring_t *s)
 	return ss;
 }
 
+static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
+	if (l + 1 >= s -> m) {
+		char *tmp;
+		s->m = s->l + 1;
+		kroundup32(s->m);
+		if ((tmp = (char*)realloc(s->s, s->m)))
+			s->s = tmp;
+		else
+			return EOF;
+	}
+	memcpy(s->s, p, l);
+	s->l = l;
+	s->s[s->l] = 0;
+	return l;
+}
+
+static inline int ks_overwrite(const char* p, kstring_t *s) {
+	return ks_overwriten(p, strlen(p), s);
+}
+
 static inline int kputsn(const char *p, int l, kstring_t *s)
 {
 	if (s->l + l + 1 >= s->m) {

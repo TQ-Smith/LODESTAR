@@ -69,7 +69,7 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
     Window* window = init_window();
     window -> winNum = record -> curWinNum++;
     window -> winNumOnChrom = record -> curWinNumOnChrom++;
-    kputs(ks_str(record -> curChrom), window -> chromosome);
+    ks_overwrite(ks_str(record -> curChrom), window -> chromosome);
     window -> numLoci = record -> numHapsInOverlap * record -> HAP_SIZE;
 
     bool isSameChrom = true;
@@ -106,7 +106,7 @@ Window* get_next_window(WindowRecord* record, Genotype** threadGeno) {
     } else {
         record -> globalNumHaps += window -> numLoci / record -> HAP_SIZE;
         record -> curChrom -> l = 0;
-        kputs(ks_str(record -> parser -> nextChrom), record -> curChrom);
+        ks_overwrite(ks_str(record -> parser -> nextChrom), record -> curChrom);
         record -> numHapsInOverlap = 0;
         record -> curWinNumOnChrom = 1;
     }
@@ -305,7 +305,7 @@ Window** sliding_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int k
     }
     
     Window* global = init_window();
-    kputs("Global", global -> chromosome);
+    ks_overwrite("Global", global -> chromosome);
     global -> winNum = 0;
     global -> winNumOnChrom = 0;
     global -> startLocus = 0;
@@ -396,7 +396,7 @@ Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int k, 
     Window* window = init_window();
     window -> winNum = 0;
     window -> winNumOnChrom = 0;
-    kputs("Global", window -> chromosome);
+    ks_overwrite("Global", window -> chromosome);
     window -> startLocus = 0;
     window -> endLocus = 0;
 

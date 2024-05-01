@@ -37,7 +37,7 @@ VCFLocusParser* init_vcf_locus_parser(char* fileName, RegionFilter* filter, doub
     for (int i = 0; i <= ks_len(buffer); i++)
         if (ks_str(buffer)[i] == '\t') {
             if (numTabs > 7)
-                kputsn(ks_str(buffer) + i + 1, i - prevIndex, &sampleNames[numTabs - 8]);
+                ks_overwriten(ks_str(buffer) + i + 1, i - prevIndex, &sampleNames[numTabs - 8]);
             prevIndex = i;
             numTabs++;
         }
@@ -86,7 +86,7 @@ void seek(VCFLocusParser* parser) {
         for (int i = 0; i <= ks_len(parser -> buffer) && isInFilter; i++) {
             if (i == ks_len(parser -> buffer) || ks_str(parser -> buffer)[i] == '\t') {
                 if (numTabs == 0) {
-                    kputsn(ks_str(parser -> buffer), i, parser -> nextChrom);
+                    ks_overwriten(ks_str(parser -> buffer), i, parser -> nextChrom);
                 } else if (numTabs == 1) {
                     parser -> nextPos = (int) strtol(ks_str(parser -> buffer) + prevIndex + 1, (char**) NULL, 10);
                     if (parser -> filter != NULL && !query_locus(parser -> filter, parser -> nextChrom, (unsigned int) parser -> nextPos))
@@ -139,7 +139,7 @@ void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* num
     if (parser -> nextChrom != chrom) {
         chrom -> l = 0;
         parser -> nextChrom -> l = 0;
-        kputs(ks_str(parser -> nextChrom), chrom);
+        ks_overwrite(ks_str(parser -> nextChrom), chrom);
     }
 
     *pos = parser -> nextPos;
@@ -173,7 +173,7 @@ void destroy_vcf_locus_parser(VCFLocusParser* parser) {
 int main() {
     
     kstring_t* intervals = (kstring_t*) calloc(1, sizeof(kstring_t));
-    kputs("1", intervals);
+    ks_overwrite("1", intervals);
     RegionFilter* filter = init_region_filter(intervals, true);
     VCFLocusParser* parser = init_vcf_locus_parser("./data/vcf_parser_test.vcf.gz", filter, 0, 1);
 

@@ -106,7 +106,6 @@ RegionFilter* init_region_filter(kstring_t* inputRegions, bool takeComplement) {
 }
 
 bool query_locus(RegionFilter* filter, kstring_t* chrom, unsigned int locus) {
-    printf("%s\n", ks_str(chrom));
     khint_t k = kh_get(region, filter -> regions, ks_str(chrom));
     if (k != kh_end(filter -> regions)) {
         Region* current = kh_value(filter -> regions, k);
