@@ -33,8 +33,8 @@ typedef struct {
     Genotype* genotypes;
 
     kstring_t* chrom;
-    int startLocus;
-    int endLocus;
+    unsigned int startLocus;
+    unsigned int endLocus;
     int numLoci;
 
     khash_t(haplotype)* labelMap;

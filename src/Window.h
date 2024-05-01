@@ -11,8 +11,8 @@ typedef struct {
     int winNum;
     int winNumOnChrom;
     kstring_t* chromosome;
-    int startLocus;
-    int endLocus;
+    unsigned int startLocus;
+    unsigned int endLocus;
     int numLoci;
 
     double** X;

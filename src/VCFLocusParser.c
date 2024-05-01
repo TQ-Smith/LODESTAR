@@ -132,7 +132,7 @@ void seek(VCFLocusParser* parser) {
 
 }
 
-void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, Locus** locus) {
+void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, unsigned int* pos, int* numOfAlleles, Locus** locus) {
     if (parser == NULL || parser -> isEOF)
         return;
     
@@ -182,7 +182,7 @@ int main() {
         printf("%s\n", ks_str(&(parser -> sampleNames[i])));
     
     kstring_t* chromosome = (kstring_t*) calloc(1, sizeof(kstring_t));
-    int position;
+    unsigned int position;
     int numOfAlleles;
     Locus* locus = (Locus*) calloc(parser -> numSamples, sizeof(Locus));
 

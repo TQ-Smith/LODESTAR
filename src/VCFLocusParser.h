@@ -43,14 +43,14 @@ typedef struct {
     int alleleCounts[16];
 
     kstring_t* nextChrom;
-    int nextPos;
+    unsigned int nextPos;
     int nextNumAlleles;
     Locus* nextLocus;
 } VCFLocusParser;
 
 VCFLocusParser* init_vcf_locus_parser(char* fileName, RegionFilter* filter, double maf, double afMissing);
 
-void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, int* pos, int* numOfAlleles, Locus** genos);
+void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, unsigned int* pos, int* numOfAlleles, Locus** genos);
 
 void destroy_vcf_locus_parser(VCFLocusParser* parser);
 
