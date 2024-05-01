@@ -55,8 +55,13 @@ VCFLocusParser* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool t
     parser -> nextLocus = (Locus*) calloc(numSamples, sizeof(Locus));
     if (regions == NULL)
         parser -> filter = NULL;
-    else
+    else {
         parser -> filter = init_region_filter(regions, takeComplement);
+        if (parser -> filter == NULL) {
+            destroy_vcf_locus_parser(parser);
+            return NULL;
+        }
+    }
     parser -> maf = maf;
     parser -> afMissing = afMissing;
     parser -> dropMonomorphicSites = dropMonomorphicSites;
