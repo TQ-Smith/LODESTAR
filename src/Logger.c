@@ -40,6 +40,10 @@ void _log(const char* prefix, const char* fmt, ...) {
 
 void _close_log() {
     pthread_mutex_lock(&logLock);
+    if (log -> file == NULL) {
+        pthread_mutex_unlock(&logLock);
+        return;
+    }
     if (log -> file != stderr)
         fclose(log -> file);
     free(log);

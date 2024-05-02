@@ -10,10 +10,11 @@
 #include "../lib/ketopt.h"
 
 typedef struct {
+    char* input_filename;
     VCFLocusParser* parser;
     char* output_basename;
-    FILE* windowsInfo;
-    FILE* windowsCoords;
+    FILE* windows_info;
+    FILE* windows_coords;
     int HAP_SIZE;
     int WINDOW_SIZE;
     int STEP_SIZE;
@@ -21,7 +22,7 @@ typedef struct {
     int threads;
     bool similarity;
     bool global;
-    char* coords_file_name;
+    char* coords_filename;
     FILE* coords_file;
     double pthresh;
     int num_perms;
@@ -37,21 +38,54 @@ typedef struct {
     bool json_output;
 } LodestarConfiguration;
 
+#define PRINT_BOOL(X) (X ? "true" : "false")
+
 void print_configuration(FILE* output, LodestarConfiguration lodestar_config) {
-    fprintf(output, "Parameters used to run LODESTAR:\n");
-    fprintf(output, "--------------------------------\n");
-    if (lodestar_config.parser != NULL)
-        fprintf(output, "Input File: %s\n", ks_str(lodestar_config.parser -> fileName));
-    if (lodestar_config.output_basename != NULL) {
-        if (!lodestar_config.global)
-            fprintf(output, "Window Statistics File: %s%s.txt\n", lodestar_config.output_basename, "Statistics");
-        fprintf(output, "Window Coordinates File: %s%s.%s\n", lodestar_config.output_basename, "Coordinates", lodestar_config.json_output ? "json" : "txt");
-    }
-    
+    fprintf(output, "Input file: %s\n", lodestar_config.input_filename);
+    fprintf(output, "Output basename: %s\n", lodestar_config.output_basename);
+    fprintf(output, "Haplotype size: %d\n", lodestar_config.HAP_SIZE);
+    fprintf(output, "Window size: %d\n", lodestar_config.WINDOW_SIZE);
+    fprintf(output, "Step size: %d\n", lodestar_config.STEP_SIZE);
+    fprintf(output, "K: %d\n", lodestar_config.k);
+    fprintf(output, "Use similarity: %s\n", PRINT_BOOL(lodestar_config.similarity));
+    fprintf(output, "Calculate genome-wide only: %s\n", PRINT_BOOL(lodestar_config.global));
+    fprintf(output, "Number of threads used: %d\n", lodestar_config.threads);
+    fprintf(output, "P-value threshold: %lf\n", lodestar_config.pthresh);
+    fprintf(output, "Number of permutations: %d\n", lodestar_config.num_perms);
+    fprintf(output, "Procrustes statistic threshold: %lf\n", lodestar_config.tthresh);
+    if (lodestar_config.regions != NULL && lodestar_config.regions[0] == '^')
+        fprintf(output, "Exclude records from input: %s\n", lodestar_config.regions);
+    if (lodestar_config.regions != NULL && lodestar_config.regions[0] != '^')
+        fprintf(output, "Include records from input: %s\n", lodestar_config.regions);
+    fprintf(output, "Minor allele frequency threshold: %lf\n", lodestar_config.maf);
+    fprintf(output, "Missing allele frequency threshold: %lf\n", lodestar_config.afMissing);
+    if (lodestar_config.ibs_regions_str != NULL && lodestar_config.ibs_regions_str[0] == '^')
+        fprintf(output, "Exclude records for saving IBS values: %s\n", lodestar_config.ibs_regions_str);
+    if (lodestar_config.ibs_regions_str != NULL && lodestar_config.ibs_regions_str[0] != '^')
+        fprintf(output, "Include records for saving IBS values: %s\n", lodestar_config.ibs_regions_str);
+    if (lodestar_config.asd_regions_str != NULL && lodestar_config.asd_regions_str[0] == '^')
+        fprintf(output, "Exclude records for saving ASD values: %s\n", lodestar_config.asd_regions_str);
+    if (lodestar_config.asd_regions_str != NULL && lodestar_config.asd_regions_str[0] != '^')
+        fprintf(output, "Include records for saving ASD values: %s\n", lodestar_config.asd_regions_str);
+    if (lodestar_config.coords_filename != NULL)
+        fprintf(output, "File of coordinates to perform Procrustes analysis against: %s\n", lodestar_config.coords_filename);
+    fprintf(output, "Use long-format output: %s\n", PRINT_BOOL(lodestar_config.long_output));
+    fprintf(output, "Save as JSON file: %s\n", PRINT_BOOL(lodestar_config.json_output));
 }
 
 void destroy_lodestar_configuration(LodestarConfiguration lodestar_config) {
-
+    if (lodestar_config.parser != NULL)
+        destroy_vcf_locus_parser(lodestar_config.parser);
+    if (lodestar_config.windows_info != NULL)
+        fclose(lodestar_config.windows_info);
+    if (lodestar_config.windows_coords != NULL)
+        fclose(lodestar_config.windows_coords);
+    if (lodestar_config.coords_file != NULL)
+        fclose(lodestar_config.coords_file);
+    if (lodestar_config.ibs_regions != NULL)
+        destroy_region_filter(lodestar_config.ibs_regions);
+    if (lodestar_config.asd_regions != NULL)
+        destroy_region_filter(lodestar_config.asd_regions);
 }
 
 void print_help() {
@@ -128,16 +162,14 @@ static ko_longopt_t long_options[] = {
     {"pthresh",         ko_optional_argument, 305},
     {"perms",           ko_optional_argument, 306},
     {"tthresh",         ko_optional_argument, 307},
-    {"regions",         ko_optional_argument, 308},
-    {"^regions",        ko_optional_argument, 309},
-    {"maf",             ko_optional_argument, 310},
-    {"afMissing",       ko_optional_argument, 311},
-    {"ibs",             ko_optional_argument, 312},
-    {"^ibs",            ko_optional_argument, 313},
-    {"asd",             ko_optional_argument, 314},
-    {"^asd",            ko_optional_argument, 315},
-    {"long",            ko_optional_argument, 316},
-    {"json",            ko_optional_argument, 317},
+    {"[^]regions",      ko_optional_argument, 308},
+    {"maf",             ko_optional_argument, 309},
+    {"afMissing",       ko_optional_argument, 310},
+    {"[^]ibs",          ko_optional_argument, 311},
+    {"[^]asd",          ko_optional_argument, 312},
+    {"long",            ko_optional_argument, 313},
+    {"json",            ko_optional_argument, 314},
+    {"coords",          ko_optional_argument, 315},
     {0, 0, 0}
 };
 
@@ -149,24 +181,40 @@ int main (int argc, char *argv[]) {
 
     while ((c = ketopt(&options, argc, argv, 1, opt_str, long_options)) >= 0) {
         switch (c) {
-            case ':':
-                fprintf(stderr, "Error! Option is missing an argument! Exiting ...\n");
-                return 1;
-            case '?':
-                fprintf(stderr, "Error! \"%s\" is unknown! Exiting ...\n", argv[options.i - 1]);
-                return 1;
-            case 300:
-                print_help();
-                return 0;
-            case 'v':
-            case 301:
-                fprintf(stderr, "Version 1.0 May 2024.\n");
-                return 0;
+            case ':': fprintf(stderr, "Error! Option is missing an argument! Exiting ...\n"); return 1;
+            case '?': fprintf(stderr, "Error! \"%s\" is unknown! Exiting ...\n", argv[options.i - 1]); return 1;
+            case 300: print_help(); return 0;
+            case 'v': case 301: fprintf(stderr, "Version 1.0 May 2024.\n"); return 0;
         }
 	}
 	options = KETOPT_INIT;
 
-    LodestarConfiguration lodestar_config = {NULL, NULL, NULL, NULL, 1, 100, 10, 2, 1, false, false, NULL, NULL, 0, 10000, 0.95, NULL, 0, 1, NULL, NULL, NULL, NULL, false, false};
+    LodestarConfiguration lodestar_config = {NULL, NULL, NULL, NULL, NULL, 1, 100, 10, 2, 1, false, false, NULL, NULL, 0, 10000, 0.95, NULL, 0, 1, NULL, NULL, NULL, NULL, false, false};
+
+    while ((c = ketopt(&options, argc, argv, 1, opt_str, long_options)) >= 0) {
+        switch (c) {
+            case 'i': lodestar_config.input_filename = options.arg; break;
+            case 'o': lodestar_config.output_basename = options.arg; break;
+            case 'h': lodestar_config.HAP_SIZE = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 'w': lodestar_config.WINDOW_SIZE = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 's': lodestar_config.STEP_SIZE = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 'k': lodestar_config.k = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 302: lodestar_config.similarity = true; break;
+            case 303: lodestar_config.global = true; break;
+            case 304: lodestar_config.threads = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 305: lodestar_config.pthresh = strtod(options.arg, (char**) NULL); break;
+            case 306: lodestar_config.num_perms = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 307: lodestar_config.tthresh = strtod(options.arg, (char**) NULL); break;
+            case 308: lodestar_config.regions = options.arg; break;
+            case 309: lodestar_config.maf = strtod(options.arg, (char**) NULL); break;
+            case 310: lodestar_config.afMissing = strtod(options.arg, (char**) NULL); break;
+            case 311: lodestar_config.ibs_regions_str = options.arg; break;
+            case 312: lodestar_config.asd_regions_str = options.arg; break;
+            case 313: lodestar_config.long_output = true; break;
+            case 314: lodestar_config.json_output = true; break;
+            case 315: lodestar_config.coords_filename = options.arg; break;
+        }
+	}
 
     print_configuration(stderr, lodestar_config);
 
