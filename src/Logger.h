@@ -25,6 +25,7 @@ void _close_log();
 #define LOG_INFO(...) _log("[INFO]", __VA_ARGS__)
 #define LOG_WARNING(...) _log("[WARNING]", __VA_ARGS__)
 #define LOG_ERROR(...) _log("[ERROR]", __VA_ARGS__)
+#define LOG(...) _log("", __VA_ARGS__)
 #define CLOSE_LOG() _close_log()
 
 #endif

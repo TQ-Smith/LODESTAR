@@ -399,6 +399,9 @@ Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int k, 
     ks_overwrite("Global", window -> chromosome);
     window -> startLocus = 0;
     window -> endLocus = 0;
+    window -> asd = (double*) calloc(PACKED_SIZE(encoder -> numSamples), sizeof(double));
+    window -> saveIBS = true;
+    window -> saveASD = true;
 
     if (NUM_THREADS == 1) {
         while (!parser -> isEOF) {
@@ -429,15 +432,19 @@ Window* global_window(VCFLocusParser* parser, HaplotypeEncoder* encoder, int k, 
         free(record);
     }
 
-    for (int i = 0; i < encoder -> numSamples; i++)
-        for (int j = i + 1; j < encoder -> numSamples; j++)
+    for (int i = 0; i < encoder -> numSamples; i++) {
+        for (int j = i + 1; j < encoder -> numSamples; j++) {
             asd[PACKED_INDEX(i, j)] = ibs_to_asd(alleleCounts[PACKED_INDEX(i, j)]);
+            window -> asd[PACKED_INDEX(i, j)] = asd[PACKED_INDEX(i, j)];
+        }
+    }
 
     RealSymEigen* eigen = init_real_sym_eigen(encoder -> numSamples);
     perform_mds_on_window(window, eigen, asd, k);
     destroy_real_sym_eigen(eigen);
 
-    free(alleleCounts);
+    window -> ibs = alleleCounts;
+
     free(asd);
 
     return window;

@@ -4,9 +4,9 @@
 // Author: TQ Smith
 // Purpose: 
 
-#include <stdio.h>
-
 #include "VCFLocusParser.h"
+
+#include "Logger.h"
 
 VCFLocusParser* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool takeComplement, double maf, double afMissing, bool dropMonomorphicSites) {
 
@@ -14,8 +14,9 @@ VCFLocusParser* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool t
 
     int errnum;
     gzerror(file, &errnum);
-    if (errnum != Z_OK)
+    if (errnum != Z_OK) {
         return NULL;
+    }
     
     kstream_t* stream = ks_init(file);
     

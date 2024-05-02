@@ -7,6 +7,8 @@
 
 #include "ProcrustesAnalysis.h"
 
+#include "Logger.h"
+
 #include "../lib/ketopt.h"
 
 typedef struct {
@@ -37,6 +39,133 @@ typedef struct {
     bool long_output;
     bool json_output;
 } LodestarConfiguration;
+
+int check_configuration(LodestarConfiguration* lodestar_config) {
+    
+    if (lodestar_config -> maf < 0 || lodestar_config -> maf > 1) {
+        fprintf(stderr, "MAF must be in [0, 1].\n");
+        return 1;
+    }
+
+    if (lodestar_config -> afMissing < 0 || lodestar_config -> afMissing > 1) {
+        fprintf(stderr, "Missing genotype threshold must be in [0, 1].\n");
+        return 1;
+    }
+    
+    kstring_t* r = (kstring_t*) calloc(1, sizeof(kstring_t));
+    bool takeComplement; 
+    if (lodestar_config -> regions != NULL) {
+        takeComplement = lodestar_config -> regions[0] == '^' ? true : false;
+        if (takeComplement)
+            ks_overwrite(lodestar_config -> regions + 1, r);
+        else 
+            ks_overwrite(lodestar_config -> regions, r);
+    }
+    if ((lodestar_config -> parser = init_vcf_locus_parser(lodestar_config -> input_filename, r, takeComplement, lodestar_config -> maf, lodestar_config -> afMissing, true)) == NULL) {
+        free(ks_str(r)); free(r);
+        fprintf(stderr, "Invalid input file name or region.\n");
+        return 1;
+    }
+
+    if (lodestar_config -> ibs_regions_str != NULL) {
+        takeComplement = lodestar_config -> ibs_regions_str[0] == '^' ? true : false;
+        if (takeComplement)
+            ks_overwrite(lodestar_config -> ibs_regions_str + 1, r);
+        else 
+            ks_overwrite(lodestar_config -> ibs_regions_str, r);
+    }
+    if ((lodestar_config -> ibs_regions = init_region_filter(r, takeComplement)) == NULL) {
+        free(ks_str(r)); free(r);
+        fprintf(stderr, "Invlaid region given for IBS argument.\n");
+        return 1;
+    }
+
+    if (lodestar_config -> asd_regions_str != NULL) {
+        takeComplement = lodestar_config -> asd_regions_str[0] == '^' ? true : false;
+        if (takeComplement)
+            ks_overwrite(lodestar_config -> asd_regions_str + 1, r);
+        else 
+            ks_overwrite(lodestar_config -> asd_regions_str, r);
+    }
+    if ((lodestar_config -> asd_regions = init_region_filter(r, takeComplement)) == NULL) {
+        free(ks_str(r)); free(r);
+        fprintf(stderr, "Invlaid region given for ASD argument.\n");
+        return 1;
+    }
+    free(ks_str(r)); free(r);
+
+    if (lodestar_config -> output_basename == NULL) {
+        fprintf(stderr, "No output basename given.\n");
+        return 1;
+    }
+    
+    if (lodestar_config -> HAP_SIZE <= 0) {
+        fprintf(stderr, "Haplotype size must be a positive integer.\n");
+        return 1;
+    }
+
+    if (lodestar_config -> WINDOW_SIZE <= 0) {
+        fprintf(stderr, "Window size must be a positive integer.\n");
+        return 1;
+    }
+
+    if (lodestar_config -> STEP_SIZE <= 0 || lodestar_config -> STEP_SIZE > lodestar_config -> WINDOW_SIZE) {
+        fprintf(stderr, "Step size must be a positive integer less than or equal to the window size.\n");
+        return 1;
+    }
+
+    if (lodestar_config -> k <= 0 || lodestar_config -> k >= lodestar_config -> parser -> numSamples) {
+        fprintf(stderr, "k must be an integer between 1 and (number of samples - 1).\n");
+        return 1;
+    }
+
+    if (lodestar_config -> threads <= 0) {
+        fprintf(stderr, "threads must be a positive integer greater than 0.\n");
+        return 1;
+    }
+
+    if (lodestar_config -> pthresh <= 0 || lodestar_config -> pthresh > 1) {
+        fprintf(stderr, "pthresh must be a real number greater than 0 and less than or equal to 1.\n");
+        return 1;
+    }
+
+    if (lodestar_config -> num_perms <= 0) {
+        fprintf(stderr, "perms must be a positive integer greater than 0.\n");
+        return 1;
+    }
+
+    if (lodestar_config -> tthresh <= 0 || lodestar_config -> tthresh > 1) {
+        fprintf(stderr, "tthresh must be a real number greater than 0 and less than or equal to 1.\n");
+        return 1;
+    }
+
+    if (lodestar_config -> coords_filename != NULL) {
+        lodestar_config -> coords_file = fopen(lodestar_config -> coords_filename, "r");
+        if (lodestar_config -> coords_file == NULL) {
+            fprintf(stderr, "%s does not exist.\n", lodestar_config -> coords_filename);
+            return 1;
+        }
+        int numLines = 1, dim = 1;
+        char c;
+        while ((c = getc(lodestar_config -> coords_file)) != EOF) {
+            if (numLines == 0 && c == ',')
+                dim++;
+            if (c == '\n')
+                numLines++;
+        }
+        fclose(lodestar_config -> coords_file);
+        if (numLines != lodestar_config -> parser -> numSamples) {
+            fprintf(stderr, "Number of samples in coordinate file %s does not match that of the input file.\n", lodestar_config -> coords_filename);
+            return 1;
+        }
+        if (dim != lodestar_config -> k) {
+            fprintf(stderr, "Dimension of coordinate file %s does not match that of k.\n", lodestar_config -> coords_filename);
+            return 1;
+        }
+    }
+
+    return 0;
+}
 
 #define PRINT_BOOL(X) (X ? "true" : "false")
 
@@ -89,6 +218,7 @@ void destroy_lodestar_configuration(LodestarConfiguration lodestar_config) {
 }
 
 void print_help() {
+    fprintf(stderr, "\n");
     fprintf(stderr, "LODESTAR v1.0 May 2024\n");
     fprintf(stderr, "----------------------\n\n");
     fprintf(stderr, "Written by T. Quinn Smith\n");
@@ -101,11 +231,11 @@ void print_help() {
     fprintf(stderr, "   -i STR                  Path to input vcf file.\n");
     fprintf(stderr, "   -o STR                  Output base names for files.\n");
     fprintf(stderr, "   -h INT                  Number of loci in a haplotype.\n");
-    fprintf(stderr, "                               Default 1.\n");
+    fprintf(stderr, "                               Default 1. Not used when --global is set.\n");
     fprintf(stderr, "   -w INT                  Number of haplotypes in a window.\n");
-    fprintf(stderr, "                               Default 100.\n");
+    fprintf(stderr, "                               Default 100. Not used when --global is set.\n");
     fprintf(stderr, "   -s INT                  Number of haplotypes to increment the sliding window.\n");
-    fprintf(stderr, "                               Default 10.\n");
+    fprintf(stderr, "                               Default 10. Not used when --global is set.\n");
     fprintf(stderr, "   -k INT                  Dimension to project samples into. Must be less than number of samples.\n");
     fprintf(stderr, "                               Default 2. Must be less than number of samples in VCF.\n");
     fprintf(stderr, "   --threads INT           Number of threads to use in computation.\n");
@@ -126,7 +256,9 @@ void print_help() {
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of missing genotypes greater than or equal to threshold.\n");
     fprintf(stderr, "                               Default 1.\n");
     fprintf(stderr, "   --[^]ibs REGIONS        Saves IBS calculations for overlapping windows included/excluded defined by REGIONS.\n");
+    fprintf(stderr, "                               Not used when --global is set.\n");
     fprintf(stderr, "   --[^]asd REGIONS        Saves ASD calculations for overlapping windows included/excluded defined by REGIONS.\n");
+    fprintf(stderr, "                               Not used when --global is set.\n");
     fprintf(stderr, "   --long                  Prints calculations in long format instead of matrix form.\n");
     fprintf(stderr, "   --json                  Prints window information in JSON format instead of TXT.\n");
     fprintf(stderr, "Types:\n");
@@ -135,6 +267,7 @@ void print_help() {
     fprintf(stderr, "   DOUBLE                  A real number between 0 and 1, inclusive.\n");
     fprintf(stderr, "   REGIONS                 REGION,REGIONS | REGION\n");
     fprintf(stderr, "   REGION                  STR | STR:INT | STR:-INT | STR:INT- | STR:INT-INT\n");
+    fprintf(stderr, "\n");
 }
 
 void print_window_info(Window* window, int n, int k) {
@@ -154,22 +287,28 @@ void print_window_info(Window* window, int n, int k) {
 }
 
 static ko_longopt_t long_options[] = {
-    {"help",            ko_no_argument,       300},
-    {"version",         ko_no_argument,       301},
-    {"similarity",      ko_no_argument,       302},
-    {"global",          ko_no_argument,       303},
-    {"threads",         ko_optional_argument, 304},
-    {"pthresh",         ko_optional_argument, 305},
-    {"perms",           ko_optional_argument, 306},
-    {"tthresh",         ko_optional_argument, 307},
-    {"[^]regions",      ko_optional_argument, 308},
-    {"maf",             ko_optional_argument, 309},
-    {"afMissing",       ko_optional_argument, 310},
-    {"[^]ibs",          ko_optional_argument, 311},
-    {"[^]asd",          ko_optional_argument, 312},
-    {"long",            ko_optional_argument, 313},
-    {"json",            ko_optional_argument, 314},
-    {"coords",          ko_optional_argument, 315},
+    {"help",            ko_no_argument,         300},
+    {"version",         ko_no_argument,         'v'},
+    {"similarity",      ko_no_argument,         302},
+    {"global",          ko_no_argument,         303},
+    {"threads",         ko_required_argument,   304},
+    {"pthresh",         ko_required_argument,   305},
+    {"perms",           ko_required_argument,   306},
+    {"tthresh",         ko_required_argument,   307},
+    {"[^]regions",      ko_required_argument,   308},
+    {"maf",             ko_required_argument,   309},
+    {"afMissing",       ko_required_argument,   310},
+    {"[^]ibs",          ko_required_argument,   311},
+    {"[^]asd",          ko_required_argument,   312},
+    {"long",            ko_no_argument,         313},
+    {"json",            ko_no_argument,         314},
+    {"coords",          ko_required_argument,   315},
+    {"input",           ko_required_argument,   'i'},
+    {"output",          ko_required_argument,   'o'},
+    {"dimension",       ko_required_argument,   'k'},
+    {"haplotype",       ko_required_argument,   'h'},
+    {"window",          ko_required_argument,   'w'},
+    {"step",            ko_required_argument,   's'},
     {0, 0, 0}
 };
 
@@ -181,10 +320,10 @@ int main (int argc, char *argv[]) {
 
     while ((c = ketopt(&options, argc, argv, 1, opt_str, long_options)) >= 0) {
         switch (c) {
-            case ':': fprintf(stderr, "Error! Option is missing an argument! Exiting ...\n"); return 1;
+            case ':': fprintf(stderr, "Error! Option %s is missing an argument! Exiting ...\n", argv[options.i - 1]); return 1;
             case '?': fprintf(stderr, "Error! \"%s\" is unknown! Exiting ...\n", argv[options.i - 1]); return 1;
             case 300: print_help(); return 0;
-            case 'v': case 301: fprintf(stderr, "Version 1.0 May 2024.\n"); return 0;
+            case 'v': fprintf(stderr, "Version 1.0 May 2024.\n"); return 0;
         }
 	}
 	options = KETOPT_INIT;
@@ -215,8 +354,11 @@ int main (int argc, char *argv[]) {
             case 315: lodestar_config.coords_filename = options.arg; break;
         }
 	}
-
-    print_configuration(stderr, lodestar_config);
+    
+    if (check_configuration(&lodestar_config) != 0) {
+        fprintf(stderr, "Exiting!\n");
+        return 1;
+    }
 
     return 0;
 

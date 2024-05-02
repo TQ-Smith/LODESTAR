@@ -2,6 +2,8 @@
 #ifndef _WINDOW_H_
 #define _WINDOW_H_
 
+#include <stdbool.h>
+
 #include "../lib/kstring.h"
 
 #include "AlleleSharingDistance.h"
@@ -16,7 +18,11 @@ typedef struct {
     int numLoci;
 
     double** X;
+
+    bool saveIBS;
+    bool saveASD;
     IBS* ibs;
+    double* asd;
 
 } Window;
 
