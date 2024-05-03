@@ -35,11 +35,11 @@ src/Window.o:
 src/HaplotypeEncoder.o: src/VCFLocusParser.o
 	$(CC) $(CFLAGS) src/HaplotypeEncoder.c -o src/HaplotypeEncoder.o
 
-src/VCFLocusParser.o: src/RegionFilter.o
+src/VCFLocusParser.o: src/RegionSet.o
 	$(CC) $(CFLAGS) src/VCFLocusParser.c -o src/VCFLocusParser.o
 
-src/RegionFilter.o:
-	$(CC) $(CFLAGS) src/RegionFilter.c -o src/RegionFilter.o
+src/RegionSet.o:
+	$(CC) $(CFLAGS) src/RegionSet.c -o src/RegionSet.o
 
 src/Logger.o:
 	$(CC) $(CFLAGS) src/Logger.c -o src/Logger.o

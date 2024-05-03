@@ -129,6 +129,8 @@ static inline char *ks_release(kstring_t *s)
 	return ss;
 }
 
+// Added on 3 May 2024.
+// Overwrites contents of s with l characters from p.
 static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
 	if (l + 1 >= s -> m) {
 		char *tmp;
@@ -145,10 +147,13 @@ static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
 	return l;
 }
 
+// Added on 3 May 2024.
+// Overwrites contents of s with p.
 static inline int ks_overwrite(const char* p, kstring_t *s) {
 	return ks_overwriten(p, strlen(p), s);
 }
 
+// Note, this method appends l characters of p to s.
 static inline int kputsn(const char *p, int l, kstring_t *s)
 {
 	if (s->l + l + 1 >= s->m) {
@@ -166,6 +171,7 @@ static inline int kputsn(const char *p, int l, kstring_t *s)
 	return l;
 }
 
+// Note, this method appends p to s.
 static inline int kputs(const char *p, kstring_t *s)
 {
 	return kputsn(p, strlen(p), s);
