@@ -172,18 +172,18 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                 for (int k = 0; k < K; k++)
                     eigen -> WORK[j] += U[COL_MAJOR(i, k, K)] * V[COL_MAJOR(K - k - 1, j, K)];
             }
-            // As we calculate, we can also calculate our shift vector.
+            // As we form A^T, we also calculate shift.
+            shift[i] = 0;
             for (int j = 0; j < K; j++) {
+                // Copy over WORK to build A^T.
                 U[COL_MAJOR(i, j, K)] = eigen -> WORK[j];
-                if (x0 == NULL && y0 == NULL)
-                    shift[i] = 0;
-                else if (x0 == NULL)
-                    shift[i] = y0[i];
-                else if (y0 == NULL)
-                    shift[i] = -rho * U[COL_MAJOR(i, j, K)] * x0[i];
-                else
-                    shift[i] = y0[i] - rho * U[COL_MAJOR(i, j, K)] * x0[i];
+                if (x0 != NULL)
+                    shift[i] += U[COL_MAJOR(i, j, K)] * x0[j];
             }
+            if (y0 != NULL)
+                shift[i] = y0[i] - rho * shift[i];
+            else
+                shift[i] = -rho * shift[i];
         }
 
         printf("A^T = \n");
