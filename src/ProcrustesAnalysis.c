@@ -149,21 +149,6 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         // Define our shift vector. Known as b in the paper.
         double* shift = eigen -> W;
 
-        printf("U = \n");
-        for (int i = 0; i < K; i++) {
-            for (int j = 0; j < K; j++) {
-                printf("%lf\t", U[COL_MAJOR(i, j, K)]);
-            }
-            printf("\n");
-        }
-        printf("V = \n");
-        for (int i = 0; i < K; i++) {
-            for (int j = 0; j < K; j++) {
-                printf("%lf\t", V[COL_MAJOR(i, j, K)]);
-            }
-            printf("\n");
-        }
-
         // We calculate (A^T) = U(V^T). Again, eigen -> WORK is used as an auxilary vector.
         //  NOTE: U is replaced by (A^T).
         for (int i = 0; i < K; i++) {
@@ -186,20 +171,9 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                 shift[i] = -rho * shift[i];
         }
 
-        printf("A^T = \n");
-        for (int i = 0; i < K; i++) {
-            for (int j = 0; j < K; j++) {
-                printf("%lf\t", U[COL_MAJOR(i, j, K)]);
-            }
-            printf("\n");
-        }
-        printf("rho = %lf\n", rho);
-        printf("b = \n");
-        for (int i = 0; i < K; i++)
-            printf("%lf\t", shift[i]);
-        printf("\n");
-
         // Transform each of the samples by the equation rho * (A^T) * X + shift.
+        //  We could put this in the previous loop, but since K is usually small,
+        //  we keep is seperate for clarity.
         for (int i = 0; i < N; i++) {
             // Sample vector times (A^T).
             for (int j = 0; j < K; j++) {
@@ -213,17 +187,18 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         }
 
     }
-
+    
+    // Calculate statistic.
     double statistic = 1 - (trLambda * trLambda) / (trX * trY);
 
+    // Convert to either similarity or dissimilarity.
     return similarity ? sqrt(1 - statistic) : sqrt(statistic);
-
-    return 0;
 
 }
 
 double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEigen_t* eigen, int n, int k, bool similarity, double t0, int NUM_PERMS) {
 
+    // Copy X to shuffleX.
     for (int i = 0; i < n; i++)
         for (int j = 0; j < k; j++)
             shuffleX[i][j] = Xc[i][j];
@@ -231,17 +206,22 @@ double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEige
     double t;
     int numSig = 1;
 
+    // Perform NUM_PERMS permutations.
     for (int i = 0; i < NUM_PERMS; i++) {
+        // Shuffle the rows of X.
         shuffle_real_matrix(shuffleX, n);
+        // Compute statistic between the two sets of points. Do not transform.
         t = procrustes_statistic(shuffleX, NULL, Yc, NULL, eigen, n, k, false, similarity);
+        // If our statistic exceeds our threshold, increment counter.
         if (t > t0)
             numSig++;
     }
 
+    // Return p-value.
     return ((double) numSig) / (NUM_PERMS + 1);
-
 }
 
+/*
 int main() {
     int N = 4, K = 2;
     double** X = (double**) calloc(N, sizeof(double*));
@@ -252,20 +232,22 @@ int main() {
         X[i] = (double*) calloc(3, sizeof(double));
         Y[i] = (double*) calloc(3, sizeof(double));
     }
-    X[0][0] = -1; X[0][1] = 1; X[0][2] = 2;
-    X[1][0] =  1; X[1][1] = 1; X[1][2] = 3;
-    X[2][0] = -1; X[2][1] = -1; X[2][2] = -4;
-    X[3][0] =  1; X[3][1] = -1; X[3][2] = -5;
-    x0[0] = 1; x0[1] = 2; x0[2] = 3;
+    X[0][0] = 1; X[0][1] = 2; X[0][2] = 2;
+    X[1][0] =  3; X[1][1] = 4; X[1][2] = 3;
+    X[2][0] = 3; X[2][1] = -6; X[2][2] = -4;
+    X[3][0] =  7; X[3][1] = -8; X[3][2] = -5;
+    x0[0] = -1; x0[1] = 3; x0[2] = -2;
 
-    Y[0][0] = -1; Y[0][1] = 0; Y[0][2] = -1;
+    Y[0][0] = 1; Y[0][1] = 0; Y[0][2] = -1;
     Y[1][0] =  0; Y[1][1] = 2; Y[1][2] = -3;
-    Y[2][0] = -2; Y[2][1] = 0; Y[2][2] = 5;
-    Y[3][0] =  1; Y[3][1] = 0; Y[3][2] = 7;
-    y0[0] = 1; y0[1] = -1; y0[2] = 5;
+    Y[2][0] = -5; Y[2][1] = 0; Y[2][2] = 5;
+    Y[3][0] =  7; Y[3][1] = 0; Y[3][2] = 7;
+    y0[0] = 1; y0[1] = 2; y0[2] = -1;
 
     RealSymEigen_t* eigen = init_real_sym_eigen(K);
 
-    double t0 = procrustes_statistic(X, x0, Y, y0, eigen, N, K, true, false);
+    double t0 = procrustes_statistic(X, x0, Y, y0, eigen, N, K, true, true);
 
+    printf("Statistic: %lf\n", t0);
 }
+*/
