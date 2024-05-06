@@ -20,7 +20,7 @@
 static pthread_mutex_t logLock = PTHREAD_MUTEX_INITIALIZER;
 
 // Our logger structure.
-typedef struct Logger {
+typedef struct {
     char date_and_time[51];
     va_list args;
     time_t current_time;

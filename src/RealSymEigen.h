@@ -16,7 +16,7 @@
 #include <stdlib.h>
 
 // A structure to hold all the memory used by dsyevr.
-typedef struct RealSymEigen {
+typedef struct {
     double *A, *B, *W, *Z, *WORK;
     int *ISUPPZ, *IWORK;
     int N, M;

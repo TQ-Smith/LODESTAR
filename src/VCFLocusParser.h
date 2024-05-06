@@ -28,7 +28,7 @@ typedef char Locus;
 #define RIGHT_ALLELE(a) (a & 0x0F)
 
 // Our structure that represents a VCFLocusParser.
-typedef struct VCFLocusParser{
+typedef struct {
     // The name of the VCF file.
     kstring_t* fileName;
     // The GZ file. Note: Seamlessly works with uncompressed files too.

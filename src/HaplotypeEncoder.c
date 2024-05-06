@@ -1,46 +1,55 @@
 
 // File: HaplotypeEncoder.c
-// Date: 
-// Author: TQ Smith
-// Purpose: 
+// Date: 6 May 2024
+// Author: T. Quinn Smith
+// Principal Investigator: Dr. Zachary A. Szpiech
+// Purpose: Assume a VCF file is phased and encode haplotypes of samples' genotypes.
 
 #include "HaplotypeEncoder.h"
 
-#include <math.h>
+HaplotypeEncoder_t* init_haplotype_encoder(int numSamples) {
 
-HaplotypeEncoder* init_haplotype_encoder(int numSamples) {
+    // Create structure.
+    HaplotypeEncoder_t* encoder = (HaplotypeEncoder_t*) calloc(1, sizeof(HaplotypeEncoder_t));
 
-    HaplotypeEncoder* encoder = (HaplotypeEncoder*) calloc(1, sizeof(HaplotypeEncoder));
-
+    // Allocate reguired memory.
     encoder -> numSamples = numSamples;
     encoder -> locus = (Locus*) calloc(numSamples, sizeof(Locus));
     encoder -> genotypes = (Genotype*) calloc(numSamples, sizeof(Genotype));
-
     encoder -> chrom = (kstring_t*) calloc(1, sizeof(kstring_t));
-
     encoder -> labelMap = kh_init(haplotype);
-
+    // The tree has one node, which corresponds to the empty string.
     encoder -> numLeaves = 1;
 
     return encoder;
 
 }
 
+// The method used to relabel haplotypes when the tree gets too large.
+// Accepts:
+//  HaplotypeEncoder_t* encoder -> The encoder whose haplotypes we are going to relabel.
+// Returns: void.
 void relabel_haplotypes(HaplotypeEncoder* encoder) {
 
     khint_t j;
     khiter_t k;
     int ret;
 
+    // Before relabeling, we mark all the current labels in the hash table with a flag to signal that
+    //  they can be reassigned. I debated if this approach is better than clearing buckets and repopulating
+    //  the hash table. This maybe faster than reallocating memory repeatedly.
     for (j = kh_begin(encoder -> labelMap); j != kh_end(encoder -> labelMap); j++) {
 		if (!kh_exist(encoder -> labelMap, j)) 
             continue;
 		kh_val(encoder -> labelMap, j) = MISSING;
 	}
     
+    // We start the new label at 0.
     Haplotype newLabel = 0;
 
+    // For each of the samples ...
     for (int i = 0; i < encoder -> numSamples; i++) {
+        // If the sample has missing genotypes, we skip relabeling.
         if (encoder -> genotypes[i].left == MISSING)
             continue;
         
@@ -105,7 +114,7 @@ bool get_next_haplotype(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
     encoder -> chrom -> l = 0;
     ks_overwrite(ks_str(parser -> nextChrom), encoder -> chrom);
 
-    encoder -> startLocus = parser -> nextPos;
+    encoder -> startCoord = parser -> nextPos;
 
     encoder -> numLeaves = 1;
 
@@ -116,7 +125,7 @@ bool get_next_haplotype(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
     int numAlleles;
 
     while(!(parser -> isEOF) && (encoder -> numLoci < HAP_SIZE) && isSameChrom) {
-        get_next_locus(parser, encoder -> chrom, &(encoder -> endLocus), &numAlleles, &(encoder -> locus));
+        get_next_locus(parser, encoder -> chrom, &(encoder -> endCoord), &numAlleles, &(encoder -> locus));
         add_locus(encoder, numAlleles);
         isSameChrom = strcmp(ks_str(encoder -> chrom), ks_str(parser -> nextChrom)) == 0;
         encoder -> numLoci++;
@@ -140,8 +149,8 @@ void destroy_haplotype_encoder(HaplotypeEncoder* encoder) {
 /*
 void print_encoder_info(HaplotypeEncoder* encoder) {
     printf("Chromosome: %s\n", ks_str(encoder -> chrom));
-    printf("Start locus: %d\n", encoder -> startLocus);
-    printf("End locus: %d\n", encoder -> endLocus);
+    printf("Start locus: %d\n", encoder -> startCoord);
+    printf("End locus: %d\n", encoder -> endCoord);
     printf("Number of loci: %d\n", encoder -> numLoci);
     printf("Sample Haplotypes:\n");
     for (int i = 0; i < encoder -> numSamples; i++)
