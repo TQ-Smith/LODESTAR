@@ -33,7 +33,7 @@ typedef struct {
     bool takeComplement;
     // Our hash table associating chromosomes to intervals.
     khash_t(Region)* regions;
-} RegionSet;
+} RegionSet_t;
 
 // A string used to define a set of intervals must follow the following grammar:
 // REGIONS -> (REGION,REGIONS) | REGION
@@ -45,30 +45,30 @@ typedef struct {
 //  kstring_t* inputRegions -> Our string that defines intervals. Follows above grammar.
 //  bool takeComplement -> Flag to indicate if set should be treated as complement of intervals.
 // Returns:
-//  RegionSet*, The created set.
-RegionSet* init_region_set(kstring_t* inputRegions, bool takeComplement);
+//  RegionSet_t*, The created set.
+RegionSet_t* init_region_set(kstring_t* inputRegions, bool takeComplement);
 
 // Used to test if a locus is in the defined set.
 // Accepts:
-//  RegionSet* set -> The set to evaluate membership.
+//  RegionSet_t* set -> The set to evaluate membership.
 //  kstring_t* chrom -> The chromosome the locus is located on.
 //  unsigned int locus -> The coordinate of the locus.
 // Returns: bool, If the locus is in the set.
-bool query_locus(RegionSet* set, kstring_t* chrom, unsigned int locus);
+bool query_locus(RegionSet_t* set, kstring_t* chrom, unsigned int locus);
 
 // Used to test if a interval overlaps members of the set.
 // Accepts:
-//  RegionSet* set -> The set to evaluate membership.
+//  RegionSet_t* set -> The set to evaluate membership.
 //  kstring_t* chrom -> The chromosome the locus is located on.
 //  unsigned int startLocus -> The start coordinate of the window.
 //  unsigned int endLocus -> The end coordinate of the window.
 // Returns: bool, If the window overlaps with set elements.
-bool query_overlap(RegionSet* set, kstring_t* chrom, unsigned int startLocus, unsigned int endLocus);
+bool query_overlap(RegionSet_t* set, kstring_t* chrom, unsigned int startLocus, unsigned int endLocus);
 
 // Destroy a set.
 // Accepts:
-//  RegionSet* set -> The set to be destroyed.
+//  RegionSet_t* set -> The set to be destroyed.
 // Returns: void.
-void destroy_region_set(RegionSet* set);
+void destroy_region_set(RegionSet_t* set);
 
 #endif

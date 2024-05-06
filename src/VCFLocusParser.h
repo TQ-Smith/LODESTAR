@@ -1,61 +1,111 @@
 
-// File: 
-// Date: 18 Janurary 2024
-// Author: TQ Smith
-// Purpose: Parse the genotypes for each record in a VCF file.
+// File: VCFLocusParser.h
+// Date: 6 May 2024
+// Author: T. Quinn Smith
+// Principal Investigator: Dr. Zachary A. Szpiech
+// Purpose: Parse a VCF file for samples' genotypes at each record.
 
 #ifndef _VCF_LOCUS_PARSER_H_
 #define _VCF_LOCUS_PARSER_H_
 
-#include <stdlib.h>
-
-#include <stdbool.h>
-
 #include "../lib/zlib.h"
-
 #include "../lib/kstring.h"
-
 #include "../lib/kseq.h"
+#include "RegionSet.h"
 
-#include "RegionFilter.h"
-
+// We use kseq as a stream to read in GZ files.
 #define BUFFER_SIZE 4096
 KSTREAM_INIT(gzFile, gzread, BUFFER_SIZE)
 
+// We define a sample's genotype as a char.
+//  The most significant 4-bits are the left allele, 
+//  and the least significant 4-bits are the right allele.
+//  NOTE: If a locus has N alleles labeled 0,..,N - 1, then the
+//  missing allele is encoded as N. Thus, there is a maximum of 15
+//  alleles at each locus. This can be easily modified.
 typedef char Locus;
-
 #define LEFT_ALLELE(a) (a >> 4)
 #define RIGHT_ALLELE(a) (a & 0x0F)
 
-typedef struct {
+// Our structure that represents a VCFLocusParser.
+typedef struct VCFLocusParser{
+    // The name of the VCF file.
     kstring_t* fileName;
+    // The GZ file. Note: Seamlessly works with uncompressed files too.
     gzFile file;
+    // The stream to read in the GZ file.
     kstream_t* stream;
+    // A buffer to hold a line of the VCF parser from the stream.
     kstring_t* buffer;
     bool isEOF;
 
+    // Number of samples in the VCF file.
     int numSamples;
+    // An array of kstring_t to hold the names of each sample.
     kstring_t* sampleNames;
 
-    RegionFilter* filter;
+    // Fields to help us omitt unwanted record.
+    //  If the user wishes, they can specify a set of regions to include/exclude.
+    RegionSet_t* set;
+    // Flag to drop monomorphic sites.
     bool dropMonomorphicSites;
+    // Minor-allele-frequency threshold.
     double maf;
+    // Missing genotype threshold.
     double afMissing;
+    // An array to hold the number of each allele at a locus.
+    //  Used in maf calculation.
     int alleleCounts[16];
 
+    // For convenience, we implement a priming read/peak operation.
+    //  This allows us to easily test if the next record belongs to a different chromosome.
     kstring_t* nextChrom;
     unsigned int nextPos;
     int nextNumAlleles;
+    // Array that holds the genotypes for each of the samples.
     Locus* nextLocus;
-} VCFLocusParser;
+} VCFLocusParser_t;
 
-VCFLocusParser* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool takeComplement, double maf, double afMissing, bool dropMonomorphicSites);
+// Creates a VCFLocusParser_t structure.
+// Accepts:
+//  char* fileName -> The name of the VCF file.
+//  kstring_t* regions -> Regions to include/exclude when reading in the VCF file.
+//                          See RegionSet.h on how to specify string.
+//                          All regions are parsed if NULL.
+//  bool takeComplement -> When false, regions in regions parameter are included during parsing.
+//                          When true, regions in the regions parameter are excluded during parsing.
+//                          Not used if regions is NULL.
+//  double maf -> Records with a minor-allele-frequency < maf are dropped.
+//  double afMissing -> Record with a proportion of missing genotypes >= afMissing are dropped.
+//  bool dropMonomorphicSites -> If set, records with monomorphic genotypes are dropped.
+// Returns: VCFLocusParser_t*, If fileName does not correspond to a file or regions could not be parsed, return NULL.
+//              Otherwise, return the created structure.
+VCFLocusParser_t* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool takeComplement, double maf, double afMissing, bool dropMonomorphicSites);
 
-void get_next_locus(VCFLocusParser* parser, kstring_t* chrom, unsigned int* pos, int* numOfAlleles, Locus** genos);
+// Get the next locus from a parser.
+// Accepts:
+//  VCFLocusParser_t* parser -> The parser structure to read the VCF file.
+//  kstring_t* chrom -> Sets the chromosome of the read-in record.
+//  unsigned int* pos -> Sets the position of the read-in record.
+//  int* numOfAlleles -> Sets the number of alleles at the read-in record.
+//  Locus** genos -> Sets the array of the samples' genotypes at the read-in record.
+// Returns: void. Note: when EOF is set, passed arguments are unchanged.
+void get_next_locus(VCFLocusParser_t* parser, kstring_t* chrom, unsigned int* pos, int* numOfAlleles, Locus** genos);
 
-void destroy_vcf_locus_parser(VCFLocusParser* parser);
+// Free all the memory allocated to a VCFLocusParser_t.
+// Accepts:
+//  VCFLocusParser_t* parser -> The parser to free.
+// Returns: void.
+void destroy_vcf_locus_parser(VCFLocusParser_t* parser);
 
+// Encode a string genotype from the VCF file into a Locus.
+//  This function will be called a lot.
+// Accepts:
+//  char* start -> The genotype to parse.
+//  int numAlleles -> The number alleles at the given record.
+// Returns: Locus, The encoded genotype.
 static inline Locus parse_locus(char* start, int numAlleles) {
+    // By default, both genotypes at a locus are missing.
     Locus locus = (Locus) (numAlleles << 4) | numAlleles;
     char* next = start + 1;
     // If the left allele is not missing, then parse integer and set left genotype.

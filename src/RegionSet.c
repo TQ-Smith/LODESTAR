@@ -13,7 +13,7 @@
 //  const char* chrom -> The chromosome the interval lies on.
 //  Region* region -> The region that represents an interval on a chromosome.
 // Returns: void.
-void insert_region(RegionSet* set, const char* chrom, Region_t* region) {
+void insert_region(RegionSet_t* set, const char* chrom, Region_t* region) {
     khint_t k;
     int absent;
     k = kh_get(Region, set -> regions, chrom); 
@@ -47,12 +47,12 @@ void insert_region(RegionSet* set, const char* chrom, Region_t* region) {
 }
 
 // Parse an individual region.
-//  RegionSet* set -> The set to search.
+//  RegionSet_t* set -> The set to search.
 //  kstring_t* region -> Our string that defines a single region. Follows grammar defined in RegionSet.h
 //  int startIndex -> The index of the first character defining the region in the region string.
 //  int endIndex -> The index of the last character defining the region in the region string.
 // Returns: bool, True if region was syntactically valid. False otherwise.
-bool parse_region(RegionSet* set, kstring_t* region, int startIndex, int endIndex) {
+bool parse_region(RegionSet_t* set, kstring_t* region, int startIndex, int endIndex) {
     char* leftEndpoint = NULL;
     char* rightEndpoint = NULL;
     int colonIndex = 0, hyphenIndex = 0, startLocus, endLocus;
@@ -127,10 +127,10 @@ bool parse_region(RegionSet* set, kstring_t* region, int startIndex, int endInde
 
 // Parse a list of REGION.
 // Accepts:
-//  RegionSet* set -> The set to search.
+//  RegionSet_t* set -> The set to search.
 //  kstring_t* inputRegions -> Our string that defines intervals. Follows grammar defined in RegionSet.h
 // Returns: bool, True if all regions were syntactically valid. False otherwise.
-bool parse_regions(RegionSet* set, kstring_t* inputRegions) {
+bool parse_regions(RegionSet_t* set, kstring_t* inputRegions) {
     int prevIndex = -1;
     for (int i = 0; i <= ks_len(inputRegions); i++) {
         if (i == ks_len(inputRegions) || ks_str(inputRegions)[i] == ',') {
@@ -142,9 +142,9 @@ bool parse_regions(RegionSet* set, kstring_t* inputRegions) {
     return true;
 }
 
-RegionSet* init_region_set(kstring_t* inputRegions, bool takeComplement) {
+RegionSet_t* init_region_set(kstring_t* inputRegions, bool takeComplement) {
     // Allocate a set.
-    RegionSet* set = (RegionSet*) calloc(1, sizeof(RegionSet));
+    RegionSet_t* set = (RegionSet_t*) calloc(1, sizeof(RegionSet_t));
     set -> takeComplement = takeComplement;
     set -> regions = kh_init(Region);
     if (parse_regions(set, inputRegions))
@@ -154,7 +154,7 @@ RegionSet* init_region_set(kstring_t* inputRegions, bool takeComplement) {
     return NULL;
 }
 
-bool query_locus(RegionSet* set, kstring_t* chrom, unsigned int locus) {
+bool query_locus(RegionSet_t* set, kstring_t* chrom, unsigned int locus) {
     khint_t k = kh_get(Region, set -> regions, ks_str(chrom));
     // If the chromosome is in the hash set ...
     if (k != kh_end(set -> regions)) {
@@ -171,7 +171,7 @@ bool query_locus(RegionSet* set, kstring_t* chrom, unsigned int locus) {
     return set -> takeComplement ^ false;
 }
 
-bool query_overlap(RegionSet* set, kstring_t* chrom, unsigned int startLocus, unsigned int endLocus) {
+bool query_overlap(RegionSet_t* set, kstring_t* chrom, unsigned int startLocus, unsigned int endLocus) {
     khint_t k = kh_get(Region, set -> regions, ks_str(chrom));
     // If the chromosome is in the hash set ...
     if (k != kh_end(set -> regions)) {
@@ -197,7 +197,7 @@ bool query_overlap(RegionSet* set, kstring_t* chrom, unsigned int startLocus, un
     return set -> takeComplement ^ false;
 }
 
-void destroy_region_set(RegionSet* set) {
+void destroy_region_set(RegionSet_t* set) {
     if (set == NULL)
         return;
     Region_t* current = NULL;
@@ -235,7 +235,7 @@ int main() {
     kputs("chr1", s4);
     printf("Create Regions:\n");
     kputs("chr1:100-200,chr2,chr3:-200,chr4:300-,chr5:400,chr5:500-600,chr1:1000-2000,chr1:500-600,chr2:100-200", s);
-    RegionSet* set = init_region_set(s, false);
+    RegionSet_t* set = init_region_set(s, false);
     printf("\n");
     printf("Query:\n");
     printf("Query locus chr3:100: %d\n", query_locus(set, s1, 100));
