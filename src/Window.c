@@ -1,20 +1,25 @@
 
-#include "Window.h"
+// File: Window.c
+// Date: 8 May 2024
+// Author: T. Quinn Smith
+// Principal Investigator: Dr. Zachary A. Szpiech
+// Purpose: Defines the attributes of a window in the genome.
 
+#include "Window.h"
 #include <stdlib.h>
 
-Window* init_window() {
-    Window* window = (Window*) calloc(1, sizeof(Window));
+Window_t* init_window() {
+    // Allocate memory and set defaults.
+    Window_t* window = (Window_t*) calloc(1, sizeof(Window_t));
     window -> chromosome = (kstring_t*) calloc(1, sizeof(kstring_t));
     window -> X = NULL;
     window -> saveIBS = false;
-    window -> saveASD = false;
     window -> ibs = NULL;
-    window -> asd = NULL;
     return window;
 }
 
-void destroy_window(Window* window, int n) {
+void destroy_window(Window_t* window, int n) {
+    // Free all memory when not NULL.
     if (window == NULL)
         return;
     if (window -> X != NULL) {
@@ -24,8 +29,6 @@ void destroy_window(Window* window, int n) {
     }
     if (window -> ibs != NULL)
         free(window -> ibs);
-    if (window -> asd != NULL)
-        free(window -> asd);
     free(ks_str(window -> chromosome)); free(window -> chromosome);
     free(window);
 }

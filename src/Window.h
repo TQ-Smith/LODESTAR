@@ -1,33 +1,56 @@
 
+// File: Window.h
+// Date: 8 May 2024
+// Author: T. Quinn Smith
+// Principal Investigator: Dr. Zachary A. Szpiech
+// Purpose: Defines the attributes of a window in the genome.
+
 #ifndef _WINDOW_H_
 #define _WINDOW_H_
 
-#include <stdbool.h>
-
 #include "../lib/kstring.h"
-
-#include "AlleleSharingDistance.h"
+#include "IdentityByState.h"
+#include <stdbool.h>
 
 typedef struct {
 
+    // The window number along the whole chromosome.
     int winNum;
+    // The window number on the current chromosome.
     int winNumOnChrom;
+    // The chromosome the window is on.
     kstring_t* chromosome;
-    unsigned int startLocus;
-    unsigned int endLocus;
+    // The start coordinate of the first haplotype in the window.
+    unsigned int startCoord;
+    // The end coordinate of the last haplotype in the window.
+    unsigned int endCoord;
+    // The number of loci in the window. This is not the number of 
+    //  haplotypes in the window since that can be calculated easily 
+    //  from the number of loci in the window.
     int numLoci;
 
+    // The matrix of points representing samples in k-dimensional space.
     double** X;
 
+    // A flag to indicate if the IBS counts for the window should be saved.
     bool saveIBS;
-    bool saveASD;
-    IBS* ibs;
-    double* asd;
+    // The IBS counts for the window. If saveIBS is not set, pointer is NULL.
+    IBS_t* ibs;
 
-} Window;
+} Window_t;
 
-Window* init_window();
 
-void destroy_window(Window* window, int n);
+// Create and allocate memory for a window.
+// Accepts: void.
+// Returns: Window_t*, The pointer to the created window.
+Window_t* init_window();
+
+// Destroy memory occupied by a window.
+// Accepts:
+//  Window_t* window -> Pointer to window structure to destroy.
+//  int n -> The number of samples in the set of points.
+//              Used to free window -> X.
+// Returns: void.
+void destroy_window(Window_t* window, int n);
 
 #endif
