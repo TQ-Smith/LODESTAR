@@ -134,7 +134,7 @@ static inline char *ks_release(kstring_t *s)
 static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
 	if (l + 1 >= s -> m) {
 		char *tmp;
-		s->m = s->l + 1;
+		s->m = s->l + 2;
 		kroundup32(s->m);
 		if ((tmp = (char*)realloc(s->s, s->m)))
 			s->s = tmp;

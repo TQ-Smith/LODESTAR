@@ -45,7 +45,7 @@ typedef struct {
     // A locus auxilary array to read in genotypes from a VCFLocusParser.
     //  Make use of HaplotypeEncoder_t easier to work with.
     Locus* locus;
-    Genotype* genotypes;
+    Genotype_t* genotypes;
 
     // The chromsome of the current haplotype.
     kstring_t* chrom;

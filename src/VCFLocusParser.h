@@ -60,7 +60,7 @@ typedef struct {
     // For convenience, we implement a priming read/peak operation.
     //  This allows us to easily test if the next record belongs to a different chromosome.
     kstring_t* nextChrom;
-    unsigned int nextPos;
+    unsigned int nextCoord;
     int nextNumAlleles;
     // Array that holds the genotypes for each of the samples.
     Locus* nextLocus;
@@ -86,11 +86,11 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool
 // Accepts:
 //  VCFLocusParser_t* parser -> The parser structure to read the VCF file.
 //  kstring_t* chrom -> Sets the chromosome of the read-in record.
-//  unsigned int* pos -> Sets the position of the read-in record.
+//  unsigned int* coord -> Sets the position of the read-in record.
 //  int* numOfAlleles -> Sets the number of alleles at the read-in record.
 //  Locus** genos -> Sets the array of the samples' genotypes at the read-in record.
 // Returns: void. Note: when EOF is set, passed arguments are unchanged.
-void get_next_locus(VCFLocusParser_t* parser, kstring_t* chrom, unsigned int* pos, int* numOfAlleles, Locus** genos);
+void get_next_locus(VCFLocusParser_t* parser, kstring_t* chrom, unsigned int* coord, int* numOfAlleles, Locus** genos);
 
 // Free all the memory allocated to a VCFLocusParser_t.
 // Accepts:

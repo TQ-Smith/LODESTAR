@@ -15,7 +15,7 @@ HaplotypeEncoder_t* init_haplotype_encoder(int numSamples) {
     // Allocate reguired memory.
     encoder -> numSamples = numSamples;
     encoder -> locus = (Locus*) calloc(numSamples, sizeof(Locus));
-    encoder -> genotypes = (Genotype*) calloc(numSamples, sizeof(Genotype));
+    encoder -> genotypes = (Genotype_t*) calloc(numSamples, sizeof(Genotype_t));
     encoder -> chrom = (kstring_t*) calloc(1, sizeof(kstring_t));
     encoder -> labelMap = kh_init(haplotype);
     // The tree has one node, which corresponds to the empty string.
@@ -29,7 +29,7 @@ HaplotypeEncoder_t* init_haplotype_encoder(int numSamples) {
 // Accepts:
 //  HaplotypeEncoder_t* encoder -> The encoder whose haplotypes we are going to relabel.
 // Returns: void.
-void relabel_haplotypes(HaplotypeEncoder* encoder) {
+void relabel_haplotypes(HaplotypeEncoder_t* encoder) {
 
     khint_t j;
     khiter_t k;
@@ -53,17 +53,23 @@ void relabel_haplotypes(HaplotypeEncoder* encoder) {
         if (encoder -> genotypes[i].left == MISSING)
             continue;
         
+        // Label left haplotype.
         k = kh_get(haplotype, encoder -> labelMap, encoder -> genotypes[i].left);
+        // If the left haplotype encoding has never been encountered before ...
         if (k == kh_end(encoder -> labelMap)) {
+            // Insert encoding and generate label for the haplotype.
             k = kh_put(haplotype, encoder -> labelMap, encoder -> genotypes[i].left, &ret);
             kh_value(encoder -> labelMap, k) = newLabel++;
         }
+        // If the encoding has been used before in a previous relabeling but needs a new label ...
         if (kh_value(encoder -> labelMap, k) == MISSING) {
+            // Create new label.
             kh_value(encoder -> labelMap, k) = newLabel++;
         }
-
+        // Get label from hash table and relabel left haplotype.
         encoder -> genotypes[i].left = kh_value(encoder -> labelMap, kh_get(haplotype, encoder -> labelMap, encoder -> genotypes[i].left));
 
+        // Do the same for the right haplotype as the left.
         k = kh_get(haplotype, encoder -> labelMap, encoder -> genotypes[i].right);
         if (k == kh_end(encoder -> labelMap)) {
             k = kh_put(haplotype, encoder -> labelMap, encoder -> genotypes[i].right, &ret);
@@ -72,60 +78,83 @@ void relabel_haplotypes(HaplotypeEncoder* encoder) {
         if (kh_value(encoder -> labelMap, k) == MISSING) {
             kh_value(encoder -> labelMap, k) = newLabel++;
         }
-        
         encoder -> genotypes[i].right = kh_value(encoder -> labelMap, kh_get(haplotype, encoder -> labelMap, encoder -> genotypes[i].right));
     }
 
+    // The number of leaves in the tree is the same as the number of new labels (unique haplotypes).
     encoder -> numLeaves = newLabel;
 
 }
 
-void add_locus(HaplotypeEncoder* encoder, int numAlleles) {
+// Add a new locus to each haplotype and update encodings.
+//  We are extending our tree.
+// Accepts:
+//  HaplotypeEncoder_t* encoder -> The encoder with the haplotypes we are extending.
+//  int numAlleles -> The number of alleles at the locus we are appending to the haplotypes.
+// Returns: void.
+void add_locus(HaplotypeEncoder_t* encoder, int numAlleles) {
 
+    // If extending our tree causes integer overflow, we relabel the haplotypes.
+    if (numAlleles * encoder -> numLeaves == MISSING || (numAlleles * encoder -> numLeaves) / numAlleles != encoder -> numLeaves)
+        relabel_haplotypes(encoder);
+
+    // NOTE: We are assuming that the new locus is in encoder -> locus.
+    // For each of the samples ...
     for (int i = 0; i < encoder -> numSamples; i++) {
+        // If this locus is the first in the tree.
         if (encoder -> numLeaves == 1) {
+            // Assign the left and right alleles to their respective haplotypes.
             encoder -> genotypes[i].left = LEFT_ALLELE(encoder -> locus[i]);
             encoder -> genotypes[i].right = RIGHT_ALLELE(encoder -> locus[i]);
+            // If either of the alleles are the missing genotype, both the left and right are flagged as missing.
             if (encoder -> genotypes[i].left == numAlleles || encoder -> genotypes[i].right == numAlleles) {
                 encoder -> genotypes[i].left = MISSING;
                 encoder -> genotypes[i].right = MISSING;
             }
-        } else if (encoder -> genotypes[i].left == MISSING || encoder -> genotypes[i].right == MISSING || LEFT_ALLELE(encoder -> locus[i]) == numAlleles || RIGHT_ALLELE(encoder -> locus[i]) == numAlleles) {
+        // If either the left and right haplotypes are missing or the current loci contains a missing genotype, we flag both haplotypes as missing. 
+        } else if (encoder -> genotypes[i].left == MISSING || LEFT_ALLELE(encoder -> locus[i]) == numAlleles || RIGHT_ALLELE(encoder -> locus[i]) == numAlleles) {
             encoder -> genotypes[i].left = MISSING;
             encoder -> genotypes[i].right = MISSING;
+        // Otherwise, both genotypes are not missing, so we move the haplotypes to their new leaves.
         } else {
             encoder -> genotypes[i].left = encoder -> genotypes[i].left * numAlleles + LEFT_ALLELE(encoder -> locus[i]);
             encoder -> genotypes[i].right = encoder -> genotypes[i].right * numAlleles + RIGHT_ALLELE(encoder -> locus[i]);
         }
     }
     
+    // We extend the tree.
     encoder -> numLeaves = (encoder -> numLeaves) * numAlleles;
-
-    if ((2 * encoder -> numLeaves) / 2 != encoder -> numLeaves)
-        relabel_haplotypes(encoder);
 
 }
 
-bool get_next_haplotype(VCFLocusParser* parser, HaplotypeEncoder* encoder, int HAP_SIZE) {
+bool get_next_haplotype(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, int HAP_SIZE) {
 
+    // If the end of the VCF file has been reached, we cannot get another haplotype.
     if (parser -> isEOF)
         return false;
     
-    encoder -> chrom -> l = 0;
+    // Set chromosome and start coordinate of the haplotype.
     ks_overwrite(ks_str(parser -> nextChrom), encoder -> chrom);
+    encoder -> startCoord = parser -> nextCoord;
 
-    encoder -> startCoord = parser -> nextPos;
-
+    // Reset the tree.
     encoder -> numLeaves = 1;
 
+    // There are no loci in the haplotype yet.
     encoder -> numLoci = 0;
 
+    // Used to test if the next locus is on the same coordinate as the current.
     bool isSameChrom = true;
 
+    // Holds the number of alleles at a locus.
     int numAlleles;
 
+    // While the end of VCF file has not been reached the maximum haplotype size has not been reached
+    //  and the current locus is on the same chromosome as the next locus.
     while(!(parser -> isEOF) && (encoder -> numLoci < HAP_SIZE) && isSameChrom) {
+        // Get the next locus from the VCF file.
         get_next_locus(parser, encoder -> chrom, &(encoder -> endCoord), &numAlleles, &(encoder -> locus));
+        // Extend the haplotypes.
         add_locus(encoder, numAlleles);
         isSameChrom = strcmp(ks_str(encoder -> chrom), ks_str(parser -> nextChrom)) == 0;
         encoder -> numLoci++;
@@ -135,7 +164,7 @@ bool get_next_haplotype(VCFLocusParser* parser, HaplotypeEncoder* encoder, int H
 
 }
 
-void destroy_haplotype_encoder(HaplotypeEncoder* encoder) {
+void destroy_haplotype_encoder(HaplotypeEncoder_t* encoder) {
     if (encoder == NULL)
         return;
     free(encoder -> locus);
@@ -146,8 +175,8 @@ void destroy_haplotype_encoder(HaplotypeEncoder* encoder) {
 }
 
 // Used to test the haplotype encoder.
-/*
-void print_encoder_info(HaplotypeEncoder* encoder) {
+
+void print_encoder_info(HaplotypeEncoder_t* encoder) {
     printf("Chromosome: %s\n", ks_str(encoder -> chrom));
     printf("Start locus: %d\n", encoder -> startCoord);
     printf("End locus: %d\n", encoder -> endCoord);
@@ -157,10 +186,11 @@ void print_encoder_info(HaplotypeEncoder* encoder) {
         printf("Sample %d -> %ld/%ld\n", i + 1, encoder -> genotypes[i].left, encoder -> genotypes[i].right);
 }
 
+/*
 int main() {
 
-    VCFLocusParser* parser = init_vcf_locus_parser("./data/haplotype_encoder_test.vcf.gz");
-    HaplotypeEncoder* encoder = init_haplotype_encoder(parser -> numSamples);
+    VCFLocusParser_t* parser = init_vcf_locus_parser("./data/haplotype_encoder_test.vcf.gz", NULL, false, 0, 1, false);
+    HaplotypeEncoder_t* encoder = init_haplotype_encoder(parser -> numSamples);
     printf("\nTest 1\n");
     printf("---------\n");
     printf("Read in whole chromosomes:\n\n");
@@ -171,9 +201,9 @@ int main() {
     printf("\nSecond Haplotype:\n");
     print_encoder_info(encoder);
     destroy_vcf_locus_parser(parser);
-
+    
     printf("\n");
-    parser = init_vcf_locus_parser("./data/haplotype_encoder_test.vcf.gz");
+    parser = init_vcf_locus_parser("./data/haplotype_encoder_test.vcf.gz", NULL, false, 0, 1, false);
     printf("\nTest 2\n");
     printf("---------\n");
     printf("Read in 2-loci haplotypes:\n\n");
@@ -189,7 +219,7 @@ int main() {
     destroy_vcf_locus_parser(parser);
 
     printf("\n");
-    parser = init_vcf_locus_parser("./data/haplotype_encoder_test.vcf.gz");
+    parser = init_vcf_locus_parser("./data/haplotype_encoder_test.vcf.gz", NULL, false, 0, 1, false);
     printf("\nTest 3\n");
     printf("---------\n");
     printf("Read in 1-locus haplotypes:\n\n");
@@ -211,7 +241,7 @@ int main() {
     destroy_vcf_locus_parser(parser);
 
     printf("\n");
-    parser = init_vcf_locus_parser("./data/haplotype_encoder_test2.vcf.gz");
+    parser = init_vcf_locus_parser("./data/haplotype_encoder_test2.vcf.gz", NULL, false, 0, 1, false);
     printf("\nTest 4\n");
     printf("---------\n");
     get_next_haplotype(parser, encoder, 4);
@@ -221,17 +251,15 @@ int main() {
     relabel_haplotypes(encoder);
     print_encoder_info(encoder);
     get_next_haplotype(parser, encoder, 10);
-    printf("\nSecond Haplotype:\n");
+    printf("\nRe-labeled the Relabels:\n");
     print_encoder_info(encoder);
     printf("\nRelabeled:\n");
     relabel_haplotypes(encoder);
     print_encoder_info(encoder);
     destroy_vcf_locus_parser(parser);
 
-
     printf("\n");
-
+    
     destroy_haplotype_encoder(encoder);
-
 }
 */

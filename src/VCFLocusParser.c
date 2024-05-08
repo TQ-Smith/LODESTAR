@@ -44,18 +44,18 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool
     // Read in the sample names.
     int numTabs = 0, prevIndex;
     for (int i = 0; i <= ks_len(buffer); i++) {
-        if (ks_str(buffer)[i] == '\t') {
-            if (numTabs > 7)
-                ks_overwriten(ks_str(buffer) + i + 1, i - prevIndex, &sampleNames[numTabs - 8]);
+        if (i == ks_len(buffer) || ks_str(buffer)[i] == '\t') {
+            if (numTabs > 8)
+                ks_overwriten(ks_str(buffer) + prevIndex + 1, i - prevIndex - 1, &sampleNames[numTabs - 9]);
             prevIndex = i;
             numTabs++;
         }
     }
 
     // Allocate our structure and the memory for its fields.
-    VCFLocusParser_t* parser = (VCFLocusParser_t*) malloc(sizeof(VCFLocusParser_t));
+    VCFLocusParser_t* parser = (VCFLocusParser_t*) calloc(1, sizeof(VCFLocusParser_t));
     parser -> fileName = (kstring_t*) calloc(1, sizeof(kstring_t));
-    ks_overwrite(fileName, parser -> fileName);
+    kputs(fileName, parser -> fileName);
     parser -> file = file;
     parser -> stream = stream;
     parser -> numSamples = numSamples;
@@ -69,9 +69,8 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool
     else {
         // Try parsing the regions argument.
         parser -> set = init_region_set(regions, takeComplement);
-        // If error ...
+        // If error, then free memory already allocated to parser, and return NULL for error.
         if (parser -> set == NULL) {
-            // Free memory already allocated to parser, and return NULL for error.
             destroy_vcf_locus_parser(parser);
             return NULL;
         }
@@ -85,7 +84,7 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool
         parser -> alleleCounts[i] = 0;
 
     // Prime the first record.
-    get_next_locus(parser, parser -> nextChrom, &(parser -> nextPos), &(parser -> nextNumAlleles), &(parser -> nextLocus));
+    get_next_locus(parser, parser -> nextChrom, &(parser -> nextCoord), &(parser -> nextNumAlleles), &(parser -> nextLocus));
 
     // Return created parser.
     return parser;
@@ -123,9 +122,9 @@ void seek(VCFLocusParser_t* parser) {
                     ks_overwriten(ks_str(parser -> buffer), i, parser -> nextChrom);
                 } else if (numTabs == 1) {
                     // The second field is the position on the chromosome.
-                    parser -> nextPos = (int) strtol(ks_str(parser -> buffer) + prevIndex + 1, (char**) NULL, 10);
+                    parser -> nextCoord = (int) strtol(ks_str(parser -> buffer) + prevIndex + 1, (char**) NULL, 10);
                     // If a RegionSet was specified and the locus is not in the set, set flag and stop parsing record.
-                    if (parser -> set != NULL && !query_locus(parser -> set, parser -> nextChrom, (unsigned int) parser -> nextPos))
+                    if (parser -> set != NULL && !query_locus(parser -> set, parser -> nextChrom, (unsigned int) parser -> nextCoord))
                         isInSet = false;
                 } else if (numTabs == 4) {
                     // The fifth field holds the ALT alleles. Each record has at least two alleles.
@@ -186,7 +185,7 @@ void seek(VCFLocusParser_t* parser) {
 
 }
 
-void get_next_locus(VCFLocusParser_t* parser, kstring_t* chrom, unsigned int* pos, int* numOfAlleles, Locus** locus) {
+void get_next_locus(VCFLocusParser_t* parser, kstring_t* chrom, unsigned int* coord, int* numOfAlleles, Locus** locus) {
     // If parser does not exist or EOF, leave arguments unchanged and return.
     if (parser == NULL || parser -> isEOF)
         return;
@@ -194,7 +193,7 @@ void get_next_locus(VCFLocusParser_t* parser, kstring_t* chrom, unsigned int* po
     // Move the primed read into the arguments.
     if (parser -> nextChrom != chrom)
         ks_overwrite(ks_str(parser -> nextChrom), chrom);
-    *pos = parser -> nextPos;
+    *coord = parser -> nextCoord;
     *numOfAlleles = parser -> nextNumAlleles;
     // We just swap array pointers, which is better than copying each element individually.
     Locus* temp = *locus;
