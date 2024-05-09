@@ -1,19 +1,20 @@
 
+// File: main.c
+// Date: 9 May 2024
+// Author: T. Quinn Smith
+// Principal Investigator: Dr. Zachary A. Szpiech
+// Purpose: Command-line interface for LODESTAR and main analysis.
+
 #include "VCFLocusParser.h"
-
 #include "HaplotypeEncoder.h"
-
 #include "SlidingWindow.h"
-
 #include "ProcrustesAnalysis.h"
-
 #include "Logger.h"
-
 #include "../lib/ketopt.h"
 
 typedef struct {
     char* input_filename;
-    VCFLocusParser* parser;
+    VCFLocusParser_t* parser;
     char* output_basename;
     FILE* windows_info;
     FILE* windows_coords;
@@ -24,8 +25,8 @@ typedef struct {
     int threads;
     bool similarity;
     bool global;
-    char* coords_filename;
-    FILE* coords_file;
+    char* target_filename;
+    FILE* target_file;
     double pthresh;
     int num_perms;
     double tthresh;
@@ -33,9 +34,11 @@ typedef struct {
     double maf;
     double afMissing;
     char* ibs_regions_str;
-    RegionFilter* ibs_regions;
+    RegionSet_t* ibs_regions;
     char* asd_regions_str;
-    RegionFilter* asd_regions;
+    RegionSet_t* asd_regions;
+    char* print_regions_str;
+    RegionSet_t* print_regions;
     bool long_output;
     bool json_output;
 } LodestarConfiguration;
@@ -74,9 +77,9 @@ int check_configuration(LodestarConfiguration* lodestar_config) {
         else 
             ks_overwrite(lodestar_config -> ibs_regions_str, r);
     }
-    if ((lodestar_config -> ibs_regions = init_region_filter(r, takeComplement)) == NULL) {
+    if ((lodestar_config -> ibs_regions = init_region_set(r, takeComplement)) == NULL) {
         free(ks_str(r)); free(r);
-        fprintf(stderr, "Invlaid region given for IBS argument.\n");
+        fprintf(stderr, "Invlaid region given for IBS option.\n");
         return 1;
     }
 
@@ -87,9 +90,22 @@ int check_configuration(LodestarConfiguration* lodestar_config) {
         else 
             ks_overwrite(lodestar_config -> asd_regions_str, r);
     }
-    if ((lodestar_config -> asd_regions = init_region_filter(r, takeComplement)) == NULL) {
+    if ((lodestar_config -> asd_regions = init_region_set(r, takeComplement)) == NULL) {
         free(ks_str(r)); free(r);
-        fprintf(stderr, "Invlaid region given for ASD argument.\n");
+        fprintf(stderr, "Invlaid region given for ASD option.\n");
+        return 1;
+    }
+
+    if (lodestar_config -> print_regions_str != NULL) {
+        takeComplement = lodestar_config -> print_regions_str[0] == '^' ? true : false;
+        if (takeComplement)
+            ks_overwrite(lodestar_config -> print_regions_str + 1, r);
+        else 
+            ks_overwrite(lodestar_config -> print_regions_str, r);
+    }
+    if ((lodestar_config -> print_regions = init_region_set(r, takeComplement)) == NULL) {
+        free(ks_str(r)); free(r);
+        fprintf(stderr, "Invlaid region given for printCoords option.\n");
         return 1;
     }
     free(ks_str(r)); free(r);
@@ -105,12 +121,12 @@ int check_configuration(LodestarConfiguration* lodestar_config) {
     }
 
     if (lodestar_config -> WINDOW_SIZE <= 0) {
-        fprintf(stderr, "Window size must be a positive integer.\n");
+        fprintf(stderr, "Window size must be a positive integer supplied by the user.\n");
         return 1;
     }
 
     if (lodestar_config -> STEP_SIZE <= 0 || lodestar_config -> STEP_SIZE > lodestar_config -> WINDOW_SIZE) {
-        fprintf(stderr, "Step size must be a positive integer less than or equal to the window size.\n");
+        fprintf(stderr, "Step size must be a positive integer less than or equal to the window size supplied by the user.\n");
         return 1;
     }
 
@@ -139,27 +155,27 @@ int check_configuration(LodestarConfiguration* lodestar_config) {
         return 1;
     }
 
-    if (lodestar_config -> coords_filename != NULL) {
-        lodestar_config -> coords_file = fopen(lodestar_config -> coords_filename, "r");
-        if (lodestar_config -> coords_file == NULL) {
-            fprintf(stderr, "%s does not exist.\n", lodestar_config -> coords_filename);
+    if (lodestar_config -> target_filename != NULL) {
+        lodestar_config -> target_file = fopen(lodestar_config -> target_filename, "r");
+        if (lodestar_config -> target_file == NULL) {
+            fprintf(stderr, "%s does not exist.\n", lodestar_config -> target_filename);
             return 1;
         }
         int numLines = 1, dim = 1;
         char c;
-        while ((c = getc(lodestar_config -> coords_file)) != EOF) {
+        while ((c = getc(lodestar_config -> target_file)) != EOF) {
             if (numLines == 0 && c == ',')
                 dim++;
             if (c == '\n')
                 numLines++;
         }
-        fclose(lodestar_config -> coords_file);
+        fclose(lodestar_config -> target_file);
         if (numLines != lodestar_config -> parser -> numSamples) {
-            fprintf(stderr, "Number of samples in coordinate file %s does not match that of the input file.\n", lodestar_config -> coords_filename);
+            fprintf(stderr, "Number of samples in coordinate file %s does not match that of the input file.\n", lodestar_config -> target_filename);
             return 1;
         }
         if (dim != lodestar_config -> k) {
-            fprintf(stderr, "Dimension of coordinate file %s does not match that of k.\n", lodestar_config -> coords_filename);
+            fprintf(stderr, "Dimension of coordinate file %s does not match that of k.\n", lodestar_config -> target_filename);
             return 1;
         }
     }
@@ -179,8 +195,8 @@ void print_configuration(FILE* output, LodestarConfiguration lodestar_config) {
     fprintf(output, "Use similarity: %s\n", PRINT_BOOL(lodestar_config.similarity));
     fprintf(output, "Calculate genome-wide only: %s\n", PRINT_BOOL(lodestar_config.global));
     fprintf(output, "Number of threads used: %d\n", lodestar_config.threads);
-    fprintf(output, "P-value threshold: %lf\n", lodestar_config.pthresh);
-    fprintf(output, "Number of permutations: %d\n", lodestar_config.num_perms);
+    fprintf(output, "P-value threshold (Disabled if 0): %lf\n", lodestar_config.pthresh);
+    fprintf(output, "Number of permutations (Disabled p-value threshold is 0): %d\n", lodestar_config.num_perms);
     fprintf(output, "Procrustes statistic threshold: %lf\n", lodestar_config.tthresh);
     if (lodestar_config.regions != NULL && lodestar_config.regions[0] == '^')
         fprintf(output, "Exclude records from input: %s\n", lodestar_config.regions);
@@ -196,8 +212,12 @@ void print_configuration(FILE* output, LodestarConfiguration lodestar_config) {
         fprintf(output, "Exclude records for saving ASD values: %s\n", lodestar_config.asd_regions_str);
     if (lodestar_config.asd_regions_str != NULL && lodestar_config.asd_regions_str[0] != '^')
         fprintf(output, "Include records for saving ASD values: %s\n", lodestar_config.asd_regions_str);
-    if (lodestar_config.coords_filename != NULL)
-        fprintf(output, "File of coordinates to perform Procrustes analysis against: %s\n", lodestar_config.coords_filename);
+    if (lodestar_config.print_regions_str != NULL && lodestar_config.print_regions_str[0] == '^')
+        fprintf(output, "Print coordinates of windows that are not overlapping: %s\n", lodestar_config.print_regions_str);
+    if (lodestar_config.print_regions_str != NULL && lodestar_config.print_regions_str[0] != '^')
+        fprintf(output, "Print coordinates of windows that are overlapping: %s\n", lodestar_config.print_regions_str);
+    if (lodestar_config.target_filename != NULL)
+        fprintf(output, "File of coordinates to perform Procrustes analysis against: %s\n", lodestar_config.target_filename);
     fprintf(output, "Use long-format output: %s\n", PRINT_BOOL(lodestar_config.long_output));
     fprintf(output, "Save as JSON file: %s\n", PRINT_BOOL(lodestar_config.json_output));
 }
@@ -209,12 +229,14 @@ void destroy_lodestar_configuration(LodestarConfiguration lodestar_config) {
         fclose(lodestar_config.windows_info);
     if (lodestar_config.windows_coords != NULL)
         fclose(lodestar_config.windows_coords);
-    if (lodestar_config.coords_file != NULL)
-        fclose(lodestar_config.coords_file);
+    if (lodestar_config.target_file != NULL)
+        fclose(lodestar_config.target_file);
+    if (lodestar_config.print_regions != NULL)
+        destroy_region_set(lodestar_config.print_regions);
     if (lodestar_config.ibs_regions != NULL)
-        destroy_region_filter(lodestar_config.ibs_regions);
+        destroy_region_set(lodestar_config.ibs_regions);
     if (lodestar_config.asd_regions != NULL)
-        destroy_region_filter(lodestar_config.asd_regions);
+        destroy_region_set(lodestar_config.asd_regions);
 }
 
 void print_help() {
@@ -226,41 +248,42 @@ void print_help() {
     fprintf(stderr, "The Pennsylvania State University\n\n");
     fprintf(stderr, "Usage: lodestar [options] -i <input.vcf.gz> -o <output_basename>\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "   --help                  Prints help menu and exits.\n");
-    fprintf(stderr, "   --version               Prints version number and exits.\n");
-    fprintf(stderr, "   -i STR                  Path to input vcf file.\n");
-    fprintf(stderr, "   -o STR                  Output base names for files.\n");
-    fprintf(stderr, "   -h INT                  Number of loci in a haplotype.\n");
-    fprintf(stderr, "                               Default 1. Not used when --global is set.\n");
-    fprintf(stderr, "   -w INT                  Number of haplotypes in a window.\n");
-    fprintf(stderr, "                               Default 100. Not used when --global is set.\n");
-    fprintf(stderr, "   -s INT                  Number of haplotypes to increment the sliding window.\n");
-    fprintf(stderr, "                               Default 10. Not used when --global is set.\n");
-    fprintf(stderr, "   -k INT                  Dimension to project samples into. Must be less than number of samples.\n");
-    fprintf(stderr, "                               Default 2. Must be less than number of samples in VCF.\n");
-    fprintf(stderr, "   --threads INT           Number of threads to use in computation.\n");
-    fprintf(stderr, "                               Default 1.\n");
-    fprintf(stderr, "   --similarity            Compute similarity between sets of points instead of dissimilarity.\n");
-    fprintf(stderr, "   --global                Compute only the global set of points.\n");
-    fprintf(stderr, "                               Takes presedence over windowing parameters.\n");
-    fprintf(stderr, "   --coords STR            A n-by-k csv file containing user defined coordinates to perform Procrustes analysis.\n");
-    fprintf(stderr, "   --pthresh DOUBLE        Transform and print coordinates of all windows less than or equal to threshold.\n");
-    fprintf(stderr, "                               Default 0.\n");
-    fprintf(stderr, "   --perms INT             The number of permutations to execute.\n");
-    fprintf(stderr, "                               Default 10000. Permutation test does not execute if pthresh is 0.\n");
-    fprintf(stderr, "   --tthresh DOUBLE        Transform and print coordinates of all windows greater than or equal to threshold.\n");
-    fprintf(stderr, "                               Default 0.95. Disabled if pthresh is not 0.\n");
-    fprintf(stderr, "   --[^]regions REGIONS    Include/exclude records from VCF defined by REGIONS.\n");
-    fprintf(stderr, "   --maf DOUBLE            Drops VCF records with a MAF less than threshold.\n");
-    fprintf(stderr, "                               Default 0.\n");
-    fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of missing genotypes greater than or equal to threshold.\n");
-    fprintf(stderr, "                               Default 1.\n");
-    fprintf(stderr, "   --[^]ibs REGIONS        Saves IBS calculations for overlapping windows included/excluded defined by REGIONS.\n");
-    fprintf(stderr, "                               Not used when --global is set.\n");
-    fprintf(stderr, "   --[^]asd REGIONS        Saves ASD calculations for overlapping windows included/excluded defined by REGIONS.\n");
-    fprintf(stderr, "                               Not used when --global is set.\n");
-    fprintf(stderr, "   --long                  Prints calculations in long format instead of matrix form.\n");
-    fprintf(stderr, "   --json                  Prints window information in JSON format instead of TXT.\n");
+    fprintf(stderr, "   --help                      Prints help menu and exits.\n");
+    fprintf(stderr, "   --version                   Prints version number and exits.\n");
+    fprintf(stderr, "   -i STR                      Path to input vcf file.\n");
+    fprintf(stderr, "   -o STR                      Output base names for files.\n");
+    fprintf(stderr, "   -h INT                      Number of loci in a haplotype.\n");
+    fprintf(stderr, "                                   Default 1. Not used when --global is set.\n");
+    fprintf(stderr, "   -w INT                      Number of haplotypes in a window.\n");
+    fprintf(stderr, "                                   Must be set by user. Not used when --global is set.\n");
+    fprintf(stderr, "   -s INT                      Number of haplotypes to increment the sliding window.\n");
+    fprintf(stderr, "                                   Must be set by user. Not used when --global is set.\n");
+    fprintf(stderr, "   -k INT                      Dimension to project samples into. Must be less than number of samples.\n");
+    fprintf(stderr, "                                   Default 2. Must be less than number of samples in VCF.\n");
+    fprintf(stderr, "   --threads INT               Number of threads to use in computation.\n");
+    fprintf(stderr, "                                   Default 1.\n");
+    fprintf(stderr, "   --similarity                Compute similarity between sets of points instead of dissimilarity.\n");
+    fprintf(stderr, "   --global                    Compute only the global set of points.\n");
+    fprintf(stderr, "                                   Takes presedence over windowing parameters.\n");
+    fprintf(stderr, "   --target STR                A n-by-k csv file containing user defined coordinates to perform Procrustes analysis.\n");
+    fprintf(stderr, "   --pthresh DOUBLE            Print coordinates of all windows less than or equal to threshold.\n");
+    fprintf(stderr, "                                   Window must also satisfy tthresh. Default 0.\n");
+    fprintf(stderr, "   --perms INT                 The number of permutations to execute.\n");
+    fprintf(stderr, "                                   Default 10000. Permutation test does not execute if pthresh is 0.\n");
+    fprintf(stderr, "   --tthresh DOUBLE            Print coordinates of all windows greater than or equal to threshold.\n");
+    fprintf(stderr, "                                   Window must also satisfy pthresh. Default 0.95.\n");
+    fprintf(stderr, "   --printCoords [^]REGIONS    Print coordinates that are overlapping/non-overlapping with REGIONS regardless of pthresh and tthresh.\n");
+    fprintf(stderr, "   --regions [^]REGIONS        Include/exclude records from VCF defined by REGIONS.\n");
+    fprintf(stderr, "   --maf DOUBLE                Drops VCF records with a MAF less than threshold.\n");
+    fprintf(stderr, "                                   Default 0.\n");
+    fprintf(stderr, "   --afMissing DOUBLE          Drops VCF records with fraction of missing genotypes greater than or equal to threshold.\n");
+    fprintf(stderr, "                                   Default 1.\n");
+    fprintf(stderr, "   --ibs [^]REGIONS            Saves IBS calculations for overlapping windows included/excluded defined by REGIONS.\n");
+    fprintf(stderr, "                                   Not used when --global is set.\n");
+    fprintf(stderr, "   --asd [^]REGIONS            Saves ASD calculations for overlapping windows included/excluded defined by REGIONS.\n");
+    fprintf(stderr, "                                   Not used when --global is set.\n");
+    fprintf(stderr, "   --long                      Prints calculations in long format instead of matrix form.\n");
+    fprintf(stderr, "   --json                      Prints window information in JSON format instead of TXT.\n");
     fprintf(stderr, "Types:\n");
     fprintf(stderr, "   STR                     A string.\n");
     fprintf(stderr, "   INT                     A non-negative integer.\n");
@@ -268,22 +291,6 @@ void print_help() {
     fprintf(stderr, "   REGIONS                 REGION,REGIONS | REGION\n");
     fprintf(stderr, "   REGION                  STR | STR:INT | STR:-INT | STR:INT- | STR:INT-INT\n");
     fprintf(stderr, "\n");
-}
-
-void print_window_info(Window* window, int n, int k) {
-    printf("Window Number: %d\n", window -> winNum);
-    printf("Chromosome: %s\n", ks_str(window -> chromosome));
-    printf("Window Number on Chromosome: %d\n", window -> winNumOnChrom);
-    printf("Start Position: %d\n", window -> startLocus);
-    printf("End Position: %d\n", window -> endLocus);
-    printf("Number of Loci: %d\n", window -> numLoci);
-    printf("X = \n");
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < k; j++)
-            printf("%5lf\t", window -> X[i][j]);
-        printf("\n");
-    }
-    printf("\n\n");
 }
 
 static ko_longopt_t long_options[] = {
@@ -302,7 +309,8 @@ static ko_longopt_t long_options[] = {
     {"[^]asd",          ko_required_argument,   312},
     {"long",            ko_no_argument,         313},
     {"json",            ko_no_argument,         314},
-    {"coords",          ko_required_argument,   315},
+    {"target",          ko_required_argument,   315},
+    {"printCoords",     ko_required_argument,   316},
     {"input",           ko_required_argument,   'i'},
     {"output",          ko_required_argument,   'o'},
     {"dimension",       ko_required_argument,   'k'},
@@ -328,7 +336,36 @@ int main (int argc, char *argv[]) {
 	}
 	options = KETOPT_INIT;
 
-    LodestarConfiguration lodestar_config = {NULL, NULL, NULL, NULL, NULL, 1, 100, 10, 2, 1, false, false, NULL, NULL, 0, 10000, 0.95, NULL, 0, 1, NULL, NULL, NULL, NULL, false, false};
+    LodestarConfiguration lodestar_config;
+
+    lodestar_config.input_filename = NULL;
+    lodestar_config.parser = NULL;
+    lodestar_config.output_basename = NULL;
+    lodestar_config.windows_info = NULL;
+    lodestar_config.windows_coords = NULL;
+    lodestar_config.HAP_SIZE = 1;
+    lodestar_config.WINDOW_SIZE = -1;
+    lodestar_config.STEP_SIZE = -1;
+    lodestar_config.k = 2;
+    lodestar_config.threads = 1;
+    lodestar_config.similarity = false;
+    lodestar_config.global = false;
+    lodestar_config.target_filename = NULL;
+    lodestar_config.target_file = NULL;
+    lodestar_config.pthresh = 0;
+    lodestar_config.num_perms = 10000;
+    lodestar_config.tthresh = 0.95;
+    lodestar_config.regions = NULL;
+    lodestar_config.maf = 0;
+    lodestar_config.afMissing = 1;
+    lodestar_config.ibs_regions_str = NULL;
+    lodestar_config.ibs_regions = NULL;
+    lodestar_config.asd_regions_str = NULL;
+    lodestar_config.asd_regions = NULL;
+    lodestar_config.print_regions_str = NULL;
+    lodestar_config.print_regions = NULL;
+    lodestar_config.long_output = false;
+    lodestar_config.json_output = false;
 
     while ((c = ketopt(&options, argc, argv, 1, opt_str, long_options)) >= 0) {
         switch (c) {
@@ -351,7 +388,8 @@ int main (int argc, char *argv[]) {
             case 312: lodestar_config.asd_regions_str = options.arg; break;
             case 313: lodestar_config.long_output = true; break;
             case 314: lodestar_config.json_output = true; break;
-            case 315: lodestar_config.coords_filename = options.arg; break;
+            case 315: lodestar_config.target_filename = options.arg; break;
+            case 316: lodestar_config.print_regions_str = options.arg; break;
         }
 	}
     

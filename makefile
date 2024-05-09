@@ -1,8 +1,9 @@
 
 # File: Makefile
-# Date: 
-# Author: TQ Smith
-# Purpose: 
+# Date: 9 May 2024
+# Author: T. Quinn Smith
+# Principal Investigator: Dr. Zachary A. Szpiech
+# Purpose: Build LODESTAR. ONLY compiles with gcc. NOT clang.
 
 CC = gcc-13
 CFLAGS = -c -Wall -g
@@ -11,7 +12,7 @@ LFLAGS = -g -o
 bin/lodestar: src/main.o
 	$(CC) $(LFLAGS) bin/lodestar src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
 
-src/main.o: src/Logger.o src/SlidingWindow.o src/ProcrustesAnalysis.o
+src/main.o: src/SlidingWindow.o src/ProcrustesAnalysis.o
 	$(CC) $(CFLAGS) src/main.c -o src/main.o
 
 src/ProcrustesAnalysis.o: src/RealSymEigen.o
@@ -40,9 +41,6 @@ src/VCFLocusParser.o: src/RegionSet.o
 
 src/RegionSet.o:
 	$(CC) $(CFLAGS) src/RegionSet.c -o src/RegionSet.o
-
-src/Logger.o:
-	$(CC) $(CFLAGS) src/Logger.c -o src/Logger.o
 
 lib/lapack:
 	$(CC) $(CFLAGS) lib/lapack/*.f -o lib/lapack

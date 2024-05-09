@@ -237,7 +237,13 @@ void* sliding_window_multi_thread(void* arg) {
 
         // Compute ASD matrix for current window.
         process_window_multi_thread(threadGeno, winAlleleCounts, globalAlleleCounts, asd, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE);
-
+        printf("Window %d\n", window -> winNum);
+        for (int i = 0; i < record -> encoder -> numSamples; i++) {
+            for (int j = i; j < record -> encoder -> numSamples; j++) {
+                printf("%lf\t", asd[PACKED_INDEX(i, j)]);
+            }
+            printf("\n");
+        }
         // Project samples into dimension k.
         perform_mds_on_window(window, eigen, asd, k);
 
@@ -285,6 +291,13 @@ void sliding_window_single_thread(WindowRecord_t* record) {
         window = get_next_window(record, NULL);
         numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
         process_window_single_thread(record -> winGeno, record -> winStartIndex, winAlleleCounts, stepAlleleCounts, record -> globalAlleleCounts, asd, numHapsInWin, window -> winNumOnChrom == 1, record -> curWinNumOnChrom == 1, record -> numSamples, record -> STEP_SIZE, record -> WINDOW_SIZE);
+        printf("Window %d\n", window -> winNum);
+        for (int i = 0; i < record -> encoder -> numSamples; i++) {
+            for (int j = i; j < record -> encoder -> numSamples; j++) {
+                printf("%lf\t", asd[PACKED_INDEX(i, j)]);
+            }
+            printf("\n");
+        }
         perform_mds_on_window(window, record -> eigen, asd, record -> k);
         *kl_pushp(WindowPtr, record -> winList) = window;
     }
@@ -429,8 +442,12 @@ void* global_window_multi_thread(void* arg) {
     // Used for swapping.
     Genotype_t* temp;
 
-    pthread_mutex_lock(&genomeLock);
-    while (!record -> parser -> isEOF) {
+    while (true) {
+        pthread_mutex_lock(&genomeLock);
+        if (record -> parser -> isEOF) {
+            pthread_mutex_unlock(&genomeLock);
+            break;
+        }
         // Get the next haplotype.
         get_next_haplotype(record -> parser, record -> encoder, record -> HAP_SIZE);
         record -> numLoci += record -> encoder -> numLoci;
@@ -440,7 +457,6 @@ void* global_window_multi_thread(void* arg) {
         // Process IBS of haplotype.
         pairwise_ibs(genotypes, alleleCounts, numSamples);
     }
-    pthread_mutex_unlock(&genomeLock);
 
     // Add counts to genome-wide IBS counts.
     pthread_mutex_lock(&globalLock);
@@ -497,10 +513,12 @@ Window_t* global_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, i
     }
 
     // Convert counts to ASD.
-    for (int i = 0; i < encoder -> numSamples; i++)
-        for (int j = i + 1; j < encoder -> numSamples; j++)
+    for (int i = 0; i < encoder -> numSamples; i++) {
+        for (int j = i + 1; j < encoder -> numSamples; j++) {
             asd[PACKED_INDEX(i, j)] = ibs_to_asd(alleleCounts[PACKED_INDEX(i, j)]);
-    
+        }
+    }
+
     // Perfrom MDS on global.
     RealSymEigen_t* eigen = init_real_sym_eigen(encoder -> numSamples);
     perform_mds_on_window(window, eigen, asd, k);
@@ -512,6 +530,45 @@ Window_t* global_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, i
     return window;
 }
 
+void print_window_info(Window_t* window, int n, int k) {
+    printf("Window Number: %d\n", window -> winNum);
+    printf("Chromosome: %s\n", ks_str(window -> chromosome));
+    printf("Window Number on Chromosome: %d\n", window -> winNumOnChrom);
+    printf("Start Position: %d\n", window -> startCoord);
+    printf("End Position: %d\n", window -> endCoord);
+    printf("Number of Loci: %d\n", window -> numLoci);
+    printf("X = \n");
+    for (int i = 0; i < n && window -> X != NULL; i++) {
+        for (int j = 0; j < k; j++)
+            printf("%5lf\t", window -> X[i][j]);
+        printf("\n");
+    }
+    printf("\n\n");
+}
+
+/*
 int main() {
 
+    int k = 2;
+    int HAP_SIZE = 1;
+    int STEP_SIZE = 2; 
+    int WINDOW_SIZE = 3;
+    int NUM_THREADS = 2;
+    int numWindows;
+
+    VCFLocusParser_t* parser = init_vcf_locus_parser("./data/sliding_window_test2.vcf.gz", NULL, false, 0, 1, true);
+    HaplotypeEncoder_t* encoder = init_haplotype_encoder(parser -> numSamples);
+
+    Window_t** windows = sliding_window(parser, encoder, k, HAP_SIZE, STEP_SIZE, WINDOW_SIZE, NUM_THREADS, &numWindows);
+
+    for (int i = 0; i < numWindows; i++) {
+        print_window_info(windows[i], encoder -> numSamples, k);
+        destroy_window(windows[i], encoder -> numSamples);
+    }
+    free(windows);
+
+    destroy_vcf_locus_parser(parser);
+    destroy_haplotype_encoder(encoder);
+
 }
+*/
