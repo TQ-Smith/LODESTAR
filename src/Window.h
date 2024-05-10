@@ -37,6 +37,12 @@ typedef struct {
     // The IBS counts for the window. If saveIBS is not set, pointer is NULL.
     IBS_t* ibs;
 
+    // The p-value associated with the window.
+    double pval;
+
+    // The t-statistic associated with the window.
+    double t;
+
 } Window_t;
 
 

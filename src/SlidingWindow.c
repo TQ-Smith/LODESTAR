@@ -530,6 +530,7 @@ Window_t* global_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, i
     return window;
 }
 
+/*
 void print_window_info(Window_t* window, int n, int k) {
     printf("Window Number: %d\n", window -> winNum);
     printf("Chromosome: %s\n", ks_str(window -> chromosome));
@@ -546,7 +547,6 @@ void print_window_info(Window_t* window, int n, int k) {
     printf("\n\n");
 }
 
-/*
 int main() {
 
     int k = 2;
