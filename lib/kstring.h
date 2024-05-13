@@ -129,30 +129,6 @@ static inline char *ks_release(kstring_t *s)
 	return ss;
 }
 
-// Added on 3 May 2024.
-// Overwrites contents of s with l characters from p.
-static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
-	if (l + 1 >= s -> m) {
-		char *tmp;
-		s->m = s->l + 2;
-		kroundup32(s->m);
-		if ((tmp = (char*)realloc(s->s, s->m)))
-			s->s = tmp;
-		else
-			return EOF;
-	}
-	memcpy(s->s, p, l);
-	s->l = l;
-	s->s[s->l] = 0;
-	return l;
-}
-
-// Added on 3 May 2024.
-// Overwrites contents of s with p.
-static inline int ks_overwrite(const char* p, kstring_t *s) {
-	return ks_overwriten(p, strlen(p), s);
-}
-
 // Note, this method appends l characters of p to s.
 static inline int kputsn(const char *p, int l, kstring_t *s)
 {
@@ -176,6 +152,20 @@ static inline int kputs(const char *p, kstring_t *s)
 {
 	return kputsn(p, strlen(p), s);
 }
+
+// Added on 3 May 2024.
+// Overwrites contents of s with l characters from p.
+static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
+	s -> l = 0;
+	return kputsn(p, l, s);
+}
+
+// Added on 3 May 2024.
+// Overwrites contents of s with p.
+static inline int ks_overwrite(const char* p, kstring_t *s) {
+	return ks_overwriten(p, strlen(p), s);
+}
+
 
 static inline int kputc(int c, kstring_t *s)
 {

@@ -20,13 +20,14 @@
 //  IBS_t* winAlleleCounts -> Current window IBS counts.
 //  IBS_t* globalAlleleCounts -> Genome-wide IBS counts.
 //  double* asd -> Packed matrix for ASD calculations.
+//  Window_t* window -> The current window. Passed to save IBS counts if flag set.
 //  int curHapInWin -> The haplotype number in the window.
 //  int numHapsInWin -> The number of haplotypes in the current window.
 //  bool isLastWinOnChrom -> Set if the current window is the last one on the chromosome.
 //  int numSamples -> The number of samples.
 //  int STEP_SIZE -> The number of haplotypes in the step.
 // Returns: void. 
-void process_haplotype_multi_thread(Genotype_t* geno, IBS_t* winAlleleCounts, IBS_t* globalAlleleCounts, double* asd, int curHapInWin, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE) {
+void process_haplotype_multi_thread(Genotype_t* geno, IBS_t* winAlleleCounts, IBS_t* globalAlleleCounts, double* asd, Window_t* window, int curHapInWin, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE) {
     int numSharedAlleles;
     // For each pair ...
     for (int i = 0; i < numSamples; i++) {
@@ -44,16 +45,19 @@ void process_haplotype_multi_thread(Genotype_t* geno, IBS_t* winAlleleCounts, IB
                     increment_ibs_value(globalAlleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
             }
             // If the haplotype is the last one in the window, convert counts to ASD.
-            if (curHapInWin == numHapsInWin - 1)
+            if (curHapInWin == numHapsInWin - 1) {
+                if (window -> saveIBS)
+                    window -> ibs[PACKED_INDEX(i, j)] = winAlleleCounts[PACKED_INDEX(i, j)];
                 asd[PACKED_INDEX(i, j)] = ibs_to_asd(winAlleleCounts[PACKED_INDEX(i, j)]);
+            }
         }
     }
 }
 
-void process_window_multi_thread(Genotype_t** winGeno, IBS_t* winAlleleCounts, IBS_t* globalAlleleCounts, double* asd, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE) {
+void process_window_multi_thread(Genotype_t** winGeno, IBS_t* winAlleleCounts, IBS_t* globalAlleleCounts, double* asd, Window_t* window, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE) {
     // For each of the haplotypes in the window, calculate IBS counts.
     for (int i = 0; i < numHapsInWin; i++)
-        process_haplotype_multi_thread(winGeno[i], winAlleleCounts, globalAlleleCounts, asd, i, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE);
+        process_haplotype_multi_thread(winGeno[i], winAlleleCounts, globalAlleleCounts, asd, window, i, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE);
 }
 
 // Process a single haplotype while using one thread.
@@ -67,6 +71,7 @@ void process_window_multi_thread(Genotype_t** winGeno, IBS_t* winAlleleCounts, I
 //  IBS_t* stepAlleleCounts -> The IBS counts in the step region.
 //  IBS_t* globalAlleleCounts -> Genome-wide IBS counts.
 //  double* asd -> Packed matrix for ASD calculations.
+//  Window_t* window -> The current window. Passed to save IBS counts if flag set.
 //  int curHapInWin -> The haplotype number in the window.
 //  int numHapsInWin -> The number of haplotypes in the current window.
 //  bool isFirstWinOnChrom -> Set if the current window is the first one on the chromosome.
@@ -75,7 +80,7 @@ void process_window_multi_thread(Genotype_t** winGeno, IBS_t* winAlleleCounts, I
 //  int STEP_SIZE -> The number of haplotypes in the step.
 //  int WINDOW_SIZE -> The number of haplotypes in the window.
 // Return: void.
-void process_haplotype_single_thread(Genotype_t* geno, Genotype_t* stepGeno, IBS_t* winAlleleCounts, IBS_t* stepAlleleCounts, IBS_t* globalAlleleCounts, double* asd, int curHapInWin, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE, int WINDOW_SIZE) {
+void process_haplotype_single_thread(Genotype_t* geno, Genotype_t* stepGeno, IBS_t* winAlleleCounts, IBS_t* stepAlleleCounts, IBS_t* globalAlleleCounts, double* asd, Window_t* window, int curHapInWin, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE, int WINDOW_SIZE) {
     int numSharedAlleles;
     // For each pair ...
     for (int i = 0; i < numSamples; i++) {
@@ -97,6 +102,8 @@ void process_haplotype_single_thread(Genotype_t* geno, Genotype_t* stepGeno, IBS
             }
             // If we reached the end of the current window ...
             if (curHapInWin == numHapsInWin - 1) {
+                if (window -> saveIBS)
+                    window -> ibs[PACKED_INDEX(i, j)] = winAlleleCounts[PACKED_INDEX(i, j)];
                 // Convert to ASD.
                 asd[PACKED_INDEX(i, j)] = ibs_to_asd(winAlleleCounts[PACKED_INDEX(i, j)]);
                 add_ibs(&globalAlleleCounts[PACKED_INDEX(i, j)], &stepAlleleCounts[PACKED_INDEX(i, j)]);
@@ -122,19 +129,19 @@ void process_haplotype_single_thread(Genotype_t* geno, Genotype_t* stepGeno, IBS
 //  of the current window. We are performing each IBS calculation twice, but we are keeping the number of pairwise
 //  operations linear in the number of haplotypes.
 
-void process_window_single_thread(Genotype_t** winGeno, int winStartIndex, IBS_t* winAlleleCounts, IBS_t* stepAlleleCounts, IBS_t* globalAlleleCounts, double* asd, int numHapsInWin, bool isFirstWinOnChrom, bool isLastWinOnChrom, int numSamples, int STEP_SIZE, int WINDOW_SIZE) {
+void process_window_single_thread(Genotype_t** winGeno, int winStartIndex, IBS_t* winAlleleCounts, IBS_t* stepAlleleCounts, IBS_t* globalAlleleCounts, double* asd, Window_t* window, int numHapsInWin, bool isFirstWinOnChrom, bool isLastWinOnChrom, int numSamples, int STEP_SIZE, int WINDOW_SIZE) {
     // If the first window on the chromosome, we process the whole window and save IBS counts in the step region.
     if (isFirstWinOnChrom) {
         int stepIndex = winStartIndex;
         for (int i = 0; i < numHapsInWin; i++) {
-            process_haplotype_single_thread(winGeno[(winStartIndex + i) % WINDOW_SIZE], winGeno[stepIndex], winAlleleCounts, stepAlleleCounts, globalAlleleCounts, asd, i, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE, WINDOW_SIZE);
+            process_haplotype_single_thread(winGeno[(winStartIndex + i) % WINDOW_SIZE], winGeno[stepIndex], winAlleleCounts, stepAlleleCounts, globalAlleleCounts, asd, window, i, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE, WINDOW_SIZE);
             if (i >= (WINDOW_SIZE - STEP_SIZE))
                 stepIndex = (stepIndex + 1) % WINDOW_SIZE;
         }
     // Otherwise, we advance the window and calculate stepAlleleCounts for the next window.
     } else {
         for (int i = WINDOW_SIZE - STEP_SIZE, j = 0; i < numHapsInWin; i++, j++)
-            process_haplotype_single_thread(winGeno[(winStartIndex + i) % WINDOW_SIZE], winGeno[(winStartIndex + j) % WINDOW_SIZE], winAlleleCounts, stepAlleleCounts, globalAlleleCounts, asd, i, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE, WINDOW_SIZE);
+            process_haplotype_single_thread(winGeno[(winStartIndex + i) % WINDOW_SIZE], winGeno[(winStartIndex + j) % WINDOW_SIZE], winAlleleCounts, stepAlleleCounts, globalAlleleCounts, asd, window, i, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE, WINDOW_SIZE);
     }
 }
 

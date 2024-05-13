@@ -29,9 +29,9 @@ typedef struct {
 } Logger_t;
 
 // Our static global logger.
-static Logger_t* log = NULL;
+static Logger_t* logger = NULL;
 
-// Initialize log.
+// Initialize logger.
 // Accepts:
 //  const char* file -> The name of the output file for log to print to.
 //                          If NULL, use stderr.
@@ -39,15 +39,15 @@ static Logger_t* log = NULL;
 static void _init_log(const char* file_name) {
     pthread_mutex_lock(&logLock);
     // Create the logger.
-    log = (Logger_t*) malloc(sizeof(Logger_t));
+    logger = (Logger_t*) malloc(sizeof(Logger_t));
     // If no file name was given use stderr.
     if (file_name == NULL)
-        log -> file = stderr;
+        logger -> file = stderr;
     else {
         // Open file to log.
-        log -> file = fopen(file_name, "w");
+        logger -> file = fopen(file_name, "w");
     }
-    log -> current_time = time(NULL);
+    logger -> current_time = time(NULL);
     tzset();
     pthread_mutex_unlock(&logLock);
 }
@@ -59,16 +59,16 @@ static void _init_log(const char* file_name) {
 // Returns: void.
 static void _log(const char* prefix, const char* fmt, ...) {
     pthread_mutex_lock(&logLock);
-    if (log == NULL) {
+    if (logger == NULL) {
         pthread_mutex_unlock(&logLock);
         return;
     }
     // Print local date/time, followed by the prefix, and then, the message.
-    strftime(log -> date_and_time, sizeof(log -> date_and_time) - 1, "%a %b %d %T %Z %Y", localtime(&log -> current_time));
-    fprintf(log -> file, "%s: %s ", log -> date_and_time, prefix);
-    va_start(log -> args, fmt);
-    vfprintf(log -> file, fmt, log -> args);
-    va_end(log -> args);
+    strftime(logger -> date_and_time, sizeof(logger -> date_and_time) - 1, "%a %b %d %T %Z %Y", localtime(&logger -> current_time));
+    fprintf(logger -> file, "%s: %s ", logger -> date_and_time, prefix);
+    va_start(logger -> args, fmt);
+    vfprintf(logger -> file, fmt, logger -> args);
+    va_end(logger -> args);
     pthread_mutex_unlock(&logLock);
 }
 
@@ -77,17 +77,17 @@ static void _log(const char* prefix, const char* fmt, ...) {
 // Returns: void.
 static void _close_log() {
     pthread_mutex_lock(&logLock);
-    if (log -> file == NULL) {
+    if (logger -> file == NULL) {
         pthread_mutex_unlock(&logLock);
         return;
     }
     // If stderr is not used, close the file.
-    if (log -> file != stderr)
-        fclose(log -> file);
+    if (logger -> file != stderr)
+        fclose(logger -> file);
     // Free associated memory
-    free(log);
+    free(logger);
     // Set log back to null.
-    log = NULL;
+    logger = NULL;
     pthread_mutex_unlock(&logLock);
 }
 

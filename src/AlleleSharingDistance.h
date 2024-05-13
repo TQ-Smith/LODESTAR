@@ -10,6 +10,7 @@
 
 #include "HaplotypeEncoder.h"
 #include "IdentityByState.h"
+#include "Window.h"
 
 // Calculate the number of shared alleles between two genotypes.
 // Accepts:
@@ -50,12 +51,13 @@ static inline int num_shared_alleles(Genotype_t s1, Genotype_t s2) {
 //  IBS_t* winAlleleCounts -> Current window IBS counts.
 //  IBS_t* globalAlleleCounts -> Genome-wide IBS counts.
 //  double* asd -> Packed matrix for ASD calculations.
+//  Window_t* window -> The current window. Passed to save IBS counts if flag set.
 //  int numHapsInWin -> The number of haplotypes in the current window.
 //  bool isLastWinOnChrom -> Set if the current window is the last one on the chromosome.
 //  int numSamples -> The number of samples.
 //  int STEP_SIZE -> The number of haplotypes in the step.
 // Returns: void. 
-void process_window_multi_thread(Genotype_t** winGeno, IBS_t* winAlleleCounts, IBS_t* globalAlleleCounts, double* asd, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE);
+void process_window_multi_thread(Genotype_t** winGeno, IBS_t* winAlleleCounts, IBS_t* globalAlleleCounts, double* asd, Window_t* window, int numHapsInWin, bool isLastWinOnChrom, int numSamples, int STEP_SIZE);
 
 // Process a whole window while using a single thread.
 // Accepts:
@@ -65,6 +67,7 @@ void process_window_multi_thread(Genotype_t** winGeno, IBS_t* winAlleleCounts, I
 //  IBS_t* stepAlleleCounts -> The IBS counts in the step region.
 //  IBS_t* globalAlleleCounts -> Genome-wide IBS counts.
 //  double* asd -> Packed matrix for ASD calculations.
+//  Window_t* window -> The current window. Passed to save IBS counts if flag set.
 //  int numHapsInWin -> The number of haplotypes in the current window.
 //  bool isFirstWinOnChrom -> Set if the current window is the first one on the chromosome.
 //  bool isLastWinOnChrom -> Set if the current window is the last one on the chromosome.
@@ -72,7 +75,7 @@ void process_window_multi_thread(Genotype_t** winGeno, IBS_t* winAlleleCounts, I
 //  int STEP_SIZE -> The number of haplotypes in the step.
 //  int WINDOW_SIZE -> The number of haplotypes in the window.
 // Return: void.
-void process_window_single_thread(Genotype_t** winGeno, int winStartIndex, IBS_t* winAlleleCounts, IBS_t* stepAlleleCounts, IBS_t* globalAlleleCounts, double* asd, int numHapsInWin, bool isFirstWinOnChrom, bool isLastWinOnChrom, int numSamples, int STEP_SIZE, int WINDOW_SIZE);
+void process_window_single_thread(Genotype_t** winGeno, int winStartIndex, IBS_t* winAlleleCounts, IBS_t* stepAlleleCounts, IBS_t* globalAlleleCounts, double* asd, Window_t* window, int numHapsInWin, bool isFirstWinOnChrom, bool isLastWinOnChrom, int numSamples, int STEP_SIZE, int WINDOW_SIZE);
 
 // Calculate pairwise IBS counts between samples at one haplotype.
 // Accepts:

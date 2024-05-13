@@ -24,11 +24,11 @@ typedef struct {
     unsigned int startCoord;
     // The end coordinate of the last haplotype in the window.
     unsigned int endCoord;
-    // The number of loci in the window. This is not the number of 
-    //  haplotypes in the window since that can be calculated easily 
-    //  from the number of loci in the window.
+    // The number of loci in the window.
     int numLoci;
-
+    // The number of haplotypes in the window.
+    int numHaps;
+    
     // The matrix of points representing samples in k-dimensional space.
     double** X;
 

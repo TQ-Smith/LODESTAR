@@ -15,6 +15,7 @@ KLIST_INIT(WindowPtr, Window_t*, do_not_free_window_ptr)
 MATRIX_INIT(geno, Genotype_t)
 MATRIX_INIT(double, double)
 
+#include "Logger.h"
 #include "AlleleSharingDistance.h"
 #include "MultidimensionalScaling.h"
 #include <pthread.h>
@@ -68,6 +69,10 @@ typedef struct {
     IBS_t* globalAlleleCounts;
     // Number of haplotypes genome-wide.
     int globalNumHaps;
+    // Number of loci genome-wide.
+    int globalNumLoci;
+
+    RegionSet_t* saveIBSRegions;
 
     // The window number of the current window.
     int curWinNum;
@@ -92,8 +97,11 @@ void perform_mds_on_window(Window_t* window, RealSymEigen_t* eigen, double* asd,
     // If there was an error while computing MDS, destroy X and return.
     //  window -> X is NULL.
     if (INFO != 0) {
+        LOG_WARNING("ASD matrix of window %d on %s had rank less than %d. Could not calculate MDS.\n", window -> winNumOnChrom, ks_str(window -> chromosome), eigen -> N);
         destroy_matrix(double, X, eigen -> N);
         return;
+    } else {
+        LOG_INFO("Finished MDS for window %s.\n", window -> winNum);
     }
     // Otherwise, set X.
     window -> X = X;
@@ -114,6 +122,8 @@ Window_t* get_next_window(WindowRecord_t* record, Genotype_t** threadGeno) {
     window -> winNumOnChrom = record -> curWinNumOnChrom++;
     ks_overwrite(ks_str(record -> curChrom), window -> chromosome);
     window -> numLoci = record -> numHapsInOverlap * record -> HAP_SIZE;
+
+    LOG_INFO("Started ASD calculations for window %d.\n", window -> winNum);
 
     // Assume there will be another window on the same chromosome.
     bool isSameChrom = true;
@@ -152,6 +162,7 @@ Window_t* get_next_window(WindowRecord_t* record, Genotype_t** threadGeno) {
         if (record -> numHapsInOverlap % record -> STEP_SIZE == 0)
             record -> winStartLoci[(window -> winNumOnChrom + record -> numHapsInOverlap / record -> STEP_SIZE) % (record -> WINDOW_SIZE / record -> STEP_SIZE + 1)] = record -> encoder -> startCoord;
         window -> numLoci += record -> encoder -> numLoci;
+        record -> globalNumLoci += record -> encoder -> numLoci;
         // We processed another haplotype.
         record -> numHapsInOverlap++;
     }
@@ -160,6 +171,11 @@ Window_t* get_next_window(WindowRecord_t* record, Genotype_t** threadGeno) {
     window -> startCoord = record -> winStartLoci[window -> winNumOnChrom % (record -> WINDOW_SIZE / record -> STEP_SIZE + 1)];
     // Set the end coordinate of the current window.
     window -> endCoord = record -> encoder -> endCoord;
+    // If we should save the IBS values for this window, then set flag and allocate memory.
+    if (record -> saveIBSRegions != NULL && query_overlap(record -> saveIBSRegions, window -> chromosome, window -> startCoord, window -> endCoord)) {
+        window -> saveIBS = true;
+        window -> ibs = (IBS_t*) malloc(PACKED_SIZE(record -> numSamples) * sizeof(IBS_t));
+    }
     if (isSameChrom) {
         record -> globalNumHaps += record -> STEP_SIZE;
         record -> numHapsInOverlap = record -> WINDOW_SIZE - record -> STEP_SIZE;
@@ -236,14 +252,8 @@ void* sliding_window_multi_thread(void* arg) {
         numHapsInWin = (int) ceil((double) window -> numLoci / HAP_SIZE);
 
         // Compute ASD matrix for current window.
-        process_window_multi_thread(threadGeno, winAlleleCounts, globalAlleleCounts, asd, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE);
-        printf("Window %d\n", window -> winNum);
-        for (int i = 0; i < record -> encoder -> numSamples; i++) {
-            for (int j = i; j < record -> encoder -> numSamples; j++) {
-                printf("%lf\t", asd[PACKED_INDEX(i, j)]);
-            }
-            printf("\n");
-        }
+        process_window_multi_thread(threadGeno, winAlleleCounts, globalAlleleCounts, asd, window, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE);
+        
         // Project samples into dimension k.
         perform_mds_on_window(window, eigen, asd, k);
 
@@ -290,14 +300,7 @@ void sliding_window_single_thread(WindowRecord_t* record) {
     while (!(record -> parser -> isEOF)) {
         window = get_next_window(record, NULL);
         numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
-        process_window_single_thread(record -> winGeno, record -> winStartIndex, winAlleleCounts, stepAlleleCounts, record -> globalAlleleCounts, asd, numHapsInWin, window -> winNumOnChrom == 1, record -> curWinNumOnChrom == 1, record -> numSamples, record -> STEP_SIZE, record -> WINDOW_SIZE);
-        printf("Window %d\n", window -> winNum);
-        for (int i = 0; i < record -> encoder -> numSamples; i++) {
-            for (int j = i; j < record -> encoder -> numSamples; j++) {
-                printf("%lf\t", asd[PACKED_INDEX(i, j)]);
-            }
-            printf("\n");
-        }
+        process_window_single_thread(record -> winGeno, record -> winStartIndex, winAlleleCounts, stepAlleleCounts, record -> globalAlleleCounts, asd, window, numHapsInWin, window -> winNumOnChrom == 1, record -> curWinNumOnChrom == 1, record -> numSamples, record -> STEP_SIZE, record -> WINDOW_SIZE);
         perform_mds_on_window(window, record -> eigen, asd, record -> k);
         *kl_pushp(WindowPtr, record -> winList) = window;
     }
@@ -328,7 +331,7 @@ void sort_windows(Window_t** windows, int numWindows) {
     }
 }
 
-Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, int k, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows) {
+Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, RegionSet_t* saveIBSRegions, int k, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows) {
     
     // Set all attributes for the window record.
     WindowRecord_t* record = (WindowRecord_t*) calloc(1, sizeof(WindowRecord_t));
@@ -352,6 +355,9 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
 
     record -> globalAlleleCounts = (IBS_t*) calloc(PACKED_SIZE(record -> numSamples), sizeof(IBS_t));
     record -> globalNumHaps = 0;
+    record -> globalNumLoci = 0;
+
+    record -> saveIBSRegions = saveIBSRegions;
 
     record -> curWinNum = 1;
     record -> curWinNumOnChrom = 1;
@@ -381,7 +387,8 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
     global -> winNumOnChrom = 0;
     global -> startCoord = 0;
     global -> endCoord = 0;
-    global -> numLoci = record -> globalNumHaps;
+    global -> numLoci = record -> globalNumLoci;
+    global -> numHaps = record -> globalNumHaps;
 
     double* globalASD = (double*) malloc(PACKED_SIZE(record -> numSamples) * sizeof(double));
     // Convert IBS counts to ASD.
@@ -423,6 +430,7 @@ typedef struct {
     HaplotypeEncoder_t* encoder;
     IBS_t* alleleCounts;
     int numLoci;
+    int numHaps;
     int HAP_SIZE;
 } GlobalWindowRecord_t;
 
@@ -451,6 +459,7 @@ void* global_window_multi_thread(void* arg) {
         // Get the next haplotype.
         get_next_haplotype(record -> parser, record -> encoder, record -> HAP_SIZE);
         record -> numLoci += record -> encoder -> numLoci;
+        record -> numHaps++;
         // Swap out haplotype so thread can calulate IBS.
         SWAP(genotypes, record -> encoder -> genotypes, temp);
         pthread_mutex_unlock(&genomeLock);
@@ -490,6 +499,7 @@ Window_t* global_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, i
         while (!parser -> isEOF) {
             get_next_haplotype(parser, encoder, HAP_SIZE);
             window -> numLoci += encoder -> numLoci;
+            window -> numHaps++;
             pairwise_ibs(encoder -> genotypes, alleleCounts, encoder -> numSamples);
         }
     } else {
@@ -508,23 +518,27 @@ Window_t* global_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, i
         for (int i = 0; i < NUM_THREADS - 1; i++)
             pthread_join(threads[i], NULL);
         window -> numLoci = record -> numLoci;
+        window -> numHaps = record -> numHaps;
         free(threads);
         free(record);
     }
 
+    LOG_INFO("Finished genome-wide ASD calculations. Performing MDS ...\n");
+
     // Convert counts to ASD.
-    for (int i = 0; i < encoder -> numSamples; i++) {
-        for (int j = i + 1; j < encoder -> numSamples; j++) {
+    for (int i = 0; i < encoder -> numSamples; i++)
+        for (int j = i + 1; j < encoder -> numSamples; j++)
             asd[PACKED_INDEX(i, j)] = ibs_to_asd(alleleCounts[PACKED_INDEX(i, j)]);
-        }
-    }
 
     // Perfrom MDS on global.
     RealSymEigen_t* eigen = init_real_sym_eigen(encoder -> numSamples);
     perform_mds_on_window(window, eigen, asd, k);
     destroy_real_sym_eigen(eigen);
 
-    free(alleleCounts);
+    // Save ibs matrix for global.
+    window -> saveIBS = true;
+    window -> ibs = alleleCounts;
+
     free(asd);
 
     return window;
