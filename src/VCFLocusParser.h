@@ -42,7 +42,7 @@ typedef struct {
     // Number of samples in the VCF file.
     int numSamples;
     // An array of kstring_t to hold the names of each sample.
-    kstring_t* sampleNames;
+    kstring_t** sampleNames;
 
     // Fields to help us omitt unwanted record.
     //  If the user wishes, they can specify a set of regions to include/exclude.

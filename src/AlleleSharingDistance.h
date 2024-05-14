@@ -12,6 +12,18 @@
 #include "IdentityByState.h"
 #include "Window.h"
 
+// Better than using an if statement. ibs0, ibs1, and ibs2 correspond the 1st, 2nd, and 3rd field
+//  in the structure. We offset the address of the passed IBS structure and increment the 
+//  corresponding pointer. Pointer arithemtic can cause issues on different architecture.
+// #define increment_ibs_value(ibs, numShared) ((*(((unsigned int *) &(ibs)) + numShared))++)
+static inline void increment_ibs_value(IBS_t* ibs, int numShared) {
+    switch (numShared) {
+        case 0: ibs -> ibs0++; break;
+        case 1: ibs -> ibs1++; break;
+        case 2: ibs -> ibs2++; break;
+    }
+}
+
 // Calculate the number of shared alleles between two genotypes.
 // Accepts:
 //  Genotype_t s1 -> The genotype of the first sample.

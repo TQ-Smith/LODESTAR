@@ -9,11 +9,6 @@
 // We could include Matrix.h, but we are only using this definition.
 #define PACKED_INDEX(i, j) (i + j * (j + 1) / 2)
 
-// Better than using an if statement. ibs0, ibs1, and ibs2 correspond the 1st, 2nd, and 3rd field
-//  in the structure. We offset the address of the passed IBS structure and increment the 
-//  corresponding pointer.
-#define increment_ibs_value(ibs, numShared) ((*(((unsigned int *) &(ibs)) + numShared))++)
-
 // Process a single haplotype when using multiple threads.
 // Accepts:
 //  Genotype_t* geno -> The genotypes at a haplotype.
@@ -38,11 +33,11 @@ void process_haplotype_multi_thread(Genotype_t* geno, IBS_t* winAlleleCounts, IB
             // If neither of the genotypes are missing, we calculate IBS.
             if (geno[i].left != MISSING && geno[j].right != MISSING) {
                 numSharedAlleles = num_shared_alleles(geno[i], geno[j]);
-                increment_ibs_value(winAlleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
+                increment_ibs_value(&winAlleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
                 // If the haplotype is not in the overlap or it is the last window on the chromosome,
                 //  we add IBS count to the global matrix.
                 if (curHapInWin < STEP_SIZE || isLastWinOnChrom)
-                    increment_ibs_value(globalAlleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
+                    increment_ibs_value(&globalAlleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
             }
             // If the haplotype is the last one in the window, convert counts to ASD.
             if (curHapInWin == numHapsInWin - 1) {
@@ -93,12 +88,12 @@ void process_haplotype_single_thread(Genotype_t* geno, Genotype_t* stepGeno, IBS
             // If the haplotypes are not missing, calculate IBS and increment.
             if (geno[i].left != MISSING && geno[j].left != MISSING) {
                 numSharedAlleles = num_shared_alleles(geno[i], geno[j]);
-                increment_ibs_value(winAlleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
+                increment_ibs_value(&winAlleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
             }
             // Calculate IBS counts in step region of current window.
             if (!isLastWinOnChrom && curHapInWin >= (WINDOW_SIZE - STEP_SIZE) && stepGeno[i].left != MISSING && stepGeno[j].left != MISSING) {
                 numSharedAlleles = num_shared_alleles(stepGeno[i], stepGeno[j]);
-                increment_ibs_value(stepAlleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
+                increment_ibs_value(&stepAlleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
             }
             // If we reached the end of the current window ...
             if (curHapInWin == numHapsInWin - 1) {
@@ -153,6 +148,6 @@ void pairwise_ibs(Genotype_t* geno, IBS_t* alleleCounts, int numSamples) {
         for (int j = i + 1; j < numSamples; j++) 
             if (geno[i].left != MISSING && geno[j].left != MISSING) {
                 numSharedAlleles = num_shared_alleles(geno[i], geno[j]);
-                increment_ibs_value(alleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
+                increment_ibs_value(&alleleCounts[PACKED_INDEX(i, j)], numSharedAlleles);
             }
 }

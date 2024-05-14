@@ -11,7 +11,7 @@
 Window_t* init_window() {
     // Allocate memory and set defaults.
     Window_t* window = (Window_t*) calloc(1, sizeof(Window_t));
-    window -> chromosome = (kstring_t*) calloc(1, sizeof(kstring_t));
+    window -> chromosome = init_kstring(NULL);
     window -> X = NULL;
     window -> saveIBS = false;
     window -> ibs = NULL;
@@ -31,6 +31,6 @@ void destroy_window(Window_t* window, int n) {
     }
     if (window -> ibs != NULL)
         free(window -> ibs);
-    free(ks_str(window -> chromosome)); free(window -> chromosome);
+    destroy_kstring(window -> chromosome);
     free(window);
 }

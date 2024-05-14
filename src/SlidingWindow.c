@@ -101,7 +101,7 @@ void perform_mds_on_window(Window_t* window, RealSymEigen_t* eigen, double* asd,
         destroy_matrix(double, X, eigen -> N);
         return;
     } else {
-        LOG_INFO("Finished MDS for window %s.\n", window -> winNum);
+        LOG_INFO("Finished MDS for window %d.\n", window -> winNum);
     }
     // Otherwise, set X.
     window -> X = X;
@@ -171,10 +171,10 @@ Window_t* get_next_window(WindowRecord_t* record, Genotype_t** threadGeno) {
     window -> startCoord = record -> winStartLoci[window -> winNumOnChrom % (record -> WINDOW_SIZE / record -> STEP_SIZE + 1)];
     // Set the end coordinate of the current window.
     window -> endCoord = record -> encoder -> endCoord;
+    window -> numHaps = record -> numHapsInOverlap;
     // If we should save the IBS values for this window, then set flag and allocate memory.
     if (record -> saveIBSRegions != NULL && query_overlap(record -> saveIBSRegions, window -> chromosome, window -> startCoord, window -> endCoord)) {
         window -> saveIBS = true;
-        window -> ibs = (IBS_t*) malloc(PACKED_SIZE(record -> numSamples) * sizeof(IBS_t));
     }
     if (isSameChrom) {
         record -> globalNumHaps += record -> STEP_SIZE;
@@ -251,6 +251,10 @@ void* sliding_window_multi_thread(void* arg) {
         // Calculate the number of haplotypes in the window that we must process.
         numHapsInWin = (int) ceil((double) window -> numLoci / HAP_SIZE);
 
+        // Have thread allocate memory if we are saving the IBS counts for the window.
+        if (window -> saveIBS)
+            window -> ibs = (IBS_t*) malloc(PACKED_SIZE(record -> numSamples) * sizeof(IBS_t));
+
         // Compute ASD matrix for current window.
         process_window_multi_thread(threadGeno, winAlleleCounts, globalAlleleCounts, asd, window, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE);
         
@@ -300,6 +304,8 @@ void sliding_window_single_thread(WindowRecord_t* record) {
     while (!(record -> parser -> isEOF)) {
         window = get_next_window(record, NULL);
         numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
+        if (window -> saveIBS)
+            window -> ibs = (IBS_t*) malloc(PACKED_SIZE(record -> numSamples) * sizeof(IBS_t));
         process_window_single_thread(record -> winGeno, record -> winStartIndex, winAlleleCounts, stepAlleleCounts, record -> globalAlleleCounts, asd, window, numHapsInWin, window -> winNumOnChrom == 1, record -> curWinNumOnChrom == 1, record -> numSamples, record -> STEP_SIZE, record -> WINDOW_SIZE);
         perform_mds_on_window(window, record -> eigen, asd, record -> k);
         *kl_pushp(WindowPtr, record -> winList) = window;
@@ -361,8 +367,7 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
 
     record -> curWinNum = 1;
     record -> curWinNumOnChrom = 1;
-    record -> curChrom = (kstring_t*) calloc(1, sizeof(kstring_t));
-    kputs(ks_str(parser -> nextChrom), record -> curChrom);
+    record -> curChrom = init_kstring(ks_str(parser -> nextChrom));
 
     // Our array of windows along the genome.
     Window_t** windows;
@@ -418,7 +423,7 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
     destroy_real_sym_eigen(record -> eigen);
     free(record -> winStartLoci);
     free(record -> globalAlleleCounts);
-    free(record -> curChrom -> s); free(record -> curChrom);
+    destroy_kstring(record -> curChrom);
     free(record);
 
     return windows;

@@ -53,19 +53,17 @@ void print_window_info(FILE* output, Window_t* window) {
 
 void print_row(FILE* output, double* row, int K, bool useJsonOutput) {
     if (useJsonOutput) {
-        for (int i = 0; i < K - 1; i++) {
+        for (int i = 0; i < K - 1; i++)
             fprintf(output, "%lf, ", row[i]);
-        }
         fprintf(output, "%lf]", row[K - 1]);
     } else {
-        for (int i = 0; i < K - 1; i++) {
+        for (int i = 0; i < K - 1; i++)
             fprintf(output, "%lf\t", row[i]);
-        }
         fprintf(output, "%lf", row[K - 1]);
     }
 }
 
-void print_window_coords(FILE* output, kstring_t* sampleNames, Window_t* window, int N, int K, bool useJsonOutput, bool useLongOutput, bool asdToIbs, bool printCoords) {
+void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window, int N, int K, bool useJsonOutput, bool useLongOutput, bool asdToIbs, bool printCoords) {
     if (useJsonOutput) {
         fprintf(output, "{\n");
         fprintf(output, "\t\"Window Number\": %d,\n", window -> winNum);
@@ -88,7 +86,7 @@ void print_window_coords(FILE* output, kstring_t* sampleNames, Window_t* window,
             for (int i = 0; i < N; i++) {
                 fprintf(output, "\t\t[");
                 if (useLongOutput)
-                    fprintf(output, "%s, ", sampleNames[i].s);
+                    fprintf(output, "%s, ", ks_str(sampleNames[i]));
                 print_row(output, window -> X[i], K, true);
                 if (i != N - 1)
                     fprintf(output, ",\n");
@@ -104,8 +102,8 @@ void print_window_coords(FILE* output, kstring_t* sampleNames, Window_t* window,
             if (useLongOutput) {
                 for (int i = 0; i < N; i++) {
                     for (int j = 0; j <= i; j++) {
-                        fprintf(output, "%s, ", sampleNames[i].s);
-                        fprintf(output, "%s, ", sampleNames[j].s);
+                        fprintf(output, "%s, ", ks_str(sampleNames[i]));
+                        fprintf(output, "%s, ", ks_str(sampleNames[j]));
                         if (asdToIbs)
                             fprintf(output, "%lf]", ibs_to_asd(window -> ibs[INDEX(i, j, N)]));
                         else
@@ -155,7 +153,7 @@ void print_window_coords(FILE* output, kstring_t* sampleNames, Window_t* window,
             fprintf(output, "\n");
             for (int i = 0; i < N; i++) {
                 if (useLongOutput)
-                    fprintf(output, "%s\t", sampleNames[i].s);
+                    fprintf(output, "%s\t", ks_str(sampleNames[i]));
                 print_row(output, window -> X[i], K, false);
                 fprintf(output, "\n");
             }
@@ -167,8 +165,8 @@ void print_window_coords(FILE* output, kstring_t* sampleNames, Window_t* window,
             if (useLongOutput) {
                 for (int i = 0; i < N; i++) {
                     for (int j = 0; j <= i; j++) {
-                        fprintf(output, "%s\t", sampleNames[i].s);
-                        fprintf(output, "%s\t", sampleNames[j].s);
+                        fprintf(output, "%s\t", ks_str(sampleNames[i]));
+                        fprintf(output, "%s\t", ks_str(sampleNames[j]));
                         if (asdToIbs)
                             fprintf(output, "%lf\n", ibs_to_asd(window -> ibs[INDEX(i, j, N)]));
                         else
@@ -258,7 +256,8 @@ int check_configuration(LodestarConfiguration_t* lodestarConfig) {
     // Check afMissing.
     if (lodestarConfig -> afMissing < 0 || lodestarConfig -> afMissing > 1) { fprintf(stderr, "--afMissing must be in [0, 1].\n"); return 1;}
     // Check that input VCF file exists and region is valid if supplied.
-    kstring_t* r = (kstring_t*) calloc(1, sizeof(kstring_t));
+    if (lodestarConfig -> inputFileName == NULL) { fprintf(stderr, "Must supply an input VCF file with -i.\n"); return 1;}
+    kstring_t* r = init_kstring(NULL);
     bool takeComplement; 
     if (lodestarConfig -> regions != NULL) {
         takeComplement = lodestarConfig -> regions[0] == '^' ? true : false;
@@ -267,13 +266,13 @@ int check_configuration(LodestarConfiguration_t* lodestarConfig) {
         else 
             ks_overwrite(lodestarConfig -> regions, r);
         if ((lodestarConfig -> parser = init_vcf_locus_parser(lodestarConfig -> inputFileName, r, takeComplement, lodestarConfig -> maf, lodestarConfig -> afMissing, true)) == NULL) {
-            free(ks_str(r)); free(r);
+            destroy_kstring(r);
             fprintf(stderr, "-i file does not exist or --regions invalid.\n");
             return 1;
         }
     } else {
         if ((lodestarConfig -> parser = init_vcf_locus_parser(lodestarConfig -> inputFileName, NULL, false, lodestarConfig -> maf, lodestarConfig -> afMissing, true)) == NULL) {
-            free(r);
+            destroy_kstring(r);
             fprintf(stderr, "-i file does not exist.\n");
             return 1;
         }
@@ -286,7 +285,7 @@ int check_configuration(LodestarConfiguration_t* lodestarConfig) {
         else 
             ks_overwrite(lodestarConfig -> saveRegionsStr, r);
         if ((lodestarConfig -> saveRegions = init_region_set(r, takeComplement)) == NULL) {
-            free(ks_str(r)); free(r);
+            destroy_kstring(r);
             fprintf(stderr, "--save region is invalid.\n");
             return 1;
         }
@@ -299,16 +298,14 @@ int check_configuration(LodestarConfiguration_t* lodestarConfig) {
         else 
             ks_overwrite(lodestarConfig -> printRegionsStr, r);
         if ((lodestarConfig -> printRegions = init_region_set(r, takeComplement)) == NULL) {
-            free(ks_str(r)); free(r);
+            destroy_kstring(r);
             fprintf(stderr, "--printCoords region is invalid.\n");
             return 1;
         }
     }
-    if (ks_str(r) != NULL)
-        free(ks_str(r)); 
-    free(r);
+    destroy_kstring(r);
     // Check that output basename was given.
-    if (lodestarConfig -> outputBasename == NULL) { fprintf(stderr, "-o was not given.\n"); return 1;}
+    if (lodestarConfig -> outputBasename == NULL) { fprintf(stderr, "Must supply an output basename with -o.\n"); return 1;}
     // Check haplotype size is valid.
     if (lodestarConfig -> HAP_SIZE <= 0) { fprintf(stderr, "-h must be INT > 0.\n"); return 1;}
     // Check window size is valid.
@@ -324,7 +321,7 @@ int check_configuration(LodestarConfiguration_t* lodestarConfig) {
     // Check number of permutation.
     if (lodestarConfig -> NUM_PERMS <= 0) { fprintf(stderr, "--perms must be INT > 0.\n"); return 1;}
     // Check tthresh.
-    if (lodestarConfig -> tthresh <= 0 || lodestarConfig -> tthresh > 1) { fprintf(stderr, "--tthresh must be in (0, 1].\n"); return 1;}
+    if (lodestarConfig -> tthresh < 0 || lodestarConfig -> tthresh > 1) { fprintf(stderr, "--tthresh must be in [0, 1].\n"); return 1;}
     // Check target file if exists.
     if (lodestarConfig -> targetFileName != NULL) {
         lodestarConfig -> targetFile = fopen(lodestarConfig -> targetFileName, "r");
@@ -378,7 +375,7 @@ void print_configuration(FILE* output, LodestarConfiguration_t lodestarConfig) {
     fprintf(output, "Calculate genome-wide only: %s\n", PRINT_BOOL(lodestarConfig.global));
     fprintf(output, "Number of threads used: %d\n", lodestarConfig.threads);
     fprintf(output, "P-value threshold (Disabled if 0): %lf\n", lodestarConfig.pthresh);
-    fprintf(output, "Number of permutations (Disabled p-value threshold is 0): %d\n", lodestarConfig.NUM_PERMS);
+    fprintf(output, "Number of permutations (Disabled when p-value is 0): %d\n", lodestarConfig.NUM_PERMS);
     fprintf(output, "Procrustes statistic threshold: %lf\n", lodestarConfig.tthresh);
     if (lodestarConfig.regions != NULL)
         fprintf(output, "Include/exclude records from input: %s\n", lodestarConfig.regions);
@@ -397,7 +394,7 @@ void print_configuration(FILE* output, LodestarConfiguration_t lodestarConfig) {
 
 // Destroy all dynamically allocated memory associated with lodestarConfig.
 // Accepts:
-//  LodestarConfiguration_t lodestarConfig -> The configuration to destroy.
+//  LodestarConfiguration_t lodestarConfig.The configuration to destroy.
 // Returns: void.
 void destroy_lodestarConfiguration(LodestarConfiguration_t lodestarConfig) {
     if (lodestarConfig.parser != NULL)
@@ -452,7 +449,7 @@ void print_help() {
     fprintf(stderr, "                               Default NULL. See --asdToIbs\n");
     fprintf(stderr, "   --asdToIbs              Convert IBS values to ASD values in output.\n");
     fprintf(stderr, "                               Default false.\n");
-    fprintf(stderr, "   --maf DOUBLE            Drops VCF records with a MAF less than threshold.\n");
+    fprintf(stderr, "   --maf DOUBLE            Drops biallelic VCF records with a MAF less than threshold.\n");
     fprintf(stderr, "                               Default 0.\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of missing genotypes greater than or equal to threshold.\n");
     fprintf(stderr, "                               Default 1.\n");
@@ -512,7 +509,7 @@ int main (int argc, char *argv[]) {
     }        
 
     // Pass through options. Check for options requiring an argument that were not given one.
-    //  Also, check if any options are suplpied that are not defined. If user supplies the help
+    //  Also, check if any options are supplied that are not defined. If user supplies the help
     //  argument, print help menu and exit, likewise for version.
     while ((c = ketopt(&options, argc, argv, 1, opt_str, long_options)) >= 0) {
         switch (c) {
@@ -589,18 +586,18 @@ int main (int argc, char *argv[]) {
     //  we can execute our analysis.
 
     // Setup the logfile.
-    kstring_t* outputBasename = (kstring_t*) calloc(1, sizeof(kstring_t));
-    kputs(lodestarConfig.outputBasename, outputBasename);
-    kputs(".log", outputBasename);
-    INIT_LOG(ks_str(outputBasename));
+    kstring_t* outputBasename = init_kstring(lodestarConfig.outputBasename);
+    kstring_t* logFileName = init_kstring(lodestarConfig.outputBasename);
+    kputs(".log", logFileName);
+    INIT_LOG(ks_str(logFileName));
     // Print configuration to log file.
     print_configuration(logger -> file, lodestarConfig);
     // Print sample names in log file.
     fprintf(logger -> file, "\nSample Names:\n");
     for (int i = 0; i < lodestarConfig.parser -> numSamples; i++)
-        fprintf(logger -> file, "%s\n", lodestarConfig.parser -> sampleNames[i].s);
+        fprintf(logger -> file, "%s\n", ks_str(lodestarConfig.parser -> sampleNames[i]));
     fprintf(logger -> file, "\n");
-    printf("Logging progress in %s\n", ks_str(outputBasename));
+    printf("\nLogging progress in %s\n\n", ks_str(logFileName));
 
     // Create the haplotype encoder.
     HaplotypeEncoder_t* encoder = init_haplotype_encoder(lodestarConfig.parser -> numSamples);
@@ -612,25 +609,25 @@ int main (int argc, char *argv[]) {
     // If we are only calculating the genome-wide ...
     if (lodestarConfig.global) {
         LOG_INFO("Performing genome-wide calculations ...\n");
-        printf("Performing genome-wide calculations ...\n");
+        printf("Performing genome-wide calculations ...\n\n");
 
         global = global_window(lodestarConfig.parser, encoder, lodestarConfig.k, lodestarConfig.HAP_SIZE, lodestarConfig.threads);
 
         LOG_INFO("Finished genome-wide calculations ...\n");
-        printf("Finished genome-wide calculations ...\n");
+        printf("Finished genome-wide calculations ...\n\n");
     // If we are calculating the sliding window ...
     } else {
         LOG_INFO("Performing sliding-window calculations ...\n");
-        printf("Performing sliding-window calculations ...\n");
+        printf("Performing sliding-window calculations ...\n\n");
 
         windows = sliding_window(lodestarConfig.parser, encoder, lodestarConfig.saveRegions, lodestarConfig.k, lodestarConfig.HAP_SIZE, lodestarConfig.STEP_SIZE, lodestarConfig.WINDOW_SIZE, lodestarConfig.threads, &numWindows);
 
         LOG_INFO("Finished sliding-window calculations ...\n");
-        printf("Finished sliding-window calculations ...\n");
+        printf("Finished sliding-window calculations ...\n\n");
     }
 
     LOG_INFO("Beginning Procrustes Analysis ...\n");
-    printf("Beginning Procrustes Analysis ...\n");
+    printf("Beginning Procrustes Analysis ...\n\n");
 
     double** target = NULL;
     double* target0 = NULL;
@@ -679,8 +676,11 @@ int main (int argc, char *argv[]) {
             }
         }
 
+        LOG_INFO("Finished Procrustes Analysis ...\n");
+        printf("Finished Procrustes Analysis ...\n\n");
+
         LOG_INFO("Saving results to output files ...\n");
-        printf("Saving results to output files ...\n");
+        printf("Saving results to output files ...\n\n");
 
         ks_overwrite("windows_", outputBasename);
         kputs(lodestarConfig.outputBasename, outputBasename);
@@ -697,13 +697,13 @@ int main (int argc, char *argv[]) {
             kputs(lodestarConfig.outputBasename, outputBasename);
             kputs(".tsv", outputBasename);
             windowSummaries = fopen(ks_str(outputBasename), "w");
-            fprintf(windowSummaries, "Window Num\t");
-            fprintf(windowSummaries, "Num on Chrom");
-            fprintf(windowSummaries, "Chrom\t");
-            fprintf(windowSummaries, "Start Coord\t");
-            fprintf(windowSummaries, "End Coord\t");
-            fprintf(windowSummaries, "Num Loci\t");
-            fprintf(windowSummaries, "Num Haps\t");
+            fprintf(windowSummaries, "Win\t");
+            fprintf(windowSummaries, "WinChr\t");
+            fprintf(windowSummaries, "Chr\t");
+            fprintf(windowSummaries, "Start\t");
+            fprintf(windowSummaries, "End\t");
+            fprintf(windowSummaries, "nLoci\t");
+            fprintf(windowSummaries, "nHaps\t");
             fprintf(windowSummaries, "p-val\t");
             fprintf(windowSummaries, "t-stat\n");
             print_window_info(windowSummaries, windows[0]);
@@ -714,7 +714,8 @@ int main (int argc, char *argv[]) {
             for (int i = 1; i < numWindows; i++) {
                 print_window_info(windowSummaries, windows[i]);
                 if (lodestarConfig.useJsonOutput)
-                    fprintf(windowCoords, ",\n");
+                    fprintf(windowCoords, ",");
+                fprintf(windowCoords, "\n");
                 printCoords = (lodestarConfig.pthresh != 0 && windows[i] -> pval < lodestarConfig.pthresh) || (windows[i] -> t >= lodestarConfig.tthresh) || (lodestarConfig.printRegions != NULL && query_overlap(lodestarConfig.printRegions, windows[i] -> chromosome, windows[i] -> startCoord, windows[i] -> endCoord));
                 print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, windows[i], encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, printCoords);
             }
@@ -722,12 +723,13 @@ int main (int argc, char *argv[]) {
                 fprintf(windowCoords, "]\n");
         }
         LOG_INFO("Finished Analysis! Exiting ...\n");
-        printf("Finished Analysis! Exiting ...\n");
+        printf("Finished Analysis! Exiting ...\n\n");
     }
 
     // Close all files and free all memory used in analysis.
     CLOSE_LOG();
-    free(ks_str(outputBasename)); free(outputBasename);
+    destroy_kstring(logFileName);
+    destroy_kstring(outputBasename);
     destroy_lodestarConfiguration(lodestarConfig);
     if (windowSummaries != NULL)
         fclose(windowSummaries);

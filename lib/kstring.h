@@ -166,6 +166,24 @@ static inline int ks_overwrite(const char* p, kstring_t *s) {
 	return ks_overwriten(p, strlen(p), s);
 }
 
+// Added on 14 May 2024.
+// Create a kstring_t*.
+static inline kstring_t* init_kstring(const char* s) {
+	kstring_t* k = (kstring_t*) calloc(1, sizeof(kstring_t));
+	if (s == NULL)
+		return k;
+	kputs(s, k);
+	return k;
+}
+
+// Free memory associated with a kstring_t*
+static inline void destroy_kstring(kstring_t* k) {
+	if (k == NULL)
+		return;
+	if (ks_str(k) != NULL)
+		free(ks_str(k)); 
+	free(k);
+}
 
 static inline int kputc(int c, kstring_t *s)
 {

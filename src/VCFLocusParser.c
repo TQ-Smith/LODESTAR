@@ -23,7 +23,7 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool
     kstream_t* stream = ks_init(file);
     
     // Initialize the buffer to read in from the stream.
-    kstring_t* buffer = (kstring_t*) calloc(1, sizeof(kstring_t));
+    kstring_t* buffer = init_kstring(NULL);
     
     // Parse all the meta data in the VCF file.
     int dret;
@@ -37,32 +37,32 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool
         if (buffer -> s[i] == '\t')
             numSamples++;
     numSamples -= 8;
-
+    
     // Allocate the array to hold the sample names.
-    kstring_t* sampleNames = (kstring_t*) calloc(numSamples, sizeof(kstring_t));
-
+    kstring_t** sampleNames = (kstring_t**) calloc(numSamples, sizeof(kstring_t*));
     // Read in the sample names.
     int numTabs = 0, prevIndex;
     for (int i = 0; i <= ks_len(buffer); i++) {
         if (i == ks_len(buffer) || ks_str(buffer)[i] == '\t') {
-            if (numTabs > 8)
-                ks_overwriten(ks_str(buffer) + prevIndex + 1, i - prevIndex - 1, &sampleNames[numTabs - 9]);
+            if (numTabs > 8) {
+                sampleNames[numTabs - 9] = init_kstring(NULL);
+                kputsn(ks_str(buffer) + prevIndex + 1, i - prevIndex - 1, sampleNames[numTabs - 9]);
+            }
             prevIndex = i;
             numTabs++;
         }
     }
-
+    
     // Allocate our structure and the memory for its fields.
     VCFLocusParser_t* parser = (VCFLocusParser_t*) calloc(1, sizeof(VCFLocusParser_t));
-    parser -> fileName = (kstring_t*) calloc(1, sizeof(kstring_t));
-    kputs(fileName, parser -> fileName);
+    parser -> fileName = init_kstring(fileName);
     parser -> file = file;
     parser -> stream = stream;
     parser -> numSamples = numSamples;
     parser -> sampleNames = sampleNames;
     parser -> buffer = buffer;
     parser -> isEOF = false;
-    parser -> nextChrom = (kstring_t*) calloc(1, sizeof(kstring_t));
+    parser -> nextChrom = init_kstring(NULL);
     parser -> nextLocus = (Locus*) calloc(numSamples, sizeof(Locus));
     if (regions == NULL)
         parser -> set = NULL;
@@ -85,7 +85,7 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool
 
     // Prime the first record.
     get_next_locus(parser, parser -> nextChrom, &(parser -> nextCoord), &(parser -> nextNumAlleles), &(parser -> nextLocus));
-
+    
     // Return created parser.
     return parser;
 }
@@ -169,16 +169,14 @@ void seek(VCFLocusParser_t* parser) {
             parser -> alleleCounts[i] = 0;
         }
 
-        // If we are dropping monomorphic sites and each sample had the
-        //  same genotype, we skip the record. We cannot base this off of maf
-        //  since a record can have more alt alleles than present in the samples'
-        //  genotypes.
+        // Test that all thresholds are met.
         if (parser -> dropMonomorphicSites && afMax == 1)
             continue;
-        
-        // If maf and afMissing of the parser meet the thresholds, the record
-        //  is valid and we exit the loop.
-        if (maf >= parser -> maf && afMissing < parser -> afMissing)
+        else if (numAlleles == 2 && maf < parser -> maf)
+            continue;
+        else if (afMissing >= parser -> afMissing)
+            continue;
+        else 
             return;
 
     }
@@ -213,18 +211,18 @@ void destroy_vcf_locus_parser(VCFLocusParser_t* parser) {
     // Destroy the stream.
     ks_destroy(parser -> stream);
     // Free the file name.
-    free(ks_str(parser -> fileName)); free(parser -> fileName);
+    destroy_kstring(parser -> fileName);
     // If region set was allocated, destroy set.
     if (parser -> set != NULL)
         destroy_region_set(parser -> set);
     // Destroy the sample names.
     for (int i = 0; i < parser -> numSamples; i++)
-        free(parser -> sampleNames[i].s);
+        destroy_kstring(parser -> sampleNames[i]);
     free(parser -> sampleNames);
     // Destroy the buffer.
-    free(ks_str(parser -> buffer)); free(parser -> buffer);
+    destroy_kstring(parser -> buffer);
     // Destroy the next chromosome string.
-    free(ks_str(parser -> nextChrom)); free(parser -> nextChrom);
+    destroy_kstring(parser -> nextChrom);
     // Destroy the locus array.
     free(parser -> nextLocus);
     // Destroy the parser.
