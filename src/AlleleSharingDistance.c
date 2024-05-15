@@ -28,8 +28,9 @@ void process_haplotype_multi_thread(Genotype_t* geno, IBS_t* winAlleleCounts, IB
     for (int i = 0; i < numSamples; i++) {
         for (int j = i + 1; j < numSamples; j++) {
             // If this is the first haplotype in the window, we set counts to 0.
-            if (curHapInWin == 0)
+            if (curHapInWin == 0) {
                 reset_ibs(&winAlleleCounts[PACKED_INDEX(i, j)]);
+            }
             // If neither of the genotypes are missing, we calculate IBS.
             if (geno[i].left != MISSING && geno[j].right != MISSING) {
                 numSharedAlleles = num_shared_alleles(geno[i], geno[j]);

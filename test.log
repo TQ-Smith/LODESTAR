@@ -8,42 +8,42 @@ Step size: 1
 K: 1
 Use similarity: false
 Calculate genome-wide only: false
-Number of threads used: 1
+Number of threads used: 2
 P-value threshold (Disabled if 0): 0.000000
 Number of permutations (Disabled when p-value is 0): 10000
 Procrustes statistic threshold: 0.000000
 Biallelic minor allele frequency threshold: 0.000000
 Missing allele frequency threshold: 1.000000
-Convert ASD values to IBS counts: false
-Save IBS/ASD values for windows overlapping/not overlapping: 1
+Convert ASD values to IBS counts: true
+Save IBS/ASD values for windows overlapping/not overlapping: 1,2
 Use long-format output: false
-Save as JSON file: true
+Save as JSON file: false
 
 Sample Names:
 NA00001
 NA00002
 NA00003
 
-Wed May 15 13:10:56 EDT 2024: [INFO] Performing sliding-window calculations ...
-Wed May 15 13:10:56 EDT 2024: [INFO] Started ASD calculations for window 1.
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished MDS for window 1.
-Wed May 15 13:10:56 EDT 2024: [INFO] Started ASD calculations for window 2.
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished MDS for window 2.
-Wed May 15 13:10:56 EDT 2024: [INFO] Started ASD calculations for window 3.
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished MDS for window 3.
-Wed May 15 13:10:56 EDT 2024: [INFO] Started ASD calculations for window 4.
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished MDS for window 4.
-Wed May 15 13:10:56 EDT 2024: [INFO] Started ASD calculations for window 5.
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished MDS for window 5.
-Wed May 15 13:10:56 EDT 2024: [INFO] Started ASD calculations for window 6.
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished MDS for window 6.
-Wed May 15 13:10:56 EDT 2024: [INFO] Started ASD calculations for window 7.
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished MDS for window 7.
-Wed May 15 13:10:56 EDT 2024: [INFO] Started ASD calculations for window 8.
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished MDS for window 8.
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished MDS for window 0.
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished sliding-window calculations ...
-Wed May 15 13:10:56 EDT 2024: [INFO] Beginning Procrustes Analysis ...
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished Procrustes Analysis ...
-Wed May 15 13:10:56 EDT 2024: [INFO] Saving results to output files ...
-Wed May 15 13:10:56 EDT 2024: [INFO] Finished Analysis! Exiting ...
+Wed May 15 16:16:34 EDT 2024: [INFO] Performing sliding-window calculations ...
+Wed May 15 16:16:34 EDT 2024: [INFO] Started ASD calculations for window 1.
+Wed May 15 16:16:34 EDT 2024: [INFO] Started ASD calculations for window 2.
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished MDS for window 2.
+Wed May 15 16:16:34 EDT 2024: [INFO] Started ASD calculations for window 3.
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished MDS for window 1.
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished MDS for window 3.
+Wed May 15 16:16:34 EDT 2024: [INFO] Started ASD calculations for window 4.
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished MDS for window 4.
+Wed May 15 16:16:34 EDT 2024: [INFO] Started ASD calculations for window 5.
+Wed May 15 16:16:34 EDT 2024: [INFO] Started ASD calculations for window 6.
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished MDS for window 5.
+Wed May 15 16:16:34 EDT 2024: [INFO] Started ASD calculations for window 7.
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished MDS for window 6.
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished MDS for window 7.
+Wed May 15 16:16:34 EDT 2024: [INFO] Started ASD calculations for window 8.
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished MDS for window 8.
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished MDS for window 0.
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished sliding-window calculations ...
+Wed May 15 16:16:34 EDT 2024: [INFO] Beginning Procrustes Analysis ...
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished Procrustes Analysis ...
+Wed May 15 16:16:34 EDT 2024: [INFO] Saving results to output files ...
+Wed May 15 16:16:34 EDT 2024: [INFO] Finished Analysis! Exiting ...

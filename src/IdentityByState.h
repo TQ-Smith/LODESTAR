@@ -52,8 +52,10 @@ static inline void subtract_ibs(IBS_t* left, IBS_t* right) {
 // Accepts:
 //  IBS_t ibs -> The IBS counts.
 // Returns: double, The asd represented by the IBS counts.
+//              -1, if ASD is undefined.
 static inline double ibs_to_asd(IBS_t ibs) {
-    return 1.0 - (ibs.ibs1 + (2.0 * ibs.ibs2)) / (2.0 * (ibs.ibs0 + ibs.ibs1 + ibs.ibs2));
+    return (ibs.ibs0 == 0 && ibs.ibs1 == 0 && ibs.ibs2 == 0) ? -1 :
+        1.0 - (ibs.ibs1 + (2.0 * ibs.ibs2)) / (2.0 * (ibs.ibs0 + ibs.ibs1 + ibs.ibs2));
 }
 
 #endif

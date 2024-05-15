@@ -17,7 +17,8 @@
 //                                  Not perserved.
 //  int k -> The dimension to project down into.
 //  double** X -> An allocated N-by-k matrix to store the resulting points.
-// Returns: int, 0 for success. Otherwise, LAPACK failure, or k eigenvalues are not all positive.
+// Returns: int, 0 for success. Otherwise, LAPACK failure, k eigenvalues are not all positive,
+//              or packedDistanceMatrix contains nan.
 int compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix, int k, double** X);
 
 #endif

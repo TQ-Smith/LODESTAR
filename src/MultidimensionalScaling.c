@@ -28,6 +28,9 @@ int compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix, i
     // Square each element of the distance matrix. Compute grand mean and row sums.
     for(int i = 0; i < N; i++) {
         for(int j = i + 1; j < N; j++) {
+            // Distance matrices cannot contain negative values.
+            if (packedDistanceMatrix[INDEX(i, j, N)] < 0)
+                return 1;
             // Square each element.
             packedDistanceMatrix[INDEX(i, j, N)] *= packedDistanceMatrix[INDEX(i, j, N)];
             // Calculate row sums and grand mean.

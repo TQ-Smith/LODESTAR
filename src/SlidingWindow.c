@@ -97,7 +97,7 @@ void perform_mds_on_window(Window_t* window, RealSymEigen_t* eigen, double* asd,
     // If there was an error while computing MDS, destroy X and return.
     //  window -> X is NULL.
     if (INFO != 0) {
-        LOG_WARNING("ASD matrix of window %d on %s had rank less than %d. Could not calculate MDS.\n", window -> winNumOnChrom, ks_str(window -> chromosome), eigen -> N);
+        LOG_WARNING("ASD matrix of window %d on %s had a NaN or rank less than %d. Could not calculate MDS.\n", window -> winNumOnChrom, ks_str(window -> chromosome), eigen -> N);
         destroy_matrix(double, X, eigen -> N);
         return;
     } else {
@@ -394,6 +394,8 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
     global -> endCoord = 0;
     global -> numLoci = record -> globalNumLoci;
     global -> numHaps = record -> globalNumHaps;
+    global -> saveIBS = true;
+    global -> ibs = record -> globalAlleleCounts;
 
     double* globalASD = (double*) malloc(PACKED_SIZE(record -> numSamples) * sizeof(double));
     // Convert IBS counts to ASD.
@@ -422,7 +424,6 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
     destroy_matrix(geno, record -> winGeno, WINDOW_SIZE);
     destroy_real_sym_eigen(record -> eigen);
     free(record -> winStartLoci);
-    free(record -> globalAlleleCounts);
     destroy_kstring(record -> curChrom);
     free(record);
 

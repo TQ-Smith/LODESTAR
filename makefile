@@ -9,11 +9,11 @@ CC = gcc-13
 CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 
-bin/lodestar: src/main.o
+bin/lodestar: src/Main.o
 	$(CC) $(LFLAGS) bin/lodestar src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
 
-src/main.o: src/Logger.o src/SlidingWindow.o src/ProcrustesAnalysis.o
-	$(CC) $(CFLAGS) src/main.c -o src/main.o
+src/Main.o: src/Logger.o src/SlidingWindow.o src/ProcrustesAnalysis.o
+	$(CC) $(CFLAGS) src/Main.c -o src/Main.o
 
 src/ProcrustesAnalysis.o: src/RealSymEigen.o
 	$(CC) $(CFLAGS) src/ProcrustesAnalysis.c -o src/ProcrustesAnalysis.o
