@@ -12,6 +12,9 @@
 // Index a packed stored matrix. If i > j, then treat the upper triangle as the lower triangle.
 #define INDEX(i, j, N) (i <= j ? i + j * (j + 1) / 2 : j + i * (i + 1) / 2)
 
+// Used for comparing a floating point to 0.
+#define EPS 1.0e-5
+
 int compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix, int k, double** X) {
 
     int N = eigen -> N;
@@ -54,7 +57,9 @@ int compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix, i
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < k; j++) {
             // If the eigenvalue is negative, we cannot take square-root. Return error.
-            if (eigen -> W[k - j - 1] < 0)
+            // If one of the eigenvalues are 0, then we project into a dimension less than k,
+            //  return error.
+            if (eigen -> W[k - j - 1] < 0 || fabs(eigen -> W[k - j - 1]) <= EPS)
                 return 1;
             X[i][j] = eigen -> Z[(k - j - 1) * N + i] * sqrt(eigen -> W[k - j - 1]);
         }

@@ -65,64 +65,70 @@ void print_row(FILE* output, double* row, int K, bool useJsonOutput) {
 
 void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window, int N, int K, bool useJsonOutput, bool useLongOutput, bool asdToIbs, bool printCoords) {
     if (useJsonOutput) {
-        fprintf(output, "{\n");
-        fprintf(output, "\t\"Window Number\": %d,\n", window -> winNum);
-        fprintf(output, "\t\"Window Number on Chromosome\": %d,\n", window -> winNumOnChrom);
-        fprintf(output, "\t\"Chromosome\": %s,\n", ks_str(window -> chromosome));
-        fprintf(output, "\t\"Start Coordinate\": %d,\n", window -> startCoord);
-        fprintf(output, "\t\"End Coordinate\": %d,\n", window -> endCoord);
-        fprintf(output, "\t\"Number of Loci\": %d,\n", window -> numLoci);
-        fprintf(output, "\t\"Number of Haplotypes\": %d,\n", window -> numHaps);
+        fprintf(output, "\t{\n");
+        fprintf(output, "\t\t\"Window Number\": %d,\n", window -> winNum);
+        fprintf(output, "\t\t\"Window Number on Chromosome\": %d,\n", window -> winNumOnChrom);
+        fprintf(output, "\t\t\"Chromosome\": %s,\n", ks_str(window -> chromosome));
+        fprintf(output, "\t\t\"Start Coordinate\": %d,\n", window -> startCoord);
+        fprintf(output, "\t\t\"End Coordinate\": %d,\n", window -> endCoord);
+        fprintf(output, "\t\t\"Number of Loci\": %d,\n", window -> numLoci);
+        fprintf(output, "\t\t\"Number of Haplotypes\": %d,\n", window -> numHaps);
         if (window -> pval == 0)
-            fprintf(output, "\t\"P-Value\": null,\n");
+            fprintf(output, "\t\t\"P-Value\": null,\n");
         else 
-            fprintf(output, "\t\"P-Value\": %lf,\n", window -> pval);
-        fprintf(output, "\t\"t-statistic\": %lf,\n", window -> t);
-        fprintf(output, "\t\"Points\": ");
+            fprintf(output, "\t\t\"P-Value\": %lf,\n", window -> pval);
+        if (window -> t == -1)
+            fprintf(output, "\t\t\"t-statistic\": null,\n");
+        else 
+            fprintf(output, "\t\t\"t-statistic\": %lf,\n", window -> t);
+        fprintf(output, "\t\t\"Points\": ");
         if (!printCoords || window -> X == NULL) {
             fprintf(output, "null\n");
         } else {
             fprintf(output, "[\n");
             for (int i = 0; i < N; i++) {
-                fprintf(output, "\t\t[");
+                fprintf(output, "\t\t\t[");
                 if (useLongOutput)
-                    fprintf(output, "%s, ", ks_str(sampleNames[i]));
+                    fprintf(output, "\"%s\", ", ks_str(sampleNames[i]));
                 print_row(output, window -> X[i], K, true);
                 if (i != N - 1)
                     fprintf(output, ",\n");
                 else
                     fprintf(output, "\n");
             }
-            fprintf(output, "\t]\n");
+            fprintf(output, "\t\t]\n");
         }
-        fprintf(output, "\t\"Pairwise\": ");
+        fprintf(output, "\t\t\"Pairwise\": ");
         if (!window -> saveIBS) {
             fprintf(output, "null\n");
         } else {
             if (useLongOutput) {
+                fprintf(output, "[\n");
                 for (int i = 0; i < N; i++) {
                     for (int j = 0; j <= i; j++) {
-                        fprintf(output, "%s, ", ks_str(sampleNames[i]));
-                        fprintf(output, "%s, ", ks_str(sampleNames[j]));
+                        fprintf(output, "\t\t\t[\"%s\", ", ks_str(sampleNames[i]));
+                        fprintf(output, "\"%s\", ", ks_str(sampleNames[j]));
                         if (asdToIbs)
                             fprintf(output, "%lf]", ibs_to_asd(window -> ibs[INDEX(i, j, N)]));
                         else
                             fprintf(output, "%d/%d/%d]", window -> ibs[INDEX(i, j, N)].ibs0, window -> ibs[INDEX(i, j, N)].ibs1, window -> ibs[INDEX(i, j, N)].ibs2);
+                        if (i * j != (N - 1) * (N - 1))
+                            fprintf(output, ",");
+                        fprintf(output, "\n");
                     }
-                    if (i != N - 1)
-                        fprintf(output, ",");
-                    fprintf(output, "\n");
                 }
+                fprintf(output, "\t\t]\n");
             } else {
+                fprintf(output, "[\n");
                 for (int i = 0; i < N; i++) {
-                    fprintf(output, "[");
+                    fprintf(output, "\t\t\t[");
                     for (int j = 0; j <= i; j++) {
                         if (asdToIbs)
                             fprintf(output, "%lf", ibs_to_asd(window -> ibs[INDEX(i, j, N)]));
                         else
                             fprintf(output, "%d/%d/%d", window -> ibs[INDEX(i, j, N)].ibs0, window -> ibs[INDEX(i, j, N)].ibs1, window -> ibs[INDEX(i, j, N)].ibs2);
                         if (j != i)
-                            fprintf(output, ",");
+                            fprintf(output, ", ");
                     }
                     fprintf(output, "]");
                     if (i != N - 1)
@@ -130,9 +136,10 @@ void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window
                     else 
                         fprintf(output, "\n");
                 }
+                fprintf(output, "\t\t]\n");
             }
         }
-        fprintf(output, "}");
+        fprintf(output, "\t}");
     } else {
         fprintf(output, "Window Number: %d\n", window -> winNum);
         fprintf(output, "Window Number on Chromosome: %d\n", window -> winNumOnChrom);
@@ -145,7 +152,10 @@ void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window
             fprintf(output, "P-Value: null\n");
         else 
             fprintf(output, "P-Value: %lf\n", window -> pval);
-        fprintf(output, "t-statistic: %lf\n", window -> t);
+        if (window -> t == -1)
+            fprintf(output, "t-statistic: null\n");
+        else
+            fprintf(output, "t-statistic: %lf\n", window -> t);
         fprintf(output, "Points: ");
         if (!printCoords || window -> X == NULL) {
             fprintf(output, "null\n");
@@ -379,7 +389,7 @@ void print_configuration(FILE* output, LodestarConfiguration_t lodestarConfig) {
     fprintf(output, "Procrustes statistic threshold: %lf\n", lodestarConfig.tthresh);
     if (lodestarConfig.regions != NULL)
         fprintf(output, "Include/exclude records from input: %s\n", lodestarConfig.regions);
-    fprintf(output, "Minor allele frequency threshold: %lf\n", lodestarConfig.maf);
+    fprintf(output, "Biallelic minor allele frequency threshold: %lf\n", lodestarConfig.maf);
     fprintf(output, "Missing allele frequency threshold: %lf\n", lodestarConfig.afMissing);
     fprintf(output, "Convert ASD values to IBS counts: %s\n", PRINT_BOOL(lodestarConfig.asdToIbs));
     if (lodestarConfig.saveRegionsStr != NULL)
@@ -453,8 +463,6 @@ void print_help() {
     fprintf(stderr, "                               Default 0.\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of missing genotypes greater than or equal to threshold.\n");
     fprintf(stderr, "                               Default 1.\n");
-    fprintf(stderr, "   --ibs [^]REGS           Saves IBS calculations for overlapping windows included/excluded defined by REGS.\n");
-    fprintf(stderr, "                               Not used when --global is set.\n");
     fprintf(stderr, "   --long                  Prints calculations in long format instead of matrix form.\n");
     fprintf(stderr, "   --json                  Prints window information in JSON format instead of TXT.\n");
     fprintf(stderr, "Types:\n");
@@ -716,11 +724,11 @@ int main (int argc, char *argv[]) {
                 if (lodestarConfig.useJsonOutput)
                     fprintf(windowCoords, ",");
                 fprintf(windowCoords, "\n");
-                printCoords = (lodestarConfig.pthresh != 0 && windows[i] -> pval < lodestarConfig.pthresh) || (windows[i] -> t >= lodestarConfig.tthresh) || (lodestarConfig.printRegions != NULL && query_overlap(lodestarConfig.printRegions, windows[i] -> chromosome, windows[i] -> startCoord, windows[i] -> endCoord));
+                printCoords = (windows[i] -> X != NULL) && ((lodestarConfig.pthresh != 0 && windows[i] -> pval < lodestarConfig.pthresh) || (windows[i] -> t >= lodestarConfig.tthresh) || (lodestarConfig.printRegions != NULL && query_overlap(lodestarConfig.printRegions, windows[i] -> chromosome, windows[i] -> startCoord, windows[i] -> endCoord)));
                 print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, windows[i], encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, printCoords);
             }
             if (lodestarConfig.useJsonOutput)
-                fprintf(windowCoords, "]\n");
+                fprintf(windowCoords, "\n]\n");
         }
         LOG_INFO("Finished Analysis! Exiting ...\n");
         printf("Finished Analysis! Exiting ...\n\n");

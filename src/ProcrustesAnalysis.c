@@ -35,6 +35,11 @@ void shuffle_real_matrix(double** matrix, int m) {
 
 double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, RealSymEigen_t* eigen, int N, int K, bool transform, bool similarity) {
 
+    // If either set of points were not given, 
+    //  return -1. t-statistic can never be negative.
+    if (Xc == NULL || Yc == NULL)
+        return -1;
+
     // Trace of (Xc^T)Xc, trace of (Yc^T)Yc.
     double trX = 0, trY = 0;
 
@@ -197,6 +202,11 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
 }
 
 double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEigen_t* eigen, int n, int k, bool similarity, double t0, int NUM_PERMS) {
+
+    // If either set of points were not given, 
+    //  return 0. p-values should never be 0.
+    if (Xc == NULL || Yc == NULL)
+        return 0;
 
     // Copy X to shuffleX.
     for (int i = 0; i < n; i++)
