@@ -5,7 +5,7 @@
 # Principal Investigator: Dr. Zachary A. Szpiech
 # Purpose: Build LODESTAR. ONLY compiles with gcc. NOT clang.
 
-CC = gcc-13
+CC?=gcc
 CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 
