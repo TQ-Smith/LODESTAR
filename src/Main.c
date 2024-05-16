@@ -14,6 +14,7 @@
 #include "Matrix.h"
 MATRIX_INIT(double, double)
 
+// Used to index the lowere triangle of a packed matrix.
 #define INDEX(i, j, N) (i <= j ? i + j * (j + 1) / 2 : j + i * (i + 1) / 2)
 
 // Center a matrix for use in MDS.
@@ -36,6 +37,11 @@ void center_matrix(double** X, double* x0, int n, int k) {
             X[i][j] -= x0[j];
 }
 
+// Print the single entry fields of a window.
+// Accepts:
+//  FILE* output -> The output stream to print to.
+//  Window_t* window -> The window whose fields will be printed.
+// Returns: void.
 void print_window_info(FILE* output, Window_t* window) {
     fprintf(output, "%d\t", window -> winNum);
     fprintf(output, "%d\t", window -> winNumOnChrom);
@@ -48,6 +54,13 @@ void print_window_info(FILE* output, Window_t* window) {
     fprintf(output, "%lf\n", window -> t);
 }
 
+// Print an array.
+// Accepts:
+//  FILE* output -> The output stream to print to.
+//  double* row -> The array to print.
+//  int K -> The number of elements of row to print.
+//  bool useJsonOutput -> Flag to indicate if row should be JSON formatted.
+// Returns: void.
 void print_row(FILE* output, double* row, int K, bool useJsonOutput) {
     if (useJsonOutput) {
         for (int i = 0; i < K - 1; i++)
@@ -60,8 +73,24 @@ void print_row(FILE* output, double* row, int K, bool useJsonOutput) {
     }
 }
 
+// Print the attributes of a window.
+//  Do not like how this method is written, but I do not think there is a way around it.
+// Accepts:
+//  FILE* output -> The output stream to print to.
+//  kstring_t** sampleNames -> Array of sample names corresponding to each point in the window.
+//              Only used when useLongOutput is set.
+//  Window_t* window -> The window whose attributes will be printed.
+//  int N -> The number of samples.
+//  int K -> The dimension of the projected points.
+//  bool useJsonOutput -> Print the attributes in JSON format. Otherwise, print in plain text.
+//  bool useLongOutput -> Print coordinates and pairwise computations in long format.
+//  bool asdToIbs -> Print pairwise computations as IBS counts. Otherwise, ASD.
+//  bool printCoords -> Print the coordinates of the window if they exist.
+// Returns: void.
 void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window, int N, int K, bool useJsonOutput, bool useLongOutput, bool asdToIbs, bool printCoords) {
+    // Print JSON.
     if (useJsonOutput) {
+        // Print single fields.
         fprintf(output, "\t{\n");
         fprintf(output, "\t\t\"Window Number\": %d,\n", window -> winNum);
         fprintf(output, "\t\t\"Window Number on Chromosome\": %d,\n", window -> winNumOnChrom);
@@ -78,6 +107,7 @@ void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window
             fprintf(output, "\t\t\"t-statistic\": null,\n");
         else 
             fprintf(output, "\t\t\"t-statistic\": %lf,\n", window -> t);
+        // Print points.
         fprintf(output, "\t\t\"Points\": ");
         if (!printCoords || window -> X == NULL) {
             fprintf(output, "null\n");
@@ -95,6 +125,7 @@ void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window
             }
             fprintf(output, "\t\t]\n");
         }
+        // Print pairwise.
         fprintf(output, "\t\t\"Pairwise\": ");
         if (!window -> saveIBS) {
             fprintf(output, "null\n");
@@ -137,7 +168,9 @@ void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window
             }
         }
         fprintf(output, "\t}");
+    // Print as plain text.
     } else {
+        // Print single fields.
         fprintf(output, "Window Number: %d\n", window -> winNum);
         fprintf(output, "Window Number on Chromosome: %d\n", window -> winNumOnChrom);
         fprintf(output, "Chromosome: %s\n", ks_str(window -> chromosome));
@@ -153,6 +186,7 @@ void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window
             fprintf(output, "t-statistic: null\n");
         else
             fprintf(output, "t-statistic: %lf\n", window -> t);
+        // Print points.
         fprintf(output, "Points: ");
         if (!printCoords || window -> X == NULL) {
             fprintf(output, "null\n");
@@ -165,11 +199,11 @@ void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window
                 fprintf(output, "\n");
             }
         }
+        // Print pairwise.
         fprintf(output, "Pairwise: ");
         if (!window -> saveIBS) {
             fprintf(output, "null\n");
         } else {
-            fprintf(output, "\n");
             if (useLongOutput) {
                 for (int i = 0; i < N; i++) {
                     for (int j = 0; j < i; j++) {
@@ -650,12 +684,10 @@ int main (int argc, char *argv[]) {
         printf("Finished sliding-window calculations ...\n\n");
     }
 
-    LOG_INFO("Beginning Procrustes Analysis ...\n");
-    printf("Beginning Procrustes Analysis ...\n\n");
-
     double** target = NULL;
     double* target0 = NULL;
 
+    // If a target file is supplied, open the file and create the target set of points.
     if (lodestarConfig.targetFileName != NULL) {
         lodestarConfig.targetFile = fopen(lodestarConfig.targetFileName, "r");
         target = create_matrix(double, encoder -> numSamples, lodestarConfig.k);
@@ -667,88 +699,121 @@ int main (int argc, char *argv[]) {
                 target[i][j] = value;
             }
         }
+        // Center user defined points.
         center_matrix(target, target0, encoder -> numSamples, lodestarConfig.k);
-    } else {
+    } 
+    // Otherwise, if we did not give a target file, and we calculated the sliding window,
+    //  the first element of windows is the global window.
+    if (lodestarConfig.targetFileName == NULL && !lodestarConfig.global) {
         target = windows[0] -> X;
     }
 
-    RealSymEigen_t* eigen = init_real_sym_eigen(encoder -> numSamples);
+    // Used for Procrustes.
+    RealSymEigen_t* eigen = NULL;
+    // Used for permutation testing.
     double** shuffleX = NULL;
+    // Our output files.
     FILE* windowSummaries = NULL;
     FILE* windowCoords = NULL;
 
-    if (target == NULL || (lodestarConfig.global && global -> X == NULL)) {
-        LOG_ERROR("Could not perform Procrustes against genome-wide MDS coordinates. Genome-wide ASD matrix was of low rank.\n");
-    } else {
+    if ((lodestarConfig.global && global -> X != NULL && target != NULL) || target != NULL) {
+        LOG_INFO("Beginning Procrustes Analysis ...\n");
+        printf("Beginning Procrustes Analysis ...\n\n");
+
+        eigen = init_real_sym_eigen(encoder -> numSamples);
+        shuffleX = create_matrix(double, encoder -> numSamples, lodestarConfig.k);
         double t;
+
+        // If only global was calculated and the user suppplied coordinates, perform Procrustes against the two.
         if (lodestarConfig.global) {
             t = procrustes_statistic(global -> X, NULL, target, target0, eigen, eigen -> N, lodestarConfig.k, true, lodestarConfig.similarity);
             global -> t = t;
+            // Execute permutation test if user set p-value threshold.
             if (lodestarConfig.pthresh != 0)
                 global -> pval = permutation_test(global -> X, target, shuffleX, eigen, eigen -> N, lodestarConfig.k, lodestarConfig.similarity, t, lodestarConfig.NUM_PERMS);
-        } else {
+        } 
+        // If sliding window ...
+        if (!lodestarConfig.global) {
+            LOG_INFO("Beginning Procrustes Analysis ...\n");
+            printf("Beginning Procrustes Analysis ...\n\n");
             int startWindow = 0;
+            // If the user did not enter coordinates, perform Procrustes against genome-wide.
             if (target == windows[0] -> X)
                 startWindow = 1;
+            // For each window, perform Procrustes analysis.
             for (int i = startWindow; i < numWindows; i++) {
                 t = procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, eigen -> N, lodestarConfig.k, true, lodestarConfig.similarity);
                 windows[i] -> t = t;
+                // If the user entered a p-value threshold, execute permutation test.
                 if (lodestarConfig.pthresh != 0) {
                     LOG_INFO("Performing permutation test for window %d ...\n", windows[i] -> winNum);
                     windows[i] -> pval = permutation_test(windows[i] -> X, target, shuffleX, eigen, eigen -> N, lodestarConfig.k, lodestarConfig.similarity, t, lodestarConfig.NUM_PERMS);
                 }
             }
         }
-
         LOG_INFO("Finished Procrustes Analysis ...\n");
         printf("Finished Procrustes Analysis ...\n\n");
-
-        LOG_INFO("Saving results to output files ...\n");
-        printf("Saving results to output files ...\n\n");
-
-        ks_overwrite("windows_", outputBasename);
-        kputs(lodestarConfig.outputBasename, outputBasename);
-        if (lodestarConfig.useJsonOutput)
-            kputs(".json", outputBasename);
-        else
-            kputs(".txt", outputBasename);
-        windowCoords = fopen(ks_str(outputBasename), "w");
-
-        if (lodestarConfig.global) {
-            print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, global, encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, true);
-        } else {
-            ks_overwrite("summary_", outputBasename);
-            kputs(lodestarConfig.outputBasename, outputBasename);
-            kputs(".tsv", outputBasename);
-            windowSummaries = fopen(ks_str(outputBasename), "w");
-            fprintf(windowSummaries, "Win\t");
-            fprintf(windowSummaries, "WinChr\t");
-            fprintf(windowSummaries, "Chr\t");
-            fprintf(windowSummaries, "Start\t");
-            fprintf(windowSummaries, "End\t");
-            fprintf(windowSummaries, "nLoci\t");
-            fprintf(windowSummaries, "nHaps\t");
-            fprintf(windowSummaries, "p-val\t");
-            fprintf(windowSummaries, "t-stat\n");
-            print_window_info(windowSummaries, windows[0]);
-            if (lodestarConfig.useJsonOutput)
-                fprintf(windowCoords, "[\n");
-            print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, windows[0], encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, true);
-            bool printCoords;
-            for (int i = 1; i < numWindows; i++) {
-                print_window_info(windowSummaries, windows[i]);
-                if (lodestarConfig.useJsonOutput)
-                    fprintf(windowCoords, ",");
-                fprintf(windowCoords, "\n");
-                printCoords = (windows[i] -> X != NULL) && ((lodestarConfig.pthresh != 0 && windows[i] -> pval < lodestarConfig.pthresh) || (windows[i] -> t >= lodestarConfig.tthresh) || (lodestarConfig.printRegions != NULL && query_overlap(lodestarConfig.printRegions, windows[i] -> chromosome, windows[i] -> startCoord, windows[i] -> endCoord)));
-                print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, windows[i], encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, printCoords);
-            }
-            if (lodestarConfig.useJsonOutput)
-                fprintf(windowCoords, "\n]\n");
-        }
-        LOG_INFO("Finished Analysis! Exiting ...\n");
-        printf("Finished Analysis! Exiting ...\n\n");
     }
+
+    // Error messages to signal that Procrustes analysis was not executed.
+    if (lodestarConfig.global && global -> X == NULL && target != NULL) {
+        LOG_ERROR("Could not perform Procrustes Analysis between genome-wide and user defined coordinates because genome-wide coordinates were of low rank.\n");
+    } else if (!lodestarConfig.global && target == NULL) {
+        LOG_ERROR("Could not perform Procrustes Analysis between windows and genome-wide coordinates because genome-wide coordinates were of low rank.\n");
+    }
+
+    LOG_INFO("Saving results to output files ...\n");
+    printf("Saving results to output files ...\n\n");
+
+    ks_overwrite("windows_", outputBasename);
+    kputs(lodestarConfig.outputBasename, outputBasename);
+    if (lodestarConfig.useJsonOutput)
+        kputs(".json", outputBasename);
+    else
+        kputs(".txt", outputBasename);
+    windowCoords = fopen(ks_str(outputBasename), "w");
+
+    // If the user is just calculating genome-wide, only print one window to windows file.
+    if (lodestarConfig.global) {
+        print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, global, encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, true);
+    // Otherwise, sliding window ...
+    } else {
+        // Open summary file and print headers to summary file.
+        ks_overwrite("summary_", outputBasename);
+        kputs(lodestarConfig.outputBasename, outputBasename);
+        kputs(".tsv", outputBasename);
+        windowSummaries = fopen(ks_str(outputBasename), "w");
+        fprintf(windowSummaries, "Win\t");
+        fprintf(windowSummaries, "WinChr\t");
+        fprintf(windowSummaries, "Chr\t");
+        fprintf(windowSummaries, "Start\t");
+        fprintf(windowSummaries, "End\t");
+        fprintf(windowSummaries, "nLoci\t");
+        fprintf(windowSummaries, "nHaps\t");
+        fprintf(windowSummaries, "p-val\t");
+        fprintf(windowSummaries, "t-stat\n");
+        print_window_info(windowSummaries, windows[0]);
+        if (lodestarConfig.useJsonOutput)
+            fprintf(windowCoords, "[\n");
+        print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, windows[0], encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, true);
+        bool printCoords;
+        // For each window ...
+        for (int i = 1; i < numWindows; i++) {
+            // Print summary.
+            print_window_info(windowSummaries, windows[i]);
+            if (lodestarConfig.useJsonOutput)
+                fprintf(windowCoords, ",");
+            fprintf(windowCoords, "\n");
+            // Determine if coordinates for the file should be printed and print to windows file.
+            printCoords = (windows[i] -> X != NULL) && ((lodestarConfig.pthresh != 0 && windows[i] -> pval < lodestarConfig.pthresh) || (windows[i] -> t >= lodestarConfig.tthresh) || (lodestarConfig.printRegions != NULL && query_overlap(lodestarConfig.printRegions, windows[i] -> chromosome, windows[i] -> startCoord, windows[i] -> endCoord)));
+            print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, windows[i], encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, printCoords);
+        }
+        if (lodestarConfig.useJsonOutput)
+            fprintf(windowCoords, "\n]\n");
+    }
+    LOG_INFO("Finished Analysis! Exiting ...\n");
+    printf("Finished Analysis! Exiting ...\n\n");
+    
 
     // Close all files and free all memory used in analysis.
     CLOSE_LOG();

@@ -1,0 +1,16 @@
+Window Number: 0
+Window Number on Chromosome: 0
+Chromosome: Global
+Start Coordinate: 0
+End Coordinate: 0
+Number of Loci: 8
+Number of Haplotypes: 8
+P-Value: null
+t-statistic: null
+Points: 
+-0.046454
+-0.268057
+0.314511
+Pairwise: 
+0.300000	
+0.400000	0.583333	
