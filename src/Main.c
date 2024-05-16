@@ -61,7 +61,6 @@ void print_row(FILE* output, double* row, int K, bool useJsonOutput) {
 }
 
 void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window, int N, int K, bool useJsonOutput, bool useLongOutput, bool asdToIbs, bool printCoords) {
-    double asd;
     if (useJsonOutput) {
         fprintf(output, "\t{\n");
         fprintf(output, "\t\t\"Window Number\": %d,\n", window -> winNum);
@@ -170,6 +169,7 @@ void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window
         if (!window -> saveIBS) {
             fprintf(output, "null\n");
         } else {
+            fprintf(output, "\n");
             if (useLongOutput) {
                 for (int i = 0; i < N; i++) {
                     for (int j = 0; j < i; j++) {
@@ -339,23 +339,25 @@ int check_configuration(LodestarConfiguration_t* lodestarConfig) {
             fprintf(stderr, "--target %s does not exist.\n", lodestarConfig -> targetFileName);
             return 1;
         }
-        int numLines = 1, dim = 1;
+        int numLines = 0, dim = 1;
         char c;
         while ((c = getc(lodestarConfig -> targetFile)) != EOF) {
-            if (numLines == 0 && c == ',')
+            if (c == '\t')
                 dim++;
-            if (c == '\n')
+            if (c == '\n') {
+                // Check dimension of target file.
+                if (dim != lodestarConfig -> k) {
+                    fprintf(stderr, "Dimension of --target %s does not match that of k.\n", lodestarConfig -> targetFileName);
+                    fclose(lodestarConfig -> targetFile);
+                    return 1;
+                }
+                dim = 1;
                 numLines++;
+            }
         }
-        fclose(lodestarConfig -> targetFile);
         // Check the number of samples in target file.
         if (numLines != lodestarConfig -> parser -> numSamples) {
             fprintf(stderr, "Number of samples in --target %s does not match that of the input file.\n", lodestarConfig -> targetFileName);
-            return 1;
-        }
-        // Check dimension of target file.
-        if (dim != lodestarConfig -> k) {
-            fprintf(stderr, "Dimension of --target %s does not match that of k.\n", lodestarConfig -> targetFileName);
             return 1;
         }
     }
