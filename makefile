@@ -3,7 +3,7 @@
 # Date: 9 May 2024
 # Author: T. Quinn Smith
 # Principal Investigator: Dr. Zachary A. Szpiech
-# Purpose: Build LODESTAR. ONLY compiles with gcc. NOT clang.
+# Purpose: Build LODESTAR. 
 
 CC?=gcc
 CFLAGS = -c -Wall -g

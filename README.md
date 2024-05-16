@@ -21,4 +21,4 @@ gcc can be installed on MacOS using homebrew. Once installed, run the following 
 make CC=$(ls /opt/homebrew/bin/ | grep '^gcc-..$')
 ```
 
-## Rest of README Coming Soon!
+## README Coming Soon!
