@@ -503,9 +503,9 @@ void print_help() {
     fprintf(stderr, "   --asdToIbs              Convert IBS values to ASD values in output.\n");
     fprintf(stderr, "                               Default false.\n");
     fprintf(stderr, "   --maf DOUBLE            Drops biallelic VCF records with a MAF less than threshold.\n");
-    fprintf(stderr, "                               Default 0.\n");
+    fprintf(stderr, "                               Default 0.05\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of missing genotypes greater than or equal to threshold.\n");
-    fprintf(stderr, "                               Default 1.\n");
+    fprintf(stderr, "                               Default 0.5.\n");
     fprintf(stderr, "   --long                  Prints calculations in long format instead of matrix form.\n");
     fprintf(stderr, "   --json                  Prints window information in JSON format instead of TXT.\n");
     fprintf(stderr, "Types:\n");
@@ -591,8 +591,8 @@ int main (int argc, char *argv[]) {
     lodestarConfig.NUM_PERMS = 10000;
     lodestarConfig.tthresh = 0.95;
     lodestarConfig.regions = NULL;
-    lodestarConfig.maf = 0;
-    lodestarConfig.afMissing = 1;
+    lodestarConfig.maf = 0.05;
+    lodestarConfig.afMissing = 0.5;
     lodestarConfig.saveRegionsStr = NULL;
     lodestarConfig.saveRegions = NULL;
     lodestarConfig.asdToIbs = false;
@@ -734,8 +734,6 @@ int main (int argc, char *argv[]) {
         } 
         // If sliding window ...
         if (!lodestarConfig.global) {
-            LOG_INFO("Beginning Procrustes Analysis ...\n");
-            printf("Beginning Procrustes Analysis ...\n\n");
             int startWindow = 0;
             // If the user did not enter coordinates, perform Procrustes against genome-wide.
             if (target == windows[0] -> X)
