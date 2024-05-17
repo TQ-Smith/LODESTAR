@@ -40,4 +40,13 @@
 #define create_matrix(NAME, N, M) create_##NAME##_matrix(N, M)
 #define destroy_matrix(NAME, MATRIX, N) destroy_##NAME##_matrix(MATRIX, N)
 
+// Center a matrix for use in MDS.
+// Accepts:
+//  double** X -> The matrix to center.
+//  double* x0 -> The vector to hold the column means.
+//  int n -> The number of rows in X.
+//  int k -> The number of columns in X.
+// Returns: void.
+void center_matrix(double** X, double* x0, int n, int k);
+
 #endif

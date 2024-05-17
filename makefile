@@ -12,10 +12,10 @@ LFLAGS = -g -o
 bin/lodestar: src/Main.o
 	$(CC) $(LFLAGS) bin/lodestar src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
 
-src/Main.o: src/Logger.o src/SlidingWindow.o src/ProcrustesAnalysis.o
+src/Main.o: src/SlidingWindow.o src/ProcrustesAnalysis.o
 	$(CC) $(CFLAGS) src/Main.c -o src/Main.o
 
-src/ProcrustesAnalysis.o: src/RealSymEigen.o
+src/ProcrustesAnalysis.o: src/Logger.o src/Matrix.o src/RealSymEigen.o
 	$(CC) $(CFLAGS) src/ProcrustesAnalysis.c -o src/ProcrustesAnalysis.o
 
 src/SlidingWindow.o: src/HaplotypeEncoder.o src/Window.o src/AlleleSharingDistance.o src/MultidimensionalScaling.o
@@ -38,6 +38,9 @@ src/HaplotypeEncoder.o: src/VCFLocusParser.o
 
 src/VCFLocusParser.o: src/RegionSet.o
 	$(CC) $(CFLAGS) src/VCFLocusParser.c -o src/VCFLocusParser.o
+
+src/Matrix.o:
+	$(CC) $(CFLAGS) src/Matrix.c -o src/Matrix.o
 
 src/RegionSet.o:
 	$(CC) $(CFLAGS) src/RegionSet.c -o src/RegionSet.o

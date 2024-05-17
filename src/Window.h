@@ -31,6 +31,8 @@ typedef struct {
     
     // The matrix of points representing samples in k-dimensional space.
     double** X;
+    // The vector of X's column averages.
+    double* x0;
 
     // A flag to indicate if the IBS counts for the window should be saved.
     bool saveIBS;

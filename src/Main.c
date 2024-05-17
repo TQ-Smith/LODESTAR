@@ -17,26 +17,6 @@ MATRIX_INIT(double, double)
 // Used to index the lowere triangle of a packed matrix.
 #define INDEX(i, j, N) (i <= j ? i + j * (j + 1) / 2 : j + i * (i + 1) / 2)
 
-// Center a matrix for use in MDS.
-// Accepts:
-//  double** X -> The matrix to center.
-//  double* x0 -> The vector to hold the column means.
-//  int n -> The number of rows in X.
-//  int k -> The number of columns in X.
-// Returns: void.
-void center_matrix(double** X, double* x0, int n, int k) {
-    // Calculate the center.
-    for (int i = 0; i < k; i++) {
-        x0[i] = 0;
-        for (int j = 0; j < n; j++)
-            x0[i] += (X[j][i] / n);
-    }
-    // Center the set of points.
-    for (int i = 0; i < n; i++)
-        for (int j = 0; j < k; j++) 
-            X[i][j] -= x0[j];
-}
-
 // Print the single entry fields of a window.
 // Accepts:
 //  FILE* output -> The output stream to print to.
@@ -549,6 +529,9 @@ static ko_longopt_t long_options[] = {
 
 int main (int argc, char *argv[]) {
 
+    // Seed random number generator.
+    srand(time(NULL));
+
     // Single character aliases for long options.
     const char *opt_str = "i:o:h:w:s:k:v";
     ketopt_t options = KETOPT_INIT;
@@ -706,12 +689,9 @@ int main (int argc, char *argv[]) {
     //  the first element of windows is the global window.
     if (lodestarConfig.targetFileName == NULL && !lodestarConfig.global) {
         target = windows[0] -> X;
+        target0 = windows[0] -> x0;
     }
 
-    // Used for Procrustes.
-    RealSymEigen_t* eigen = NULL;
-    // Used for permutation testing.
-    double** shuffleX = NULL;
     // Our output files.
     FILE* windowSummaries = NULL;
     FILE* windowCoords = NULL;
@@ -719,35 +699,23 @@ int main (int argc, char *argv[]) {
     if ((lodestarConfig.global && global -> X != NULL && target != NULL) || target != NULL) {
         LOG_INFO("Beginning Procrustes Analysis ...\n");
         printf("Beginning Procrustes Analysis ...\n\n");
-
-        eigen = init_real_sym_eigen(encoder -> numSamples);
-        shuffleX = create_matrix(double, encoder -> numSamples, lodestarConfig.k);
-        double t;
-
         // If only global was calculated and the user suppplied coordinates, perform Procrustes against the two.
         if (lodestarConfig.global) {
-            t = procrustes_statistic(global -> X, NULL, target, target0, eigen, eigen -> N, lodestarConfig.k, true, lodestarConfig.similarity);
+            RealSymEigen_t* eigen = init_real_sym_eigen(encoder -> numSamples);
+            // If we are executing Procrustes analysis once, do not multithread even if user allowed multithreading.
+            double t = procrustes_statistic(global -> X, global -> x0, target, target0, eigen, eigen -> N, lodestarConfig.k, true, lodestarConfig.similarity);
             global -> t = t;
             // Execute permutation test if user set p-value threshold.
-            if (lodestarConfig.pthresh != 0)
+            if (lodestarConfig.pthresh != 0) {
+                double** shuffleX = create_matrix(double, encoder -> numSamples, lodestarConfig.k);
                 global -> pval = permutation_test(global -> X, target, shuffleX, eigen, eigen -> N, lodestarConfig.k, lodestarConfig.similarity, t, lodestarConfig.NUM_PERMS);
+                destroy_matrix(double, shuffleX, encoder -> numSamples);
+            }
+            destroy_real_sym_eigen(eigen);
         } 
         // If sliding window ...
         if (!lodestarConfig.global) {
-            int startWindow = 0;
-            // If the user did not enter coordinates, perform Procrustes against genome-wide.
-            if (target == windows[0] -> X)
-                startWindow = 1;
-            // For each window, perform Procrustes analysis.
-            for (int i = startWindow; i < numWindows; i++) {
-                t = procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, eigen -> N, lodestarConfig.k, true, lodestarConfig.similarity);
-                windows[i] -> t = t;
-                // If the user entered a p-value threshold, execute permutation test.
-                if (lodestarConfig.pthresh != 0) {
-                    LOG_INFO("Performing permutation test for window %d ...\n", windows[i] -> winNum);
-                    windows[i] -> pval = permutation_test(windows[i] -> X, target, shuffleX, eigen, eigen -> N, lodestarConfig.k, lodestarConfig.similarity, t, lodestarConfig.NUM_PERMS);
-                }
-            }
+            procrustes_sliding_window(windows, numWindows, target, target0, encoder -> numSamples, lodestarConfig.k, lodestarConfig.similarity, lodestarConfig.pthresh == 0 ? 0 : lodestarConfig.NUM_PERMS, lodestarConfig.threads);
         }
         LOG_INFO("Finished Procrustes Analysis ...\n");
         printf("Finished Procrustes Analysis ...\n\n");
@@ -816,17 +784,15 @@ int main (int argc, char *argv[]) {
     // Close all files and free all memory used in analysis.
     CLOSE_LOG();
     destroy_kstring(outputBasename);
+    if (lodestarConfig.targetFileName != NULL) {
+        destroy_matrix(double, target, encoder -> numSamples);
+        free(target0);
+    }
     destroy_lodestarConfiguration(lodestarConfig);
     if (windowSummaries != NULL)
         fclose(windowSummaries);
     if (windowCoords != NULL)
         fclose(windowCoords);
-    if (shuffleX != NULL)
-        destroy_matrix(double, shuffleX, encoder -> numSamples);
-    if (target0 != NULL) {
-        destroy_matrix(double, target, encoder -> numSamples);
-        free(target0);
-    }
     if (global != NULL)
         destroy_window(global, encoder -> numSamples);
     if (windows != NULL) {
@@ -835,7 +801,6 @@ int main (int argc, char *argv[]) {
         free(windows);
     }
     destroy_haplotype_encoder(encoder);
-    destroy_real_sym_eigen(eigen);
     return 0;
 
 }
