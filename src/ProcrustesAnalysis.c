@@ -16,6 +16,46 @@
 //  but it is good to keep things consistent.
 #define COL_MAJOR(i, j, K) (j * K + i)
 
+// A few things to note:
+//  - LAPACK requires gfortran which is not a part of CLANG.
+//  - Must be compiled with gcc/gfortran.
+//  - All matrices in LAPACK are one-dimensional arrays stored in column major
+//      form. This does not matter with symmetric matrices.
+//  - A is the matrrix to decompose. 
+//  - S will contain the singular values.
+//  - U will contain the U matrix.
+//  - VT will contain V^T. 
+
+// Define out LAPACK SVD routine.
+extern void dgesvd_(char* JOBU, char* JOBVT, int* M, int* N, double* A,
+                int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT,
+                double* WORK, int* LWORK, int* INFO);
+
+// We wrap the methods in a function to make them more readable in C.
+int dgesvd(
+    char JOBU, 
+    char JOBVT, 
+    int M, 
+    int N, 
+    double* A,
+    int LDA, 
+    double* S, 
+    double* U, 
+    int LDU, 
+    double* VT, 
+    int LDVT,
+    double* WORK, 
+    int LWORK 
+) {
+    int INFO;
+
+    dgesvd_(&JOBU, &JOBVT, &M, &N, A,
+            &LDA, S, U, &LDU, VT, &LDVT,
+            WORK, &LWORK, &INFO);
+    
+    return INFO;
+}
+
 // Fischer-Yates shuffle algorithm to shuffle the rows of a matrix.
 //  NOTE: Random number generator needs to be seeded before calling function.
 // Accepts:
@@ -43,11 +83,8 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
     // Trace of (Xc^T)Xc, trace of (Yc^T)Yc.
     double trX = 0, trY = 0;
 
-    // For convenience, we rename Z and A to C and covC, respecively.
-    //  We will perfrom SVD on C, which means we will take the eigen-decomposition
-    //  of the covariance of C.
+    // For convience we rename eigen -> Z to C.
     double* C = eigen -> Z;
-    double* covC = eigen -> A;
 
     // Calculate C = (Yc^T)Xc. Simultaneously calculate the trace of (Xc^T)Xc and trace of (Yc^T)Yc.
     for (int i = 0; i < K; i++) {
@@ -63,15 +100,6 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         }
     }
 
-    // Calculate covC = (C^T)C.
-    for (int i = 0; i < K; i++) {
-        for (int j = 0; j < K; j++) {
-            covC[COL_MAJOR(i, j, K)] = 0;
-            for (int k = 0; k < K; k++)
-                covC[COL_MAJOR(i, j, K)] += C[COL_MAJOR(k, i, K)] * C[COL_MAJOR(k, j, K)];
-        }
-    }
-
     // Trace of the lambda matrix.
     double trLambda = 0;
 
@@ -79,7 +107,21 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
     //  When K = 1, 2, 3, we can calculate the eigenvalues of covC directly as the roots of its characteric equation.
     //  We used Numerical Recipes in C, Third Edition to solve the quadratic and cubic equations.
     if (!transform) {
+        // We rename eigen -> A to covC to get the singular values.
+        double* covC = eigen -> A;
+
+        // Variables to calculate singular values when K = 1, 2, or 3.
         double a0, a1, a2, b, c, det, q, r, theta, root1, root2, root3;
+
+        // Calculate covC = (C^T)C.
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < K; j++) {
+                covC[COL_MAJOR(i, j, K)] = 0;
+                for (int k = 0; k < K; k++)
+                    covC[COL_MAJOR(i, j, K)] += C[COL_MAJOR(k, i, K)] * C[COL_MAJOR(k, j, K)];
+            }
+        }
+
         switch (K) {
             case 1:
                 trLambda += sqrt(covC[COL_MAJOR(0, 0, K)]);
@@ -117,78 +159,63 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         }
     } else {
 
-        // When we transform the coordinates, we need both the eigenvalues and eigenvectors.
-        //  For all K, we rely on LAPACK to calculate eigenpairs. We could do this manually 
-        //  for K = 1, 2, and 3, but the code would be somewhat lengthy.
-        compute_k_eigenpairs(eigen, K);
+        // Calculate SVD on C.
+        //  eigen -> W will contain the singular values.
+        //  eigen -> A will contain U.
+        //  eigen -> auxilary will contain V^T.
+        int INFO = dgesvd('A', 'A', K, K, C, K, eigen -> W, eigen -> A, K, eigen -> auxilary, K, eigen -> WORK, 26 * K);
 
-        // Calculate trLambda.
-        for (int i = 0; i < K; i++)
-            trLambda += sqrt(eigen -> W[i]);
+        // If SVD did not converge, return -1. Procrustes statistic can never have this value.
+        if (INFO != 0)
+            return -1;
 
-        // For convenience, we rename A and Z to U and V, respectively. 
-        double* U = eigen -> A;
-        double* V = eigen -> Z;
+        // Compute A^T which is stored in Z.
+        double dot;
+        for (int i = 0; i < K; i++) {
+            // Set b vector to 0 by default.
+            eigen -> ISUPPZ[i] = 0;
+            for (int j = 0; j < K; j++) {
+                dot = 0;
+                for (int k = 0; k < K; k++) {
+                    dot += eigen -> A[COL_MAJOR(i, k, K)] * eigen -> auxilary[COL_MAJOR(k, j, K)];
+                }
+                eigen -> Z[COL_MAJOR(i, j, K)] = dot;
+            }
+            trLambda += eigen -> W[i];
+        }
 
-        // Caclulate our scaling factor rho.
+        // Calculate rho.
         double rho = trLambda / trX;
 
-        // Calculate U using the equation Ui = (1 / sigma_i) * C * Vi
-        //  We could create another auxilary k-by-k array to store C, which would not require much memory
-        //  just more book-keeping. However, since k is usually small, we can recalculate C quickly.
-        //  We use eigen -> WORK[j] as a temporary vector.
-        for (int i = 0; i < K; i++) {
-            for (int j = 0; j < K; j++) {
-                eigen -> WORK[j] = 0;
-                for (int k = 0; k < N; k++)
-                    eigen -> WORK[j] += Yc[k][i] * Xc[k][j];
-            }
-            for (int j = 0; j < K; j++) {
-                U[COL_MAJOR(i, j, K)] = 0;
-                for (int k = 0; k < K; k++)
-                    U[COL_MAJOR(i, j, K)] += eigen -> WORK[k] * V[COL_MAJOR(K - j - 1, k, K)];
-                U[COL_MAJOR(i, j, K)] *= (1 / sqrt(eigen -> W[K - j - 1]));
+        // Calculate b and store in WORK.
+        //  K is usually small so we can seperate
+        //  this calculation from the previous loop.
+        if (x0 != NULL || y0 != NULL) {
+            for (int i = 0; i < K; i++) {
+                if (x0 == NULL) {
+                    eigen -> WORK[i] = y0[i];
+                } else {
+                    dot = 0;
+                    for (int j = 0; j < K; j++) {
+                        dot += eigen -> Z[COL_MAJOR(i, j, K)] * x0[j];
+                    }
+                    eigen -> WORK[i] = y0[i] - rho * dot;
+                }
             }
         }
 
-        // Define our shift vector. Known as b in the paper.
-        double* shift = eigen -> W;
-
-        // We calculate (A^T) = U(V^T). Again, eigen -> WORK is used as an auxilary vector.
-        //  NOTE: U is replaced by (A^T).
-        for (int i = 0; i < K; i++) {
-            for (int j = 0; j < K; j++) {
-                eigen -> WORK[j] = 0;
-                for (int k = 0; k < K; k++)
-                    eigen -> WORK[j] += U[COL_MAJOR(i, k, K)] * V[COL_MAJOR(K - k - 1, j, K)];
-            }
-            // As we form A^T, we also calculate shift.
-            shift[i] = 0;
-            for (int j = 0; j < K; j++) {
-                // Copy over WORK to build A^T.
-                U[COL_MAJOR(i, j, K)] = eigen -> WORK[j];
-                if (x0 != NULL)
-                    shift[i] += U[COL_MAJOR(i, j, K)] * x0[j];
-            }
-            if (y0 != NULL)
-                shift[i] = y0[i] - rho * shift[i];
-            else
-                shift[i] = -rho * shift[i];
-        }
-
-        // Transform each of the samples by the equation rho * (A^T) * X + shift.
-        //  We could put this in the previous loop, but since K is usually small,
-        //  we keep is seperate for clarity.
+        // Transform points.
+        //  rho * A^T * x + b.
+        //  Use eigen -> W as extra space.
         for (int i = 0; i < N; i++) {
-            // Sample vector times (A^T).
             for (int j = 0; j < K; j++) {
-                eigen -> WORK[j] = 0;
-                for (int k = 0; k < K; k++)
-                    eigen -> WORK[j] += U[COL_MAJOR(j, k, K)] * Xc[i][k];
+                eigen -> W[j] = 0;
+                for (int k = 0; k < K; k++) {
+                    eigen -> W[j] += eigen -> Z[COL_MAJOR(j, k, K)] * Xc[i][k];
+                }
             }
-            // Scale and shift sample.
             for (int j = 0; j < K; j++)
-                Xc[i][j] = rho * eigen -> WORK[j] + shift[j];
+                Xc[i][j] = rho * eigen -> W[j] + eigen -> WORK[j];
         }
 
     }
@@ -256,8 +283,6 @@ int main() {
 
     RealSymEigen_t* eigen = init_real_sym_eigen(K);
 
-    double t0 = procrustes_statistic(X, x0, Y, y0, eigen, N, K, true, true);
-
-    printf("Statistic: %lf\n", t0);
+    printf("\n%lf\n", procrustes_statistic(X, x0, Y, y0, eigen, N, K, true, true));
 }
 */

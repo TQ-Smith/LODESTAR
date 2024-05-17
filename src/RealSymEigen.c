@@ -22,7 +22,7 @@
 //  - Matrix Z will hold the resulting eigenvectors.
 //  - Eigenpairs in W and Z are stored from least to greatest.
 
-// Define our LAPACK methods/
+// Define our LAPACK methods.
 extern void dsyevr_(char *JOBZp, char *RANGEp, char *UPLOp, 
                         int *Np, double *A, int *LDAp, double *VLp, 
                         double *VUp, int *ILp, int *IUp, double *ABSTOLp, 
@@ -82,6 +82,8 @@ RealSymEigen_t* init_real_sym_eigen(int N) {
     eigen -> WORK = malloc(26 * N * sizeof(double));
     eigen -> IWORK = malloc(10 * N * sizeof(int));
     eigen -> N = N;
+    // Used for auxilary work in Procrustes.
+    eigen -> auxilary = malloc(N * N * sizeof(double));
     return eigen;
 }
 
@@ -127,5 +129,6 @@ void destroy_real_sym_eigen(RealSymEigen_t* eigen) {
     free(eigen -> ISUPPZ);
     free(eigen -> WORK);
     free(eigen -> IWORK);
+    free(eigen -> auxilary);
     free(eigen);
 }

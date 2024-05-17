@@ -17,7 +17,7 @@
 
 // A structure to hold all the memory used by dsyevr.
 typedef struct {
-    double *A, *B, *W, *Z, *WORK;
+    double *A, *B, *W, *Z, *WORK, *auxilary;
     int *ISUPPZ, *IWORK;
     int N, M;
 } RealSymEigen_t;

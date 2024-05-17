@@ -45,9 +45,11 @@ src/RegionSet.o:
 src/Logger.o:
 	$(CC) $(CFLAGS) src/Logger.c -o src/Logger.o
 
+.PHONY: lib/lapack
 lib/lapack:
-	$(CC) $(CFLAGS) lib/lapack/*.f -o lib/lapack
+	$(CC) $(CFLAGS) lib/lapack/*.f
+	mv *.o lib/lapack
 
 .PHONY: clean
 clean:
-	rm src/*.o bin/* lapack/*.o
+	rm src/*.o bin/* lib/lapack/*.o
