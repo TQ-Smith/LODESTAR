@@ -700,7 +700,7 @@ int main (int argc, char *argv[]) {
     // Used to transform points.
     RealSymEigen_t* eigen = init_real_sym_eigen(encoder -> numSamples);
 
-    if ((lodestarConfig.global && global -> X != NULL) || target != NULL) {
+    if ((lodestarConfig.global && global -> X != NULL && target != NULL) || target != NULL) {
         LOG_INFO("Beginning Procrustes Analysis ...\n");
         printf("Beginning Procrustes Analysis ...\n\n");
         // If only global was calculated and the user suppplied coordinates, perform Procrustes against the two.
