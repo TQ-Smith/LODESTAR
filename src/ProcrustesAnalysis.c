@@ -317,7 +317,7 @@ void* procrustes_multi_thread(void* arg) {
         LOG_INFO("Performing Procrustes for window %d ...\n", window -> winNum);
 
         // Calculate Procrustes statistic for window.
-        t = procrustes_statistic(window -> X, window -> x0, record -> target, record -> target0, eigen, record -> N, record -> K, true, record -> similarity);
+        t = procrustes_statistic(window -> X, NULL, record -> target, NULL, eigen, record -> N, record -> K, false, record -> similarity);
         window -> t = t;
         // If the user wants to do a permutation test, execute permutation test.
         if (record -> NUM_PERMS > 0) {
@@ -342,7 +342,7 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
         // For each window, perform Procrustes analysis.
         for (int i = startWindow; i < numWindows; i++) {
             LOG_INFO("Performing Procrustes for window %d ...\n", windows[i] -> winNum);
-            t = procrustes_statistic(windows[i] -> X, windows[i] -> x0, target, target0, eigen, N, K, true, similarity);
+            t = procrustes_statistic(windows[i] -> X, NULL, target, NULL, eigen, N, K, false, similarity);
             windows[i] -> t = t;
             // If the user wants to do a permutation test, execute permutation test.
             if (NUM_PERMS > 0) {
