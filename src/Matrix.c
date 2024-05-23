@@ -19,3 +19,9 @@ void center_matrix(double** X, double* x0, int n, int k) {
         for (int j = 0; j < k; j++) 
             X[i][j] -= x0[j];
 }
+
+void uncenter_matrix(double** X, double* x0, int n, int k) {
+    for (int i = 0; i < n; i++) 
+        for (int j = 0; j < k; j++)
+            X[i][j] += x0[j];
+}

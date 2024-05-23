@@ -693,20 +693,14 @@ int main (int argc, char *argv[]) {
         // Center user defined points.
         center_matrix(target, target0, encoder -> numSamples, lodestarConfig.k);
     } 
-    // Otherwise, if we did not give a target file, and we calculated the sliding window,
-    //  the first element of windows is the global window.
-    if (lodestarConfig.targetFileName == NULL && !lodestarConfig.global) {
+    if (windows != NULL) {
         target = windows[0] -> X;
-        target0 = windows[0] -> x0;
     }
 
-    // Our output files.
-    FILE* windowSummaries = NULL;
-    FILE* windowCoords = NULL;
     // Used to transform points.
     RealSymEigen_t* eigen = init_real_sym_eigen(encoder -> numSamples);
 
-    if ((lodestarConfig.global && global -> X != NULL && target != NULL) || target != NULL) {
+    if ((lodestarConfig.global && global -> X != NULL) || target != NULL) {
         LOG_INFO("Beginning Procrustes Analysis ...\n");
         printf("Beginning Procrustes Analysis ...\n\n");
         // If only global was calculated and the user suppplied coordinates, perform Procrustes against the two.
@@ -721,10 +715,9 @@ int main (int argc, char *argv[]) {
                 destroy_matrix(double, shuffleX, encoder -> numSamples);
             }
         } 
-        // If sliding window ...
-        if (!lodestarConfig.global) {
-            procrustes_sliding_window(windows, numWindows, target, target0, encoder -> numSamples, lodestarConfig.k, lodestarConfig.similarity, lodestarConfig.pthresh == 0 ? 0 : lodestarConfig.NUM_PERMS, lodestarConfig.threads);
-        }
+        
+        procrustes_sliding_window(windows, numWindows, target, target0, encoder -> numSamples, lodestarConfig.k, lodestarConfig.similarity, lodestarConfig.pthresh == 0 ? 0 : lodestarConfig.NUM_PERMS, lodestarConfig.threads);
+        
         LOG_INFO("Finished Procrustes Analysis ...\n");
         printf("Finished Procrustes Analysis ...\n\n");
     }
@@ -739,29 +732,21 @@ int main (int argc, char *argv[]) {
     LOG_INFO("Saving results to output files ...\n");
     printf("Saving results to output files ...\n\n");
 
-    ks_overwrite("windows_", outputBasename);
-    kputs(lodestarConfig.outputBasename, outputBasename);
-    if (lodestarConfig.useJsonOutput)
-        kputs(".json", outputBasename);
-    else
-        kputs(".txt", outputBasename);
-    windowCoords = fopen(ks_str(outputBasename), "w");
-
-    // If the user is just calculating genome-wide, only print one window to windows file.
-    if (lodestarConfig.global) {
-        if (target == NULL) {
-            // Uncenter global.
-            for (int i = 0; i < encoder -> numSamples; i++) 
-                for (int j = 0; j < lodestarConfig.k; j++)
-                    windows[0] -> X[i][j] += windows[0] -> x0[j];
-            print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, global, encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, true);
-        } else {
-            // Transform global to fit target.
-            procrustes_statistic(global -> X, global -> x0, target, target0, eigen, encoder -> numSamples, lodestarConfig.k, true, lodestarConfig.similarity);
-            print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, global, encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, true);
-        }
-    // Otherwise, sliding window ...
-    } else {
+    // Our output files.
+    FILE* windowSummaries = NULL;
+    FILE* windowCoords = NULL;
+    FILE* globalCoords = NULL;
+    
+    // If we performed a sliding window.
+    if (!lodestarConfig.global) {
+        // Open long window output file.
+        ks_overwrite("windows_", outputBasename);
+        kputs(lodestarConfig.outputBasename, outputBasename);
+        if (lodestarConfig.useJsonOutput)
+            kputs(".json", outputBasename);
+        else
+            kputs(".txt", outputBasename);
+        windowCoords = fopen(ks_str(outputBasename), "w");
         // Open summary file and print headers to summary file.
         ks_overwrite("summary_", outputBasename);
         kputs(lodestarConfig.outputBasename, outputBasename);
@@ -780,7 +765,6 @@ int main (int argc, char *argv[]) {
         fprintf(windowSummaries, "nHaps\t");
         fprintf(windowSummaries, "p-val\t");
         fprintf(windowSummaries, "t-stat\n");
-        print_window_info(windowSummaries, windows[0]);
         if (lodestarConfig.useJsonOutput)
             fprintf(windowCoords, "[\n");
         bool printCoords;
@@ -795,21 +779,35 @@ int main (int argc, char *argv[]) {
             printCoords = (windows[i] -> X != NULL) && ((lodestarConfig.pthresh != 0 && windows[i] -> pval < lodestarConfig.pthresh) || (windows[i] -> t >= lodestarConfig.tthresh) || (lodestarConfig.printRegions != NULL && query_overlap(lodestarConfig.printRegions, windows[i] -> chromosome, windows[i] -> startCoord, windows[i] -> endCoord)));
             // Transform coordinates if we are printing points.
             if (printCoords)
-                procrustes_statistic(windows[i] -> X, windows[i] -> x0, target, target0, eigen, encoder -> numSamples, lodestarConfig.k, true, lodestarConfig.similarity);
+                procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, encoder -> numSamples, lodestarConfig.k, true, lodestarConfig.similarity);
             print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, windows[i], encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, printCoords);
         }
-        // Uncenter global.
-        fprintf(windowCoords, "\n");
-        for (int i = 0; i < encoder -> numSamples; i++) 
-            for (int j = 0; j < lodestarConfig.k; j++)
-                windows[0] -> X[i][j] += windows[0] -> x0[j];
-        print_window_coords(windowCoords, lodestarConfig.parser -> sampleNames, windows[0], encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, true);
         if (lodestarConfig.useJsonOutput)
             fprintf(windowCoords, "\n]\n");
     }
+
+    // Create global output file.
+    ks_overwrite("global_", outputBasename);
+    kputs(lodestarConfig.outputBasename, outputBasename);
+    if (lodestarConfig.useJsonOutput)
+        kputs(".json", outputBasename);
+    else
+        kputs(".txt", outputBasename);
+    globalCoords = fopen(ks_str(outputBasename), "w");
+
+    if (lodestarConfig.global && global -> X != NULL) {
+        if (target != NULL)
+            procrustes_statistic(global -> X, NULL, target, target0, eigen, encoder -> numSamples, lodestarConfig.k, true, lodestarConfig.similarity);
+        print_window_coords(globalCoords, lodestarConfig.parser -> sampleNames, global, encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, true);
+    } 
+    if (!lodestarConfig.global && windows[0] -> X != NULL) {
+        if (target != NULL && target != windows[0] -> X) 
+            procrustes_statistic(windows[0] -> X, NULL, target, target0, eigen, encoder -> numSamples, lodestarConfig.k, true, lodestarConfig.similarity);
+        print_window_coords(globalCoords, lodestarConfig.parser -> sampleNames, windows[0], encoder -> numSamples, lodestarConfig.k, lodestarConfig.useJsonOutput, lodestarConfig.useLongOutput, lodestarConfig.asdToIbs, true);
+    }
+
     LOG_INFO("Finished Analysis! Exiting ...\n");
     printf("Finished Analysis! Exiting ...\n\n");
-    
 
     // Close all files and free all memory used in analysis.
     CLOSE_LOG();
@@ -824,6 +822,8 @@ int main (int argc, char *argv[]) {
         fclose(windowSummaries);
     if (windowCoords != NULL)
         fclose(windowCoords);
+    if (globalCoords != NULL)
+        fclose(globalCoords);
     if (global != NULL)
         destroy_window(global, encoder -> numSamples);
     if (windows != NULL) {

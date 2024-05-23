@@ -49,4 +49,13 @@
 // Returns: void.
 void center_matrix(double** X, double* x0, int n, int k);
 
+// Uncenter a matrix.
+// Accepts:
+//  double** X -> The matrix to uncenter.
+//  double* x0 -> The vector to hold the column means.
+//  int n -> The number of rows in X.
+//  int k -> The number of columns in X.
+// Returns: void.
+void uncenter_matrix(double** X, double* x0, int n, int k);
+
 #endif

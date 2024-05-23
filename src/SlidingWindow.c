@@ -103,11 +103,7 @@ void perform_mds_on_window(Window_t* window, RealSymEigen_t* eigen, double* asd,
     } else {
         LOG_INFO("Finished MDS for window %d.\n", window -> winNum);
     }
-    // Otherwise, center X and set X.
-    double* x0 = (double*) malloc(k * sizeof(double));
-    center_matrix(X, x0, eigen -> N, k);
     window -> X = X;
-    window -> x0 = x0;
 }
 
 // Reads in haplotypes and prepares the next window.

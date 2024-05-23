@@ -181,7 +181,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         double dot;
         for (int i = 0; i < K; i++) {
             // Set b vector to 0 by default.
-            eigen -> ISUPPZ[i] = 0;
+            eigen -> WORK[i] = 0;
             for (int j = 0; j < K; j++) {
                 dot = 0;
                 for (int k = 0; k < K; k++) {
@@ -389,37 +389,39 @@ int main() {
     // Seed random number generator.
     srand(time(NULL));
 
-    int N = 4, K = 2;
+    int N = 150, K = 2;
     double** X = (double**) calloc(N, sizeof(double*));
-    double* x0 = (double*) calloc(3, sizeof(double));
     double** Y = (double**) calloc(N, sizeof(double*));
-    double* y0 = (double*) calloc(3, sizeof(double));
     for (int i = 0; i < N; i++) {
-        X[i] = (double*) calloc(3, sizeof(double));
-        Y[i] = (double*) calloc(3, sizeof(double));
+        X[i] = (double*) calloc(K, sizeof(double));
+        Y[i] = (double*) calloc(K, sizeof(double));
     }
-    X[0][0] = 1; X[0][1] = 2; X[0][2] = 2;
-    X[1][0] =  3; X[1][1] = 4; X[1][2] = 3;
-    X[2][0] = 3; X[2][1] = -6; X[2][2] = -4;
-    X[3][0] =  7; X[3][1] = -8; X[3][2] = -5;
-    x0[0] = -1; x0[1] = 3; x0[2] = -2;
 
-    Y[0][0] = 1; Y[0][1] = 0; Y[0][2] = -1;
-    Y[1][0] =  0; Y[1][1] = 2; Y[1][2] = -3;
-    Y[2][0] = -5; Y[2][1] = 0; Y[2][2] = 5;
-    Y[3][0] =  7; Y[3][1] = 0; Y[3][2] = 7;
-    y0[0] = 1; y0[1] = 2; y0[2] = -1;
+    FILE* local = fopen("local.tsv", "r");
+    FILE* global = fopen("global.tsv", "r");
+
+    double in;
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < K; j++) {
+            fscanf(local, "%lf", &in);
+            X[i][j] = in;
+            fscanf(global, "%lf", &in);
+            Y[i][j] = in;
+        }
+    }
 
     RealSymEigen_t* eigen = init_real_sym_eigen(K);
 
-    shuffle_real_matrix(X, N);
+    printf("%lf\n", procrustes_statistic(X, NULL, Y, NULL, eigen, N, K, true, false));
+    printf("X = \n");
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < K; j++) {
             printf("%lf\t", X[i][j]);
         }
         printf("\n");
     }
+    fclose(local);
+    fclose(global);
 
-    printf("\n%lf\n", procrustes_statistic(X, x0, Y, y0, eigen, N, K, true, true));
 }
 */
