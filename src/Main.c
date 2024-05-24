@@ -15,7 +15,7 @@
 #include "Matrix.h"
 MATRIX_INIT(double, double)
 
-// Used to index the lowere triangle of a packed matrix.
+// Used to index the lower triangle of a packed matrix.
 #define INDEX(i, j, N) (i <= j ? i + j * (j + 1) / 2 : j + i * (i + 1) / 2)
 
 // Print the single entry fields of a window.
