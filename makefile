@@ -10,6 +10,7 @@ CFLAGS = -c -Wall -g
 LFLAGS = -g -o
 
 bin/lodestar: src/Main.o
+	mkdir -p bin
 	$(CC) $(LFLAGS) bin/lodestar src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
 
 src/Main.o: src/SlidingWindow.o src/ProcrustesAnalysis.o
