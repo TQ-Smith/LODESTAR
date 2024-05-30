@@ -48,7 +48,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
 double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEigen_t* eigen, int N, int K, bool similarity, double t0, int NUM_PERMS);
 
 
-// Perform Procrustes Analysis and/or permutation test along a sliding window using multiple threads.
+// Perform Procrustes Analysis and/or permutation test along a sliding window.
 // Accepts:
 //  Window_t** windows -> Our array of windows.
 //  int numWindows -> The length of windows.
@@ -58,8 +58,7 @@ double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEige
 //  int K -> The dimension of each point.
 //  bool similarity -> If set, statistic represents similarity between points. Otherwise, dissimilarity.
 //  int NUM_PERMS -> If 0, permutation test is NOT performed.
-//  int NUM_THREADS -> Number of threads to use in the computation.
 // Returns: void.
-void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, double* target0, int N, int K, bool similarity, int NUM_PERMS, int NUM_THREADS);
+void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, double* target0, int N, int K, bool similarity, int NUM_PERMS);
 
 #endif
