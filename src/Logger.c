@@ -23,7 +23,6 @@ void _init_log(const char* file_name) {
         // Open file to log.
         logger -> file = fopen(file_name, "w");
     }
-    logger -> current_time = time(NULL);
     tzset();
     pthread_mutex_unlock(&logLock);
 }
@@ -35,6 +34,7 @@ void _log(const char* prefix, const char* fmt, ...) {
         return;
     }
     // Print local date/time, followed by the prefix, and then, the message.
+    logger -> current_time = time(NULL);
     strftime(logger -> date_and_time, sizeof(logger -> date_and_time) - 1, "%a %b %d %T %Z %Y", localtime(&logger -> current_time));
     fprintf(logger -> file, "%s: %s ", logger -> date_and_time, prefix);
     va_start(logger -> args, fmt);
