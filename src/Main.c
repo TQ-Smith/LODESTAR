@@ -756,7 +756,7 @@ int main (int argc, char *argv[]) {
         for (int i = 0; i < argc; i++) 
             fprintf(windowSummaries, "%s ", argv[i]);
         fprintf(windowSummaries, "\n");
-        fprintf(windowSummaries, "#Win\t");
+        fprintf(windowSummaries, "Win\t");
         fprintf(windowSummaries, "WinChr\t");
         fprintf(windowSummaries, "Chr\t");
         fprintf(windowSummaries, "Start\t");
