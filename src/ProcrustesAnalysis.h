@@ -52,13 +52,12 @@ double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEige
 // Accepts:
 //  Window_t** windows -> Our array of windows.
 //  int numWindows -> The length of windows.
-//  double** target -> The target set of points.
-//  double* target0 -> The target column means vector.
+//  double** target -> The target set of centered-points.
 //  int N -> The number of points.
 //  int K -> The dimension of each point.
 //  bool similarity -> If set, statistic represents similarity between points. Otherwise, dissimilarity.
 //  int NUM_PERMS -> If 0, permutation test is NOT performed.
 // Returns: void.
-void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, double* target0, int N, int K, bool similarity, int NUM_PERMS);
+void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, int N, int K, bool similarity, int NUM_PERMS);
 
 #endif

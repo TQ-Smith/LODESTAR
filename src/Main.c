@@ -716,7 +716,7 @@ int main (int argc, char *argv[]) {
             }
         } 
         
-        procrustes_sliding_window(windows, numWindows, target, target0, encoder -> numSamples, lodestarConfig.k, lodestarConfig.similarity, lodestarConfig.pthresh == 0 ? 0 : lodestarConfig.NUM_PERMS);
+        procrustes_sliding_window(windows, numWindows, target, encoder -> numSamples, lodestarConfig.k, lodestarConfig.similarity, lodestarConfig.pthresh == 0 ? 0 : lodestarConfig.NUM_PERMS);
         
         LOG_INFO("Finished Procrustes Analysis ...\n");
         printf("Finished Procrustes Analysis ...\n\n");

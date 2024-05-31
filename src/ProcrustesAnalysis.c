@@ -15,10 +15,6 @@
 #include "Matrix.h"
 MATRIX_INIT(double, double)
 
-// We need a mutex to lock access to the array of windows
-//  to multithread Procrustes Analysis/Permutation test.
-pthread_mutex_t windowsLock = PTHREAD_MUTEX_INITIALIZER;
-
 // Fortran matrices are stored as vectors in column-major form.
 //  Covariance matrices are symmetric so this is not explicitly necessary,
 //  but it is good to keep things consistent.
@@ -268,19 +264,16 @@ double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEige
     return ((double) numSig) / (NUM_PERMS + 1.0);
 }
 
-
-// Using multiple threads was slowing the permutation test down.
+// Threading was slowing Procrustes down.
 /*
 // Our record used for multithreaded Procrustes analysis.
 //  All fields are the same as the arguments to procrustes_sliding_window
 //  except the curWinIndex.
 typedef struct {
     Window_t** windows;
-    // Index of the next avaliable window for a thread to access.
-    //  This is the only field threads can write to. Protected by 
-    //  windowsLock.
-    int curWinIndex;
-    int numWindows;
+    // The start and end index of the windows a thread must process.
+    int startIndex;
+    int endIndex;
     double** target;
     double* target0;
     int N;
@@ -303,22 +296,11 @@ void* procrustes_multi_thread(void* arg) {
     double** shuffleX = create_matrix(double, record -> N, record -> K);
     double t;
 
-    while (true) {
-
-        pthread_mutex_lock(&windowsLock);
-        // If all windows have been processed, exit loop. Thread exits.
-        if (record -> curWinIndex == record -> numWindows) {
-            pthread_mutex_unlock(&windowsLock);
-            break;
-        }
-        // Otherwise, get the current window.
-        window = record -> windows[record -> curWinIndex];
-        // Advance index to the next window.
-        record -> curWinIndex++;
-        pthread_mutex_unlock(&windowsLock);
-
-        LOG_INFO("Performing Procrustes for window %d ...\n", window -> winNum);
-
+    // Iterate through thread's partition.
+    for (int i = record -> startIndex; i <= record -> endIndex; i++) {
+        // Get current window.
+        window = record -> windows[i];
+        // LOG_INFO("Performing Procrustes for window %d ...\n", window -> winNum);
         // Calculate Procrustes statistic for window.
         t = procrustes_statistic(window -> X, NULL, record -> target, NULL, eigen, record -> N, record -> K, false, record -> similarity);
         window -> t = t;
@@ -328,13 +310,14 @@ void* procrustes_multi_thread(void* arg) {
         }
     }
 
+    free(record);
     destroy_real_sym_eigen(eigen);
     destroy_matrix(double, shuffleX, record -> N);
     return NULL;
 }
 */
 
-void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, double* target0, int N, int K, bool similarity, int NUM_PERMS) {
+void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, int N, int K, bool similarity, int NUM_PERMS) {
     
     RealSymEigen_t* eigen = init_real_sym_eigen(K);
     int startWindow = 0;
@@ -356,34 +339,46 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
         }
     }
     destroy_real_sym_eigen(eigen);
+    
     /*
-    // If we are multithreading the computations, create record for threads to acccess.
+    int startIndex;
+    if (windows[0] -> X == target)
+        startIndex = 1;
+    else
+        startIndex = 0;
+
+    int chunkSize = numWindows / NUM_THREADS;
+    
+    // Create threads.
+    pthread_t* threads = (pthread_t*) calloc(NUM_THREADS - 1, sizeof(pthread_t));
+    for (int i = 0; i < NUM_THREADS - 1; i++) {
+        ProcrustesRecord_t* record = (ProcrustesRecord_t*) calloc(1, sizeof(ProcrustesRecord_t));
+        record -> windows = windows;
+        record -> startIndex = startIndex;
+        record -> endIndex = startIndex + chunkSize;
+        record -> target = target;
+        record -> N = N;
+        record -> K = K;
+        record -> similarity = similarity;
+        record -> NUM_PERMS = NUM_PERMS;
+        pthread_create(&threads[i], NULL, procrustes_multi_thread, (void*) record);
+        startIndex = startIndex + chunkSize + 1;
+    }
     ProcrustesRecord_t* record = (ProcrustesRecord_t*) calloc(1, sizeof(ProcrustesRecord_t));
     record -> windows = windows;
-    // Index to track current window a thread can access.
-    //  Start at 0 if user entered coordinates, start at 1 if we are comparing to genome-wide.
-    if (windows[0] -> X == target)
-        record -> curWinIndex = 1;
-    else
-        record -> curWinIndex = 0;
-    record -> numWindows = numWindows;
+    record -> startIndex = startIndex;
+    record -> endIndex = numWindows - 1;
     record -> target = target;
-    record -> target0 = target0;
     record -> N = N;
     record -> K = K;
     record -> similarity = similarity;
     record -> NUM_PERMS = NUM_PERMS;
-
-    // Create threads.
-    pthread_t* threads = (pthread_t*) calloc(NUM_THREADS - 1, sizeof(pthread_t));
-    for (int i = 0; i < NUM_THREADS - 1; i++)
-        pthread_create(&threads[i], NULL, procrustes_multi_thread, (void*) record);
     procrustes_multi_thread((void*) record);
-    // Destroy threads and record.
+    
+    // Join and destroy threads.
     for (int i = 0; i < NUM_THREADS - 1; i++)
         pthread_join(threads[i], NULL);
     free(threads);
-    free(record);
     */
 }
 
