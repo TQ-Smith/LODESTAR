@@ -34,7 +34,7 @@ void _log(const char* prefix, const char* fmt, ...) {
         return;
     }
     // Print local date/time, followed by the prefix, and then, the message.
-    logger -> current_time = time(NULL);
+    time(&logger -> current_time);
     strftime(logger -> date_and_time, sizeof(logger -> date_and_time) - 1, "%a %b %d %T %Z %Y", localtime(&logger -> current_time));
     fprintf(logger -> file, "%s: %s ", logger -> date_and_time, prefix);
     va_start(logger -> args, fmt);
