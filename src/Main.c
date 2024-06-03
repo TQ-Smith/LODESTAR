@@ -220,8 +220,6 @@ typedef struct {
     char* inputFileName;
     // The parser object used to read the VCF file.
     VCFLocusParser_t* parser;
-    // The log file name;
-    char* logFileName;
     // The basename for output files.
     char* outputBasename;
     // The haplotype size in number of loci.
@@ -392,11 +390,6 @@ void print_configuration(FILE* output, LodestarConfiguration_t lodestarConfig) {
     fprintf(output, "----------------------\n");
     fprintf(output, "Input file: %s\n", lodestarConfig.inputFileName);
     fprintf(output, "Output basename: %s\n", lodestarConfig.outputBasename);
-    if (lodestarConfig.logFileName == NULL) {
-        fprintf(output, "Log file name: stderr\n");
-    } else {
-        fprintf(output, "Log file name: %s\n", lodestarConfig.logFileName);
-    }
     fprintf(output, "Haplotype size: %d\n", lodestarConfig.HAP_SIZE);
     if (!lodestarConfig.global) {
         fprintf(output, "Window size: %d\n", lodestarConfig.WINDOW_SIZE);
@@ -461,8 +454,6 @@ void print_help() {
     fprintf(stderr, "                               Must be set by user. Not used when --global is set.\n");
     fprintf(stderr, "   -k INT                  Dimension to project samples into. Must be less than number of samples.\n");
     fprintf(stderr, "                               Default 2. Must be less than number of samples in VCF.\n");
-    fprintf(stderr, "   --log STR               Print log to file STR.\n");
-    fprintf(stderr, "                               Default print to stderr.\n");
     fprintf(stderr, "   --threads INT           Number of threads to use in computation.\n");
     fprintf(stderr, "                               Default 1.\n");
     fprintf(stderr, "   --similarity            Compute similarity between sets of points instead of dissimilarity.\n");
@@ -518,7 +509,6 @@ static ko_longopt_t long_options[] = {
     {"json",            ko_no_argument,         314},
     {"target",          ko_required_argument,   315},
     {"printCoords",     ko_required_argument,   316},
-    {"log",             ko_required_argument,   317},
     {"input",           ko_required_argument,   'i'},
     {"output",          ko_required_argument,   'o'},
     {"dimension",       ko_required_argument,   'k'},
@@ -584,7 +574,6 @@ int main (int argc, char *argv[]) {
     lodestarConfig.printRegions = NULL;
     lodestarConfig.useLongOutput = false;
     lodestarConfig.useJsonOutput = false;
-    lodestarConfig.logFileName = NULL;
 
     // Parse command line arguments.
     while ((c = ketopt(&options, argc, argv, 1, opt_str, long_options)) >= 0) {
@@ -610,7 +599,6 @@ int main (int argc, char *argv[]) {
             case 314: lodestarConfig.useJsonOutput = true; break;
             case 315: lodestarConfig.targetFileName = options.arg; break;
             case 316: lodestarConfig.printRegionsStr = options.arg; break;
-            case 317: lodestarConfig.logFileName = options.arg; break;
         }
 	}
     
@@ -625,14 +613,10 @@ int main (int argc, char *argv[]) {
 
     // Setup the logfile.
     kstring_t* outputBasename = init_kstring(lodestarConfig.outputBasename);
-    // If log file name is not given, use stderr. Otherwise, use logFileName.
-    if (lodestarConfig.logFileName == NULL) {
-        INIT_LOG(NULL);
-        printf("\nLogging progress in stderr\n\n");
-    } else {
-        INIT_LOG(lodestarConfig.logFileName);
-        printf("\nLogging progress in %s\n\n", lodestarConfig.logFileName);
-    }
+    kputs(".log", outputBasename);
+    INIT_LOG(ks_str(outputBasename));
+    printf("\nLogging progress in %s\n\n", ks_str(outputBasename));
+    ks_overwrite(lodestarConfig.outputBasename, outputBasename);
     // Print configuration to log file.
     print_configuration(logger -> file, lodestarConfig);
     // Print sample names in log file.
