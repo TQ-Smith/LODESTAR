@@ -21,11 +21,13 @@ KSTREAM_INIT(gzFile, gzread, BUFFER_SIZE)
 //  The most significant 4-bits are the left allele, 
 //  and the least significant 4-bits are the right allele.
 //  NOTE: If a locus has N alleles labeled 0,..,N - 1, then the
-//  missing allele is encoded as N. Thus, there is a maximum of 15
-//  alleles at each locus. This can be easily modified.
-typedef char Locus;
-#define LEFT_ALLELE(a) (a >> 4)
-#define RIGHT_ALLELE(a) (a & 0x0F)
+//  missing allele is encoded as N. Thus, there is a maximum of 2^16
+//  alleles at each locus. This can be easily modified. Since this number
+//  is large, we artifically set the maximum number of alleles at a locus to 64.
+typedef unsigned int Locus;
+#define LEFT_ALLELE(a) (a >> 16)
+#define RIGHT_ALLELE(a) (a & 0x0000FFFF)
+#define MAX_NUM_ALLELES 64
 
 // Our structure that represents a VCFLocusParser.
 typedef struct {
@@ -55,7 +57,7 @@ typedef struct {
     double afMissing;
     // An array to hold the number of each allele at a locus.
     //  Used in maf calculation.
-    int alleleCounts[16];
+    int alleleCounts[MAX_NUM_ALLELES];
 
     // For convenience, we implement a priming read/peak operation.
     //  This allows us to easily test if the next record belongs to a different chromosome.
@@ -106,14 +108,14 @@ void destroy_vcf_locus_parser(VCFLocusParser_t* parser);
 // Returns: Locus, The encoded genotype.
 static inline Locus parse_locus(char* start, int numAlleles) {
     // By default, both genotypes at a locus are missing.
-    Locus locus = (Locus) (numAlleles << 4) | numAlleles;
+    Locus locus = (numAlleles << 16) | numAlleles;
     char* next = start + 1;
     // If the left allele is not missing, then parse integer and set left genotype.
     if (start[0] != '.')
-        locus = (strtol(start, &next, 10) << 4) | numAlleles;
+        locus = (strtol(start, &next, 10) << 16) | numAlleles;
     // If there is a second, non-missing genotype, parse and set right genotype.
     if ((next[0] == '|' || next[0] == '/') && next[1] != '.')
-        locus = (locus & 0xF0) | strtol(next + 1, (char**) NULL, 10);
+        locus = (locus & 0xFFFF0000) | strtol(next + 1, (char**) NULL, 10);
     return locus;
 }
 

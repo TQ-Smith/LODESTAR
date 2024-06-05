@@ -155,6 +155,7 @@ RegionSet_t* init_region_set(kstring_t* inputRegions, bool takeComplement) {
 }
 
 bool query_locus(RegionSet_t* set, kstring_t* chrom, unsigned int locus) {
+    printf("%d\n", locus);
     khint_t k = kh_get(Region, set -> regions, ks_str(chrom));
     // If the chromosome is in the hash set ...
     if (k != kh_end(set -> regions)) {
