@@ -666,7 +666,7 @@ int main (int argc, char *argv[]) {
     if (lodestarConfig.targetFileName != NULL) {
         lodestarConfig.targetFile = fopen(lodestarConfig.targetFileName, "r");
         target = create_matrix(double, encoder -> numSamples, lodestarConfig.k);
-        target0 = (double*) malloc(lodestarConfig.k * sizeof(double));
+        target0 = (double*) calloc(lodestarConfig.k, sizeof(double));
         double value;
         for (int i = 0; i < encoder -> numSamples; i++) {
             for (int j = 0; j < lodestarConfig.k; j++) {
