@@ -677,7 +677,7 @@ int main (int argc, char *argv[]) {
         // Center user defined points.
         center_matrix(target, target0, encoder -> numSamples, lodestarConfig.k);
     } 
-    if (windows != NULL) {
+    if (lodestarConfig.targetFileName == NULL && windows != NULL) {
         target = windows[0] -> X;
     }
 
