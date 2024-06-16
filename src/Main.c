@@ -476,7 +476,7 @@ void print_help() {
     fprintf(stderr, "                               Default false.\n");
     fprintf(stderr, "   --maf DOUBLE            Drops biallelic VCF records with a MAF less than threshold.\n");
     fprintf(stderr, "                               Default 0.05\n");
-    fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of missing genotypes greater than or equal to threshold.\n");
+    fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of genotypes missing greater than threshold.\n");
     fprintf(stderr, "                               Default 0.5.\n");
     fprintf(stderr, "   --long                  Prints calculations in long format instead of matrix form.\n");
     fprintf(stderr, "   --json                  Prints window information in JSON format instead of TXT.\n");

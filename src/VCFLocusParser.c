@@ -177,7 +177,7 @@ void seek(VCFLocusParser_t* parser) {
             continue;
         else if (numAlleles == 2 && maf < parser -> maf)
             continue;
-        else if (afMissing >= parser -> afMissing)
+        else if (afMissing > parser -> afMissing)
             continue;
         else 
             return;
