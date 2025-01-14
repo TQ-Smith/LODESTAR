@@ -724,7 +724,7 @@ int main (int argc, char *argv[]) {
     // If we performed a sliding window.
     if (!lodestarConfig.global) {
         // Open long window output file.
-        ks_overwrite("windows_", outputBasename);
+        kputs("_windows", outputBasename);
         kputs(lodestarConfig.outputBasename, outputBasename);
         if (lodestarConfig.useJsonOutput)
             kputs(".json", outputBasename);
@@ -732,7 +732,7 @@ int main (int argc, char *argv[]) {
             kputs(".txt", outputBasename);
         windowCoords = fopen(ks_str(outputBasename), "w");
         // Open summary file and print headers to summary file.
-        ks_overwrite("summary_", outputBasename);
+        kputs("_summary", outputBasename);
         kputs(lodestarConfig.outputBasename, outputBasename);
         kputs(".tsv", outputBasename);
         windowSummaries = fopen(ks_str(outputBasename), "w");
@@ -771,7 +771,7 @@ int main (int argc, char *argv[]) {
     }
 
     // Create global output file.
-    ks_overwrite("global_", outputBasename);
+    kputs("_global", outputBasename);
     kputs(lodestarConfig.outputBasename, outputBasename);
     if (lodestarConfig.useJsonOutput)
         kputs(".json", outputBasename);
