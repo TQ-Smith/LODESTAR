@@ -724,16 +724,16 @@ int main (int argc, char *argv[]) {
     // If we performed a sliding window.
     if (!lodestarConfig.global) {
         // Open long window output file.
+        ks_overwrite(lodestarConfig.outputBasename, outputBasename);
         kputs("_windows", outputBasename);
-        kputs(lodestarConfig.outputBasename, outputBasename);
         if (lodestarConfig.useJsonOutput)
             kputs(".json", outputBasename);
         else
             kputs(".txt", outputBasename);
         windowCoords = fopen(ks_str(outputBasename), "w");
         // Open summary file and print headers to summary file.
+        ks_overwrite(lodestarConfig.outputBasename, outputBasename);
         kputs("_summary", outputBasename);
-        kputs(lodestarConfig.outputBasename, outputBasename);
         kputs(".tsv", outputBasename);
         windowSummaries = fopen(ks_str(outputBasename), "w");
         fprintf(windowSummaries, "#Command: ");
@@ -771,14 +771,14 @@ int main (int argc, char *argv[]) {
     }
 
     // Create global output file.
+    ks_overwrite(lodestarConfig.outputBasename, outputBasename);
     kputs("_global", outputBasename);
-    kputs(lodestarConfig.outputBasename, outputBasename);
     if (lodestarConfig.useJsonOutput)
         kputs(".json", outputBasename);
     else
         kputs(".txt", outputBasename);
     globalCoords = fopen(ks_str(outputBasename), "w");
-
+    
     if (lodestarConfig.global && global -> X != NULL) {
         if (target != NULL)
             procrustes_statistic(global -> X, NULL, target, target0, eigen, encoder -> numSamples, lodestarConfig.k, true, lodestarConfig.similarity);
