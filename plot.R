@@ -33,6 +33,9 @@ main <- function() {
                 BP <- df["Start"],
                 P <- if (useT) lapply(df["t.stat"], function (x) 1 - x) else df["p.val"]
             )
+            if (!useT) {
+                manhat <- manhat[!manhat$p.val == 0,]
+            }
             colnames(manhat) <- c("SNP", "CHR", "BP", "P")
             # Save plot to png.
             png(paste(substr(fileName, 1, nchar(fileName) - 4), ".png", sep = ""), width = 1600, height = 1200, res = 300)
