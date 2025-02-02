@@ -524,7 +524,7 @@ int main (int argc, char *argv[]) {
     srand(time(NULL));
 
     // Single character aliases for long options.
-    const char *opt_str = "i:o:h:w:s:k:v";
+    const char *opt_str = "i:o:hw:s:k:v";
     ketopt_t options = KETOPT_INIT;
     int c;
 
