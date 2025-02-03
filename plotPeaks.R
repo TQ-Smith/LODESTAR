@@ -1,5 +1,5 @@
 
-# File: plot.R 
+# File: plotPeaks.R 
 # Date: 14 January 2025
 # Author: T. Quinn Smith
 # Principal Investigator: Dr. Zachary A. Szpiech
