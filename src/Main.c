@@ -566,7 +566,7 @@ int main (int argc, char *argv[]) {
     lodestarConfig.tthresh = 0.95;
     lodestarConfig.regions = NULL;
     lodestarConfig.maf = 0.05;
-    lodestarConfig.afMissing = 0.5;
+    lodestarConfig.afMissing = 0.1;
     lodestarConfig.saveRegionsStr = NULL;
     lodestarConfig.saveRegions = NULL;
     lodestarConfig.asdToIbs = false;

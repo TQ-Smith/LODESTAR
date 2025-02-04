@@ -13,7 +13,7 @@ main <- function() {
     args <- commandArgs(trailingOnly = TRUE)
     # If a filename and/or -p option was not given, print error and exit.
     if (length(args) != 1 && length(args) != 2) {
-        cat("Usage: Rscript plot.R [-p] <summary.tsv>\n")
+        cat("Usage: Rscript plotMDS.R [-p] <summary.tsv>\n")
     } else {
         fileName = args[1]
         if (!file.exists(fileName)) {

@@ -13,7 +13,7 @@ main <- function() {
     args <- commandArgs(trailingOnly = TRUE)
     # If a filename and/or -p option was not given, print error and exit.
     if (length(args) != 1 && length(args) != 2) {
-        cat("Usage: Rscript plot.R [-p] <summary.tsv>\n")
+        cat("Usage: Rscript plotPeaks.R [-p] <summary.tsv>\n")
     } else {
         # Get what we should plot (t or p) and file name from user.
         useT = TRUE
