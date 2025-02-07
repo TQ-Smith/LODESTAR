@@ -38,10 +38,11 @@ main <- function() {
             }
             colnames(manhat) <- c("SNP", "CHR", "BP", "P")
             # Save plot to png.
-            png(paste(substr(fileName, 1, nchar(fileName) - 4), ".png", sep = ""), width = 1600, height = 1200, res = 300)
             if (useT) {
+                png(paste(substr(fileName, 1, nchar(fileName) - 4), "_t.png", sep = ""), width = 1600, height = 1200, res = 300)
                 m <- manhattan(manhat, chr = "CHR", bp = "BP", p = "P", snp = "SNP", ylab = "-log(1-t)", main = substr(fileName, 1, length(fileName) - 4))
             } else {
+                png(paste(substr(fileName, 1, nchar(fileName) - 4), "_p.png", sep = ""), width = 1600, height = 1200, res = 300)
                 m <- manhattan(manhat, chr = "CHR", bp = "BP", p = "P", snp = "SNP", main = substr(fileName, 1, length(fileName) - 4))
             }
             dev.off()
