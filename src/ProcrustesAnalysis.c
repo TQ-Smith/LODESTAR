@@ -266,61 +266,7 @@ double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEige
     return ((double) numSig) / (NUM_PERMS + 1.0);
 }
 
-// Threading was slowing Procrustes down.
-/*
-// Our record used for multithreaded Procrustes analysis.
-//  All fields are the same as the arguments to procrustes_sliding_window
-//  except the curWinIndex.
-typedef struct {
-    Window_t** windows;
-    // The start and end index of the windows a thread must process.
-    int startIndex;
-    int endIndex;
-    double** target;
-    double* target0;
-    int N;
-    int K;
-    bool similarity;
-    int NUM_PERMS;
-} ProcrustesRecord_t;
-
-// When the user specifies multiple threads for Procrustes Analysis, each
-//  thread executes this method.
-// Accepts:
-//  void* arg -> Pointer to the created ProcrustesRecord_t*.
-// Returns: void.
-void* procrustes_multi_thread(void* arg) {
-    ProcrustesRecord_t* record = (ProcrustesRecord_t*) arg;
-
-    // Current window thread is performing Procrustes Analysis on.
-    Window_t* window = NULL;
-    RealSymEigen_t* eigen = init_real_sym_eigen(record -> K);
-    double** shuffleX = create_matrix(double, record -> N, record -> K);
-    double t;
-
-    // Iterate through thread's partition.
-    for (int i = record -> startIndex; i <= record -> endIndex; i++) {
-        // Get current window.
-        window = record -> windows[i];
-        // LOG_INFO("Performing Procrustes for window %d ...\n", window -> winNum);
-        // Calculate Procrustes statistic for window.
-        t = procrustes_statistic(window -> X, NULL, record -> target, NULL, eigen, record -> N, record -> K, false, record -> similarity);
-        window -> t = t;
-        // If the user wants to do a permutation test, execute permutation test.
-        if (record -> NUM_PERMS > 0) {
-            window -> pval = permutation_test(window -> X, record -> target, shuffleX, eigen, record -> N, record -> K, record -> similarity, t, record -> NUM_PERMS);
-        }
-    }
-
-    free(record);
-    destroy_real_sym_eigen(eigen);
-    destroy_matrix(double, shuffleX, record -> N);
-    return NULL;
-}
-*/
-
 void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, int N, int K, bool similarity, int NUM_PERMS) {
-    
     RealSymEigen_t* eigen = init_real_sym_eigen(K);
     int startWindow = 0;
     double t;
@@ -329,99 +275,16 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
     if (windows[0] -> X == target)
         startWindow = 1;
     // For each window, perform Procrustes analysis.
+    double** shuffleX = create_matrix(double, N, K);
     for (int i = startWindow; i < numWindows; i++) {
         LOG_INFO("Performing Procrustes for window %d ...\n", windows[i] -> winNum);
         t = procrustes_statistic(windows[i] -> X, NULL, target, NULL, eigen, N, K, false, similarity);
         windows[i] -> t = t;
         // If the user wants to do a permutation test, execute permutation test.
         if (NUM_PERMS > 0) {
-            double** shuffleX = create_matrix(double, N, K);
             windows[i] -> pval = permutation_test(windows[i] -> X, target, shuffleX, eigen, N, K, similarity, t, NUM_PERMS);
-            destroy_matrix(double, shuffleX, N);
         }
     }
+    destroy_matrix(double, shuffleX, N);
     destroy_real_sym_eigen(eigen);
-    
-    /*
-    int startIndex;
-    if (windows[0] -> X == target)
-        startIndex = 1;
-    else
-        startIndex = 0;
-
-    int chunkSize = numWindows / NUM_THREADS;
-    
-    // Create threads.
-    pthread_t* threads = (pthread_t*) calloc(NUM_THREADS - 1, sizeof(pthread_t));
-    for (int i = 0; i < NUM_THREADS - 1; i++) {
-        ProcrustesRecord_t* record = (ProcrustesRecord_t*) calloc(1, sizeof(ProcrustesRecord_t));
-        record -> windows = windows;
-        record -> startIndex = startIndex;
-        record -> endIndex = startIndex + chunkSize;
-        record -> target = target;
-        record -> N = N;
-        record -> K = K;
-        record -> similarity = similarity;
-        record -> NUM_PERMS = NUM_PERMS;
-        pthread_create(&threads[i], NULL, procrustes_multi_thread, (void*) record);
-        startIndex = startIndex + chunkSize + 1;
-    }
-    ProcrustesRecord_t* record = (ProcrustesRecord_t*) calloc(1, sizeof(ProcrustesRecord_t));
-    record -> windows = windows;
-    record -> startIndex = startIndex;
-    record -> endIndex = numWindows - 1;
-    record -> target = target;
-    record -> N = N;
-    record -> K = K;
-    record -> similarity = similarity;
-    record -> NUM_PERMS = NUM_PERMS;
-    procrustes_multi_thread((void*) record);
-    
-    // Join and destroy threads.
-    for (int i = 0; i < NUM_THREADS - 1; i++)
-        pthread_join(threads[i], NULL);
-    free(threads);
-    */
 }
-
-/*
-int main() {
-    // Seed random number generator.
-    srand(time(NULL));
-
-    int N = 150, K = 2;
-    double** X = (double**) calloc(N, sizeof(double*));
-    double** Y = (double**) calloc(N, sizeof(double*));
-    for (int i = 0; i < N; i++) {
-        X[i] = (double*) calloc(K, sizeof(double));
-        Y[i] = (double*) calloc(K, sizeof(double));
-    }
-
-    FILE* local = fopen("local.tsv", "r");
-    FILE* global = fopen("global.tsv", "r");
-
-    double in;
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < K; j++) {
-            fscanf(local, "%lf", &in);
-            X[i][j] = in;
-            fscanf(global, "%lf", &in);
-            Y[i][j] = in;
-        }
-    }
-
-    RealSymEigen_t* eigen = init_real_sym_eigen(K);
-
-    printf("%lf\n", procrustes_statistic(X, NULL, Y, NULL, eigen, N, K, true, false));
-    printf("X = \n");
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < K; j++) {
-            printf("%lf\t", X[i][j]);
-        }
-        printf("\n");
-    }
-    fclose(local);
-    fclose(global);
-
-}
-*/
