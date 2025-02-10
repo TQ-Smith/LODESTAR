@@ -224,9 +224,6 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
 
     }
     
-    // Calculate statistic.
-    //  NOTE: We take the absolute value to avoid the error of small values close to 0 can be stored as -0.
-    //          Will have no effect on the results.
     double statistic = 1 - (trLambda * trLambda) / (trX * trY);
 
     // Convert to either similarity or dissimilarity.
