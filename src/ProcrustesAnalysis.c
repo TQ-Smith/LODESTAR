@@ -152,7 +152,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                 root1 = 2 * sqrt(-q) * cos(theta / 3) - (a2 / 3);
                 root2 = 2 * sqrt(-q) * cos((theta / 3) - (2 * M_PI / 3)) - (a2 / 3);
                 root3 = 2 * sqrt(-q) * cos((theta / 3) + (2 * M_PI / 3)) - (a2 / 3);
-                trLambda += sqrt(root1) + sqrt(root2) + sqrt(root3);
+                trLambda += sqrt(fabs(root1)) + sqrt(fabs(root2)) + sqrt(fabs(root3));
                 break;
             default:
                 // When K > 3, we use LAPACK to calculate the eigenvalues.
@@ -252,7 +252,6 @@ double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEige
         shuffle_real_matrix(shuffleX, n);
         // Compute statistic between the two sets of points. Do not transform.
         t = procrustes_statistic(shuffleX, NULL, Yc, NULL, eigen, n, k, false, similarity);
-        
         // If our statistic exceeds our threshold, increment counter.
         if (t > t0) {
             numSig++;

@@ -817,5 +817,4 @@ int main (int argc, char *argv[]) {
     }
     destroy_haplotype_encoder(encoder);
     return 0;
-
 }
