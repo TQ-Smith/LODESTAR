@@ -18,6 +18,7 @@ Window_t* init_window() {
     window -> ibs = NULL;
     window -> pval = 0;
     window -> t = -1;
+    window -> dropWindow = false;
     return window;
 }
 

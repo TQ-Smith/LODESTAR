@@ -72,8 +72,6 @@ typedef struct {
     // Number of loci genome-wide.
     int globalNumLoci;
 
-    RegionSet_t* saveIBSRegions;
-
     // The window number of the current window.
     int curWinNum;
     // The window number on the current chromosome.
@@ -90,6 +88,12 @@ typedef struct {
 //  int k -> The dimension to project down into.
 // Returns: void.
 void perform_mds_on_window(Window_t* window, RealSymEigen_t* eigen, double* asd, int k) {
+    // If we drop a window due to a broken haplotype, then we do not perform MDS.
+    if (window -> dropWindow) {
+        LOG_WARNING("Drop window %d on %s because of too long a haplotype.\n", window -> winNumOnChrom, ks_str(window -> chromosome));
+        window -> X = NULL;
+        return;
+    }
     // Create numSamples-by-k matrix.
     double** X = create_matrix(double, eigen -> N, k);
     // Compute MDS.
@@ -145,6 +149,13 @@ Window_t* get_next_window(WindowRecord_t* record, Genotype_t** threadGeno) {
     while(record -> numHapsInOverlap < record -> WINDOW_SIZE && isSameChrom) {
         // Get the next haplotype.
         isSameChrom = get_next_haplotype(record -> parser, record -> encoder, record -> HAP_SIZE);
+        // If we encounter a haplotype that breaks the MAX_GAP, we skip the current haplotype and drop the window.
+        //  NOTE: We continue processing the window as normal because we still want the other haplotypes to 
+        //  contribute to the global relatedness matrix.
+        if (record -> encoder -> brokeMAX_GAP) {
+            window -> dropWindow = true;
+            continue;
+        }
         // If we are using a single thread, add haplotype to the end of the queue.
         if (threadGeno == NULL) {
             SWAP(record -> winGeno[record -> winEndIndex], record -> encoder -> genotypes, temp);
@@ -171,10 +182,6 @@ Window_t* get_next_window(WindowRecord_t* record, Genotype_t** threadGeno) {
     // Set the end coordinate of the current window.
     window -> endCoord = record -> encoder -> endCoord;
     window -> numHaps = record -> numHapsInOverlap;
-    // If we should save the IBS values for this window, then set flag and allocate memory.
-    if (record -> saveIBSRegions != NULL && query_overlap(record -> saveIBSRegions, window -> chromosome, window -> startCoord, window -> endCoord)) {
-        window -> saveIBS = true;
-    }
     if (isSameChrom) {
         record -> globalNumHaps += record -> STEP_SIZE;
         record -> numHapsInOverlap = record -> WINDOW_SIZE - record -> STEP_SIZE;
@@ -250,10 +257,6 @@ void* sliding_window_multi_thread(void* arg) {
         // Calculate the number of haplotypes in the window that we must process.
         numHapsInWin = (int) ceil((double) window -> numLoci / HAP_SIZE);
 
-        // Have thread allocate memory if we are saving the IBS counts for the window.
-        if (window -> saveIBS)
-            window -> ibs = (IBS_t*) malloc(PACKED_SIZE(record -> numSamples) * sizeof(IBS_t));
-
         // Compute ASD matrix for current window.
         process_window_multi_thread(threadGeno, winAlleleCounts, globalAlleleCounts, asd, window, numHapsInWin, isLastWinOnChrom, numSamples, STEP_SIZE);
         
@@ -303,8 +306,6 @@ void sliding_window_single_thread(WindowRecord_t* record) {
     while (!(record -> parser -> isEOF)) {
         window = get_next_window(record, NULL);
         numHapsInWin = (int) ceil((double) window -> numLoci / record -> HAP_SIZE);
-        if (window -> saveIBS)
-            window -> ibs = (IBS_t*) malloc(PACKED_SIZE(record -> numSamples) * sizeof(IBS_t));
         process_window_single_thread(record -> winGeno, record -> winStartIndex, winAlleleCounts, stepAlleleCounts, record -> globalAlleleCounts, asd, window, numHapsInWin, window -> winNumOnChrom == 1, record -> curWinNumOnChrom == 1, record -> numSamples, record -> STEP_SIZE, record -> WINDOW_SIZE);
         perform_mds_on_window(window, record -> eigen, asd, record -> k);
         *kl_pushp(WindowPtr, record -> winList) = window;
@@ -336,7 +337,7 @@ void sort_windows(Window_t** windows, int numWindows) {
     }
 }
 
-Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, RegionSet_t* saveIBSRegions, int k, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows) {
+Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, int k, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows) {
     
     // Set all attributes for the window record.
     WindowRecord_t* record = (WindowRecord_t*) calloc(1, sizeof(WindowRecord_t));
@@ -361,8 +362,6 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
     record -> globalAlleleCounts = (IBS_t*) calloc(PACKED_SIZE(record -> numSamples), sizeof(IBS_t));
     record -> globalNumHaps = 0;
     record -> globalNumLoci = 0;
-
-    record -> saveIBSRegions = saveIBSRegions;
 
     record -> curWinNum = 1;
     record -> curWinNumOnChrom = 1;
@@ -463,6 +462,11 @@ void* global_window_multi_thread(void* arg) {
         }
         // Get the next haplotype.
         get_next_haplotype(record -> parser, record -> encoder, record -> HAP_SIZE);
+        // Skip haplotype if MAX_GAP exceeded.
+        if (record -> encoder -> brokeMAX_GAP) {
+            pthread_mutex_unlock(&genomeLock);
+            continue;
+        }
         record -> numLoci += record -> encoder -> numLoci;
         record -> numHaps++;
         // Swap out haplotype so thread can calulate IBS.
@@ -503,6 +507,9 @@ Window_t* global_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, i
     if (NUM_THREADS == 1) {
         while (!parser -> isEOF) {
             get_next_haplotype(parser, encoder, HAP_SIZE);
+            // Skip haplotype if MAX_GAP exceeded.
+            if (encoder -> brokeMAX_GAP)
+                continue;
             window -> numLoci += encoder -> numLoci;
             window -> numHaps++;
             pairwise_ibs(encoder -> genotypes, alleleCounts, encoder -> numSamples);

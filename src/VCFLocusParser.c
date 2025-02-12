@@ -7,7 +7,7 @@
 
 #include "VCFLocusParser.h"
 
-VCFLocusParser_t* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool takeComplement, double maf, double afMissing, bool dropMonomorphicSites) {
+VCFLocusParser_t* init_vcf_locus_parser(char* fileName, bool takeComplement, double maf, double afMissing, bool dropMonomorphicSites) {
 
     // Open the GZ file.
     gzFile file = gzopen(fileName, "r");
@@ -64,17 +64,6 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, kstring_t* regions, bool
     parser -> isEOF = false;
     parser -> nextChrom = init_kstring(NULL);
     parser -> nextLocus = (Locus*) calloc(numSamples, sizeof(Locus));
-    if (regions == NULL)
-        parser -> set = NULL;
-    else {
-        // Try parsing the regions argument.
-        parser -> set = init_region_set(regions, takeComplement);
-        // If error, then free memory already allocated to parser, and return NULL for error.
-        if (parser -> set == NULL) {
-            destroy_vcf_locus_parser(parser);
-            return NULL;
-        }
-    }
 
     // Set fields from arguments.
     parser -> maf = maf;
@@ -123,9 +112,6 @@ void seek(VCFLocusParser_t* parser) {
                 } else if (numTabs == 1) {
                     // The second field is the position on the chromosome.
                     parser -> nextCoord = (int) strtol(ks_str(parser -> buffer) + prevIndex + 1, (char**) NULL, 10);
-                    // If a RegionSet was specified and the locus is not in the set, set flag and stop parsing record.
-                    if (parser -> set != NULL && !query_locus(parser -> set, parser -> nextChrom, (unsigned int) parser -> nextCoord))
-                        isInSet = false;
                 } else if (numTabs == 4) {
                     // The fifth field holds the ALT alleles. Each record has at least two alleles.
                     //  Each additional allele is appended with a ','. For each ',' encountered,
@@ -215,9 +201,6 @@ void destroy_vcf_locus_parser(VCFLocusParser_t* parser) {
     ks_destroy(parser -> stream);
     // Free the file name.
     destroy_kstring(parser -> fileName);
-    // If region set was allocated, destroy set.
-    if (parser -> set != NULL)
-        destroy_region_set(parser -> set);
     // Destroy the sample names.
     for (int i = 0; i < parser -> numSamples; i++)
         destroy_kstring(parser -> sampleNames[i]);
