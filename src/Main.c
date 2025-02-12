@@ -31,8 +31,13 @@ void print_window_info(FILE* output, Window_t* window) {
     fprintf(output, "%d\t", window -> endCoord);
     fprintf(output, "%d\t", window -> numLoci);
     fprintf(output, "%d\t", window -> numHaps);
-    fprintf(output, "%lf\t", window -> pval);
-    fprintf(output, "%lf\n", window -> t);
+    if (window -> t == -1) {
+        fprintf(output, "-1\t");
+        fprintf(output, "-1\n");
+    } else {
+        fprintf(output, "%lf\t", window -> pval);
+        fprintf(output, "%lf\n", window -> t);
+    }
 }
 
 // Print an array.
@@ -80,14 +85,13 @@ void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window
         fprintf(output, "\t\t\"End Coordinate\": %d,\n", window -> endCoord);
         fprintf(output, "\t\t\"Number of Loci\": %d,\n", window -> numLoci);
         fprintf(output, "\t\t\"Number of Haplotypes\": %d,\n", window -> numHaps);
-        if (window -> pval == 0)
-            fprintf(output, "\t\t\"P-Value\": null,\n");
-        else 
+        if (window -> t == -1) {
+            fprintf(output, "\t\t\"P-Value\": -1,\n");
+            fprintf(output, "\t\t\"t-statistic\": -1,\n");
+        } else {
             fprintf(output, "\t\t\"P-Value\": %lf,\n", window -> pval);
-        if (window -> t == -1)
-            fprintf(output, "\t\t\"t-statistic\": null,\n");
-        else 
             fprintf(output, "\t\t\"t-statistic\": %lf,\n", window -> t);
+        }
         // Print points.
         fprintf(output, "\t\t\"Points\": ");
         if (!printCoords || window -> X == NULL) {
@@ -159,14 +163,13 @@ void print_window_coords(FILE* output, kstring_t** sampleNames, Window_t* window
         fprintf(output, "End Coordinate: %d\n", window -> endCoord);
         fprintf(output, "Number of Loci: %d\n", window -> numLoci);
         fprintf(output, "Number of Haplotypes: %d\n", window -> numHaps);
-        if (window -> pval == 0)
-            fprintf(output, "P-Value: null\n");
-        else 
+        if (window -> t == -1) {
+            fprintf(output, "P-Value: -1\n");
+            fprintf(output, "t-statistic: -1\n");
+        } else {
             fprintf(output, "P-Value: %lf\n", window -> pval);
-        if (window -> t == -1)
-            fprintf(output, "t-statistic: null\n");
-        else
             fprintf(output, "t-statistic: %lf\n", window -> t);
+        }
         // Print points.
         fprintf(output, "Points: ");
         if (!printCoords || window -> X == NULL) {
@@ -477,7 +480,7 @@ void print_help() {
     fprintf(stderr, "   --maf DOUBLE            Drops biallelic VCF records with a MAF less than threshold.\n");
     fprintf(stderr, "                               Default 0.05\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of genotypes missing greater than threshold.\n");
-    fprintf(stderr, "                               Default 0.5.\n");
+    fprintf(stderr, "                               Default 0.1\n");
     fprintf(stderr, "   --long                  Prints calculations in long format instead of matrix form.\n");
     fprintf(stderr, "   --json                  Prints window information in JSON format instead of TXT.\n");
     fprintf(stderr, "Types:\n");

@@ -227,7 +227,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
     double statistic = 1 - (trLambda * trLambda) / (trX * trY);
 
     // Convert to either similarity or dissimilarity.
-    return similarity ? sqrt(1 - statistic) : sqrt(statistic);
+    return similarity ? sqrt(1 - statistic) : 1 - sqrt(1 - statistic);
 
 }
 

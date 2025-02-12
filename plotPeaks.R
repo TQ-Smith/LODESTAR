@@ -27,6 +27,7 @@ main <- function() {
         } else {
             # Create our plot.
             df <- read.delim(fileName, skip=1, header=TRUE)
+            df <- df[!df$t.stat == -1,]
             manhat <- data.frame(
                 SNP <- ".",
                 CHR <- as.numeric(factor(df$Chr, levels = unique(df$Chr))),
@@ -36,7 +37,6 @@ main <- function() {
             if (useT) {
                 # Remove undefined t-stat windows. Take difference to observe magnitude.
                 manhat$P <- df["t.stat"]
-                manhat <- manhat[!manhat$P == -1,]
                 manhat$P <- lapply(manhat$P, function (x) 1 - x)
                 print(paste("Output file: ", substr(fileName, 1, nchar(fileName) - 4), "_t.png", sep = ""))
             } else {
