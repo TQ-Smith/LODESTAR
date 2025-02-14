@@ -22,9 +22,10 @@
 //                      less than or equal to WINDOW_SIZE.
 //  int WINDOW_SIZE -> The maximum number of haplotypes that can compose a window.
 //  int NUM_THREADS -> The number of threads to use in the calculations.
+//  int MAX_GAP -> The maximum number of basepairs a window can spread. Window dropped when exceeded.
 //  int* numWindows -> Sets the total number of processed windows, including the genome-wide.
 // Returns: Window_t**, An array of window pointers.
-Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, int k, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows);
+Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, int k, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int MAX_GAP, int* numWindows);
 
 // Perform ASD and MDS just for the genome-wide window.
 // Accepts:

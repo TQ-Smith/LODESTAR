@@ -338,8 +338,8 @@ void print_help() {
     fprintf(stderr, "                               Default 0.05\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of genotypes missing greater than threshold.\n");
     fprintf(stderr, "                               Default 0.1\n");
-    fprintf(stderr, "   --gap INT               Drops haplotype and window containing haplotype if adjacent loci are greater than gap value in basepairs.\n");
-    fprintf(stderr, "                               Default 50000000\n");
+    fprintf(stderr, "   --gap INT               Drops window if window covers more than gap value in basepairs.\n");
+    fprintf(stderr, "                               Default 1000000\n");
     fprintf(stderr, "   --long                  Prints pairwise global calculations in long format instead of lower triangular form.\n");
     fprintf(stderr, "                               Default false.\n");
     fprintf(stderr, "   --asdToIbs              Convert ASD values to IBS values in output for pairwise global calculation.\n");
@@ -422,7 +422,7 @@ int main (int argc, char *argv[]) {
     lodestarConfig.tthresh = 0.95;
     lodestarConfig.maf = 0.05;
     lodestarConfig.afMissing = 0.1;
-    lodestarConfig.MAX_GAP = 50000000;
+    lodestarConfig.MAX_GAP = 1000000;
     lodestarConfig.asdToIbs = false;
     lodestarConfig.useLongOutput = false;
     lodestarConfig.useJsonOutput = false;
@@ -476,7 +476,7 @@ int main (int argc, char *argv[]) {
     fprintf(logger -> file, "\n");
 
     // Create the haplotype encoder.
-    HaplotypeEncoder_t* encoder = init_haplotype_encoder(lodestarConfig.parser -> numSamples, lodestarConfig.MAX_GAP);
+    HaplotypeEncoder_t* encoder = init_haplotype_encoder(lodestarConfig.parser -> numSamples);
 
     Window_t* global = NULL;
     Window_t** windows = NULL;
@@ -496,7 +496,7 @@ int main (int argc, char *argv[]) {
         LOG_INFO("Performing sliding-window calculations ...\n");
         printf("Performing sliding-window calculations ...\n\n");
 
-        windows = sliding_window(lodestarConfig.parser, encoder, lodestarConfig.k, lodestarConfig.HAP_SIZE, lodestarConfig.STEP_SIZE, lodestarConfig.WINDOW_SIZE, lodestarConfig.threads, &numWindows);
+        windows = sliding_window(lodestarConfig.parser, encoder, lodestarConfig.k, lodestarConfig.HAP_SIZE, lodestarConfig.STEP_SIZE, lodestarConfig.WINDOW_SIZE, lodestarConfig.threads, lodestarConfig.MAX_GAP, &numWindows);
 
         LOG_INFO("Finished sliding-window calculations ...\n");
         printf("Finished sliding-window calculations ...\n\n");

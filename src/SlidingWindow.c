@@ -65,6 +65,9 @@ typedef struct {
     int* winStartLoci;
     int numHapsInOverlap;
 
+    // The maximum number of basepairs a window can spread.
+    int MAX_GAP;
+
     // Genome-wide IBS counts.
     IBS_t* globalAlleleCounts;
     // Number of haplotypes genome-wide.
@@ -90,7 +93,7 @@ typedef struct {
 void perform_mds_on_window(Window_t* window, RealSymEigen_t* eigen, double* asd, int k) {
     // If we drop a window due to a broken haplotype, then we do not perform MDS.
     if (window -> dropWindow) {
-        LOG_WARNING("Drop window %d on %s because of too long a haplotype.\n", window -> winNumOnChrom, ks_str(window -> chromosome));
+        LOG_WARNING("Drop window %d on %s because it exceeds gap threshold.\n", window -> winNumOnChrom, ks_str(window -> chromosome));
         window -> X = NULL;
         return;
     }
@@ -149,13 +152,6 @@ Window_t* get_next_window(WindowRecord_t* record, Genotype_t** threadGeno) {
     while(record -> numHapsInOverlap < record -> WINDOW_SIZE && isSameChrom) {
         // Get the next haplotype.
         isSameChrom = get_next_haplotype(record -> parser, record -> encoder, record -> HAP_SIZE);
-        // If we encounter a haplotype that breaks the MAX_GAP, we skip the current haplotype and drop the window.
-        //  NOTE: We continue processing the window as normal because we still want the other haplotypes to 
-        //  contribute to the global relatedness matrix.
-        if (record -> encoder -> brokeMAX_GAP) {
-            window -> dropWindow = true;
-            continue;
-        }
         // If we are using a single thread, add haplotype to the end of the queue.
         if (threadGeno == NULL) {
             SWAP(record -> winGeno[record -> winEndIndex], record -> encoder -> genotypes, temp);
@@ -181,6 +177,10 @@ Window_t* get_next_window(WindowRecord_t* record, Genotype_t** threadGeno) {
     window -> startCoord = record -> winStartLoci[window -> winNumOnChrom % (record -> WINDOW_SIZE / record -> STEP_SIZE + 1)];
     // Set the end coordinate of the current window.
     window -> endCoord = record -> encoder -> endCoord;
+    // Drop window if it exceeds MAX_GAP.
+    if (window -> endCoord - window -> startCoord > record -> MAX_GAP) {
+        window -> dropWindow = true;
+    }
     window -> numHaps = record -> numHapsInOverlap;
     if (isSameChrom) {
         record -> globalNumHaps += record -> STEP_SIZE;
@@ -337,7 +337,7 @@ void sort_windows(Window_t** windows, int numWindows) {
     }
 }
 
-Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, int k, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int* numWindows) {
+Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, int k, int HAP_SIZE, int STEP_SIZE, int WINDOW_SIZE, int NUM_THREADS, int MAX_GAP, int* numWindows) {
     
     // Set all attributes for the window record.
     WindowRecord_t* record = (WindowRecord_t*) calloc(1, sizeof(WindowRecord_t));
@@ -352,6 +352,7 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
     record -> STEP_SIZE = STEP_SIZE;
     record -> WINDOW_SIZE = WINDOW_SIZE;
     record -> numSamples = encoder -> numSamples;
+    record -> MAX_GAP = MAX_GAP;
 
     record -> winGeno = create_matrix(geno, WINDOW_SIZE, encoder -> numSamples);
     record -> numHapsInOverlap = 0;
@@ -462,11 +463,6 @@ void* global_window_multi_thread(void* arg) {
         }
         // Get the next haplotype.
         get_next_haplotype(record -> parser, record -> encoder, record -> HAP_SIZE);
-        // Skip haplotype if MAX_GAP exceeded.
-        if (record -> encoder -> brokeMAX_GAP) {
-            pthread_mutex_unlock(&genomeLock);
-            continue;
-        }
         record -> numLoci += record -> encoder -> numLoci;
         record -> numHaps++;
         // Swap out haplotype so thread can calulate IBS.
@@ -507,9 +503,6 @@ Window_t* global_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, i
     if (NUM_THREADS == 1) {
         while (!parser -> isEOF) {
             get_next_haplotype(parser, encoder, HAP_SIZE);
-            // Skip haplotype if MAX_GAP exceeded.
-            if (encoder -> brokeMAX_GAP)
-                continue;
             window -> numLoci += encoder -> numLoci;
             window -> numHaps++;
             pairwise_ibs(encoder -> genotypes, alleleCounts, encoder -> numSamples);

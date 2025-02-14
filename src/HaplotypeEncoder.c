@@ -7,7 +7,7 @@
 
 #include "HaplotypeEncoder.h"
 
-HaplotypeEncoder_t* init_haplotype_encoder(int numSamples, int MAX_GAP) {
+HaplotypeEncoder_t* init_haplotype_encoder(int numSamples) {
 
     // Create structure.
     HaplotypeEncoder_t* encoder = (HaplotypeEncoder_t*) calloc(1, sizeof(HaplotypeEncoder_t));
@@ -18,8 +18,6 @@ HaplotypeEncoder_t* init_haplotype_encoder(int numSamples, int MAX_GAP) {
     encoder -> genotypes = (Genotype_t*) calloc(numSamples, sizeof(Genotype_t));
     encoder -> chrom = init_kstring(NULL);
     encoder -> labelMap = kh_init(haplotype);
-    encoder -> MAX_GAP = 50000000;
-    encoder -> brokeMAX_GAP = false;
     // The tree has one node, which corresponds to the empty string.
     encoder -> numLeaves = 1;
 
@@ -151,23 +149,11 @@ bool get_next_haplotype(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, i
     // Holds the number of alleles at a locus.
     int numAlleles;
 
-    // MAX_GAP has not been broken.
-    encoder -> brokeMAX_GAP = false;
-    int prevCoord;
-
     // While the end of VCF file has not been reached the maximum haplotype size has not been reached
     //  and the current locus is on the same chromosome as the next locus.
     while(!(parser -> isEOF) && (encoder -> numLoci < HAP_SIZE) && isSameChrom) {
-        // Set previous coord on hap.
-        if (encoder -> numLoci >= 1)
-            prevCoord = encoder -> endCoord;
         // Get the next locus from the VCF file.
         get_next_locus(parser, encoder -> chrom, &(encoder -> endCoord), &numAlleles, &(encoder -> locus));
-
-        // Flag if MAX_GAP exceeded.
-        if (encoder -> endCoord - prevCoord > encoder -> MAX_GAP) {
-            encoder -> brokeMAX_GAP = true;
-        }
 
         // Extend the haplotypes.
         add_locus(encoder, numAlleles);

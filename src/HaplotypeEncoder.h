@@ -54,11 +54,6 @@ typedef struct {
     unsigned int endCoord;
     // The number of loci in the current haplotype.
     int numLoci;
-    
-    // The maximum allowed gap between loci.
-    //  For current hap, sets brokeMAX_GAP if max gap exceeded.
-    int MAX_GAP;
-    bool brokeMAX_GAP;
 
     // A hash table used to relabel the haplotypes.
     khash_t(haplotype)* labelMap;
@@ -72,9 +67,8 @@ typedef struct {
 // Create a haplotype encoder.
 // Accepts:
 //  int numSamples -> The number of samples to track.
-//  int MAX_GAP -> The maximum allowed gap between loci.
 // Returns: HaplotypeEncoder_t*, The created encoder.
-HaplotypeEncoder_t* init_haplotype_encoder(int numSamples, int MAX_GAP);
+HaplotypeEncoder_t* init_haplotype_encoder(int numSamples);
 
 // Encode the next haplotype from the parser.
 // Accepts:

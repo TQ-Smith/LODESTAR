@@ -45,7 +45,7 @@ typedef struct {
     // The t-statistic associated with the window.
     double t;
 
-    // A flag to indicate if we drop the window because it holds a broken haplotype.
+    // A flag to indicate if we drop the window because it exceeds gap threshold.
     bool dropWindow;
 
 } Window_t;
