@@ -13,7 +13,7 @@ bin/lodestar: src/Main.o
 	mkdir -p bin
 	$(CC) $(LFLAGS) bin/lodestar src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
 
-src/Main.o: src/SlidingWindow.o src/ProcrustesAnalysis.o
+src/Main.o: src/SlidingWindow.o src/ProcrustesAnalysis.o src/Interface.o
 	$(CC) $(CFLAGS) src/Main.c -o src/Main.o
 
 src/ProcrustesAnalysis.o: src/Logger.o src/Matrix.o src/RealSymEigen.o
@@ -21,6 +21,9 @@ src/ProcrustesAnalysis.o: src/Logger.o src/Matrix.o src/RealSymEigen.o
 
 src/SlidingWindow.o: src/HaplotypeEncoder.o src/Window.o src/AlleleSharingDistance.o src/MultidimensionalScaling.o
 	$(CC) $(CFLAGS) src/SlidingWindow.c -o src/SlidingWindow.o
+
+src/Interface.o:
+	$(CC) $(CFLAGS) src/Interface.c -o src/Interface.o
 
 src/MultidimensionalScaling.o: src/RealSymEigen.o
 	$(CC) $(CFLAGS) src/MultidimensionalScaling.c -o src/MultidimensionalScaling.o

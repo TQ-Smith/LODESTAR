@@ -102,8 +102,7 @@ void seek(VCFLocusParser_t* parser) {
 
         // This is alittle clunky, but I think it is faster than splitting on '\t'.
         numTabs = 0, prevIndex = 0, numAlleles = 2;
-        isInSet = true;
-        for (int i = 0; i <= ks_len(parser -> buffer) && isInSet; i++) {
+        for (int i = 0; i <= ks_len(parser -> buffer); i++) {
             // If end of the line is reached or a tab was encountered.
             if (i == ks_len(parser -> buffer) || ks_str(parser -> buffer)[i] == '\t') {
                 if (numTabs == 0) {
@@ -138,10 +137,6 @@ void seek(VCFLocusParser_t* parser) {
 
         // Set the number of alleles at the locus.
         parser -> nextNumAlleles = numAlleles;
-
-        // If the record is not in the set, skip record.
-        if (!isInSet)
-            continue;
         
         // Calculate the number of missing genotypes present.
         afMissing = parser -> alleleCounts[numAlleles] / (2.0 * parser -> numSamples);
