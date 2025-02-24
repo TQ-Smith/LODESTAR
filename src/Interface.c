@@ -11,6 +11,88 @@
 #include "../lib/ketopt.h"
 #include "Matrix.h"
 MATRIX_INIT(double, double)
+#include "../lib/khash.h"
+KHASH_MAP_INIT_STR(strToStr, char*)
+KHASH_MAP_INIT_STR(strToInt, int)
+
+int* open_group_file(char* groupFileName, kstring_t** sampleNames, int N, int* numGroups) {
+
+    // Open tsv file.
+    FILE* groupFile = fopen(groupFileName, "r");
+    char* name = calloc(1024, sizeof(char));
+    char* group = calloc(1024, sizeof(char));
+
+    // Sample-to-group and group-to-number hash tables.
+    khash_t(strToStr) *sampleToGroup;
+    khint_t k;
+    sampleToGroup = kh_init(strToStr);
+    khash_t(strToInt) *groupToNum;
+    khint_t h;
+    groupToNum = kh_init(strToInt);
+
+    // Parser file
+    int numLines = 0, numFields, numGs = 0, absent;
+    while ( !feof(groupFile) ) {
+
+        numFields = fscanf(groupFile, "%s\t%s\n", name, group);
+        numLines++;
+
+        // Invalid file. Free memory and return.
+        if (numFields != 2 && numLines > N) {
+            // Breaking here will result in returning NULL below.
+            break;
+        }
+
+        // Insert into hash table.
+        k = kh_put(strToStr, sampleToGroup, name, &absent);
+        if (absent) kh_key(sampleToGroup, k) = strdup(name);
+        kh_val(sampleToGroup, k) = strdup(group);
+
+        h = kh_put(strToInt, groupToNum, group, &absent);
+        if (absent) {
+            kh_key(groupToNum, h) = strdup(group);
+            kh_val(groupToNum, h) = numGs;
+            numGs++;
+        }
+    }
+
+    // Create association array.
+    int* samplesToNum = calloc(N, sizeof(int));
+    *numGroups = numGs;
+
+    // Assign group number to sample.
+    for (int i = 0; i < N; i++) {
+        k = kh_get(strToStr, sampleToGroup, ks_str(sampleNames[i]));
+        // If samples does not exit, then break and free memory. NULL will be returned.
+        if (!kh_exist(sampleToGroup, k)) {
+            free(samplesToNum);
+            samplesToNum = NULL;
+            *numGroups = 0;
+            break;
+        }
+        h = kh_get(strToInt, groupToNum, kh_val(sampleToGroup, k));
+        samplesToNum[i] = kh_val(groupToNum, h);
+    }
+
+    // Free used memory.
+    free(name);
+    free(group);
+    fclose(groupFile);
+    for (k = 0; k < kh_end(sampleToGroup); k++) {
+        if (kh_exist(sampleToGroup, k)) {
+            free((char*) kh_val(sampleToGroup, k));
+            free((char*) kh_key(sampleToGroup, k));
+        }
+    }
+    kh_destroy(strToStr, sampleToGroup);
+    for (h = 0; h < kh_end(groupToNum); h++) {
+        if (kh_exist(groupToNum, h)) {
+            free((char*) kh_key(groupToNum, h));
+        }
+    }
+    kh_destroy(strToInt, groupToNum);
+    return samplesToNum;
+}
 
 double** open_target_file(char* targetFileName, int N, int K) {
     double inVal;
@@ -57,6 +139,8 @@ void print_configuration(FILE* output, LodestarConfiguration_t* lodestar_config)
     fprintf(output, "Biallelic minor allele frequency threshold: %lf\n", lodestar_config -> maf);
     fprintf(output, "Missing allele frequency threshold: %lf\n", lodestar_config -> afMissing);
     fprintf(output, "Max range of window in basepairs: %d\n", lodestar_config -> MAX_GAP);
+    if (lodestar_config -> groupFileName != NULL) 
+        fprintf(output, "File of samples to groups: %s\n", lodestar_config -> groupFileName);
     if (lodestar_config -> targetFileName != NULL)
         fprintf(output, "File of coordinates to perform Procrustes analysis against: %s\n", lodestar_config -> targetFileName);
     fprintf(output, "Save as JSON file: %s\n", PRINT_BOOL(lodestar_config -> useJsonOutput));
@@ -237,6 +321,12 @@ int check_configuration(LodestarConfiguration_t* lodestar_config) {
     // Check target file if exists.
     if (lodestar_config -> targetFileName != NULL && access(lodestar_config -> targetFileName, F_OK) != 0) {
         fprintf(stderr, "--target %s does not exist.\n", lodestar_config -> targetFileName); 
+        return -1;
+    }
+    // Check target file if exists.
+    if (lodestar_config -> groupFileName != NULL && access(lodestar_config -> groupFileName, F_OK) != 0) {
+        fprintf(stderr, "--group %s does not exist.\n", lodestar_config -> groupFileName); 
+        return -1;
     }
     // All parameters are valid, return success.
     return 0;
@@ -256,7 +346,7 @@ void print_help() {
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "   --help                  Prints help menu and exits.\n");
     fprintf(stderr, "   --version               Prints version number and exits.\n");
-    fprintf(stderr, "   -i STR                  Path to input vcf file.\n");
+    fprintf(stderr, "   -i file.vcf.gz          Path to input VCF file.\n");
     fprintf(stderr, "   -o STR                  Output base names for files.\n");
     fprintf(stderr, "   -h INT                  Number of loci in a haplotype.\n");
     fprintf(stderr, "                               Default 1. Not used when --global is set.\n");
@@ -271,7 +361,9 @@ void print_help() {
     fprintf(stderr, "   --similarity            Compute similarity between sets of points instead of dissimilarity.\n");
     fprintf(stderr, "   --global                Compute only the global set of points.\n");
     fprintf(stderr, "                               Takes presedence over windowing parameters.\n");
-    fprintf(stderr, "   --target STR            A n-by-k csv file containing user defined coordinates to perform Procrustes analysis.\n");
+    fprintf(stderr, "   --target file.tsv       A n-by-k tsv file containing user defined coordinates to perform Procrustes analysis.\n");
+    fprintf(stderr, "   --group files.tsv       A tsv file assigning each sample a group. Procrustes is perfromed against the centroid\n");
+    fprintf(stderr, "                               of the group the given sample belongs.\n");
     fprintf(stderr, "   --pthresh DOUBLE        Print coordinates of all windows less than or equal to threshold.\n");
     fprintf(stderr, "                               Window must also satisfy --tthresh. Default 0.\n");
     fprintf(stderr, "   --perms INT             The number of permutations to execute.\n");
@@ -302,6 +394,7 @@ static ko_longopt_t long_options[] = {
     {"afMissing",       ko_required_argument,   310},
     {"json",            ko_no_argument,         314},
     {"target",          ko_required_argument,   315},
+    {"group",           ko_required_argument,   317},
     {"gap",             ko_required_argument,   316},
     {"input",           ko_required_argument,   'i'},
     {"output",          ko_required_argument,   'o'},
@@ -349,6 +442,7 @@ LodestarConfiguration_t* init_lodestar_config(int argc, char *argv[]) {
     lodestar_config -> similarity = false;
     lodestar_config -> global = false;
     lodestar_config -> targetFileName = NULL;
+    lodestar_config -> groupFileName = NULL;
     lodestar_config -> pthresh = 0;
     lodestar_config -> NUM_PERMS = 10000;
     lodestar_config -> tthresh = 0.95;
@@ -378,6 +472,7 @@ LodestarConfiguration_t* init_lodestar_config(int argc, char *argv[]) {
             case 314: lodestar_config -> useJsonOutput = true; break;
             case 315: lodestar_config -> targetFileName = options.arg; break;
             case 316: lodestar_config -> MAX_GAP = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 317: lodestar_config -> groupFileName = options.arg; break;
         }
 	}
 

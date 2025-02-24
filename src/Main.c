@@ -62,6 +62,25 @@ int main (int argc, char *argv[]) {
         center_matrix(targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k);
     }
 
+    // Our group information.
+    int* samplesToGroups = NULL;
+    int numGroups = 0;
+
+    // If group file supplied, make sure it is valid. numSamples-by-2
+    if (lodestar_config -> groupFileName != NULL) {
+        samplesToGroups = open_group_file(lodestar_config -> groupFileName, parser -> sampleNames, parser -> numSamples, &numGroups);
+        if (samplesToGroups == NULL) {
+            fprintf(stderr, "--group %s does not contain sample-group pairs. Exiting.\n", lodestar_config -> targetFileName);
+            if (targetPoints != NULL) {
+                destroy_matrix(double, targetPoints, parser -> numSamples);
+                free(targetPointsColMeans);
+            }
+            free(lodestar_config);
+            destroy_vcf_locus_parser(parser);
+            return -1;
+        }
+    }
+
     // Create the haplotype encoder.
     HaplotypeEncoder_t* encoder = init_haplotype_encoder(parser -> numSamples);
 
@@ -202,6 +221,8 @@ int main (int argc, char *argv[]) {
     if (global != NULL) {
         destroy_window(global, parser -> numSamples);
     }
+    if (samplesToGroups)
+        free(samplesToGroups);
     free(lodestar_config);
     destroy_vcf_locus_parser(parser);
     destroy_haplotype_encoder(encoder);

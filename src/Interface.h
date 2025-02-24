@@ -12,6 +12,7 @@
 #include "Window.h"
 #include "VCFLocusParser.h"
 #include "HaplotypeEncoder.h"
+#include "../lib/kstring.h"
 
 // Used to index the lower triangle of a packed matrix.
 #define INDEX(i, j, N) (i <= j ? i + j * (j + 1) / 2 : j + i * (i + 1) / 2)
@@ -38,9 +39,11 @@ typedef struct {
     bool similarity;
     // Flag to indicate if we are just calculating global window.
     bool global;
-    // Name of file of user specified points to perform Procrustes
+    // Name of file for user specified points to perform Procrustes
     //  analysis with.
     char* targetFileName;
+    // Name of the file assigning each sample to a group.
+    char* groupFileName;
     // Pvalue threshold used to print points.
     double pthresh;
     // Number of permutations to execute in permutation test.
@@ -56,6 +59,15 @@ typedef struct {
     // Output file in JSON format instead of text file.
     bool useJsonOutput;
 } LodestarConfiguration_t;
+
+// Open a tsv file to get the group of each sample.
+// Accepts:
+//  char* groupFileName -> The tsv file to open.
+//  kstring_t** sampleNames -> The names of the samples.
+//  int N -> The number of samples.
+//  int* numGroups -> Sets the number of groups.
+// Returns: int*, an array assigning each sample a group number, NULL if invalid file.
+int* open_group_file(char* groupFileName, kstring_t** sampleNames, int N, int* numGroups);
 
 // Open a tsv file for target points.
 // Accepts:
