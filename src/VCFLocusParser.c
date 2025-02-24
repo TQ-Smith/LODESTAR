@@ -83,7 +83,6 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, bool takeComplement, dou
 void seek(VCFLocusParser_t* parser) {
 
     int dret, numTabs, prevIndex, numAlleles;
-    bool isInSet;
     Locus l;
     double maf, afMissing, afMax, af;
 
@@ -118,9 +117,6 @@ void seek(VCFLocusParser_t* parser) {
                     for (int j = prevIndex + 1; ks_str(parser -> buffer)[j] != '\t'; j++)
                         if (ks_str(parser -> buffer)[j] == ',')
                             numAlleles++;
-                    // If the number of alleles exceeds the maximum, drop record.
-                    if (numAlleles > MAX_NUM_ALLELES)
-                        isInSet = false;
                 } else if (numTabs > 8) {
                     // The ninth field and on holds the genotypes of the samples.
                     l = parse_locus(ks_str(parser -> buffer) + prevIndex + 1, numAlleles);
@@ -154,7 +150,9 @@ void seek(VCFLocusParser_t* parser) {
         }
 
         // Test that all thresholds are met.
-        if (parser -> dropMonomorphicSites && afMax == 1)
+        if (numAlleles > MAX_NUM_ALLELES)
+            continue;
+        else if (parser -> dropMonomorphicSites && afMax == 1)
             continue;
         else if (numAlleles == 2 && maf < parser -> maf)
             continue;

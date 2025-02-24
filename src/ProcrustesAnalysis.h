@@ -57,7 +57,8 @@ double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEige
 //  int K -> The dimension of each point.
 //  bool similarity -> If set, statistic represents similarity between points. Otherwise, dissimilarity.
 //  int NUM_PERMS -> If 0, permutation test is NOT performed.
+//  int NUM_THREADS -> Number of threads used to perform the permutation test.
 // Returns: void.
-void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, int N, int K, bool similarity, int NUM_PERMS);
+void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, int N, int K, bool similarity, int NUM_PERMS, int NUM_THREADS);
 
 #endif
