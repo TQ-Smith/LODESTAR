@@ -60,6 +60,16 @@ typedef struct {
     bool useJsonOutput;
 } LodestarConfiguration_t;
 
+// Calculates set of points were each sample is assigned the group's centroid point.
+// Accepts:
+//  double** points -> Set of points to operate on.
+//  int* samplesToGroups -> Assigns each sample a group number.
+//  int N -> The number of samples.
+//  int K -> The dimension of the points.
+//  int numGroups -> The number of groups.
+// Returns: double**, the set of points were each sample is given the sample's group's centroid.
+double** assign_centroid_of_group(double** points, int* samplesToGroups, int N, int K, int numGroups);
+
 // Open a tsv file to get the group of each sample.
 // Accepts:
 //  char* groupFileName -> The tsv file to open.

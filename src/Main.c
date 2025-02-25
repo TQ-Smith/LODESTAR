@@ -44,22 +44,18 @@ int main (int argc, char *argv[]) {
         return -1;
     }
 
-    // Our matrix to perform procrustes against.
-    double** targetPoints = NULL;
-    double* targetPointsColMeans = NULL;
+    // User defined points to perform Procrustes against.
+    double** userPoints = NULL;
 
     // If target file supplied, make sure it is valid, at least numSamples-by-k
     if (lodestar_config -> targetFileName != NULL) {
-        targetPoints = open_target_file(lodestar_config -> targetFileName, parser -> numSamples, lodestar_config -> k);
-        if (targetPoints == NULL) {
+        userPoints = open_target_file(lodestar_config -> targetFileName, parser -> numSamples, lodestar_config -> k);
+        if (userPoints == NULL) {
             fprintf(stderr, "--target %s does not contain %d values. Exiting.\n", lodestar_config -> targetFileName, lodestar_config -> k * (parser -> numSamples));
             free(lodestar_config);
             destroy_vcf_locus_parser(parser);
             return -1;
         }
-        // Otherwise, mean center input target points.
-        targetPointsColMeans = (double*) calloc(lodestar_config -> k, sizeof(double));
-        center_matrix(targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k);
     }
 
     // Our group information.
@@ -71,10 +67,6 @@ int main (int argc, char *argv[]) {
         samplesToGroups = open_group_file(lodestar_config -> groupFileName, parser -> sampleNames, parser -> numSamples, &numGroups);
         if (samplesToGroups == NULL) {
             fprintf(stderr, "--group %s does not contain sample-group pairs. Exiting.\n", lodestar_config -> targetFileName);
-            if (targetPoints != NULL) {
-                destroy_matrix(double, targetPoints, parser -> numSamples);
-                free(targetPointsColMeans);
-            }
             free(lodestar_config);
             destroy_vcf_locus_parser(parser);
             return -1;
@@ -89,8 +81,9 @@ int main (int argc, char *argv[]) {
     // Create output files.
     FILE* windowSummaries = NULL;
     FILE* windowPoints = NULL;
+    FILE* windowTarget = NULL;
     kstring_t* outputBasename = init_kstring(lodestar_config -> outputBasename);
-    printf("\nLogging progress in %s\n\n", ks_str(outputBasename));
+    printf("\nLogging progress in %s.log\n\n", ks_str(outputBasename));
     kputs(".log", outputBasename);
     INIT_LOG(ks_str(outputBasename));
     ks_overwrite(lodestar_config -> outputBasename, outputBasename);
@@ -107,6 +100,9 @@ int main (int argc, char *argv[]) {
         kputs("_windows.txt", outputBasename);
         windowPoints = fopen(ks_str(outputBasename), "w");
     }
+    ks_overwrite(lodestar_config -> outputBasename, outputBasename);
+    kputs("_target.tsv", outputBasename);
+    windowTarget = fopen(ks_str(outputBasename), "w");
     destroy_kstring(outputBasename);
 
     // Print initial configuration to log file.
@@ -134,42 +130,67 @@ int main (int argc, char *argv[]) {
         printf("Finished sliding-window calculations ...\n\n");
     }
 
+    // We now configure the target to perform Procrustes analysis.
+    double** targetPoints = NULL;
+    double* targetPointsColMeans = NULL;
+
+    // Group by user coordinates.
+    if (samplesToGroups != NULL && userPoints != NULL) {
+        targetPoints = assign_centroid_of_group(userPoints, samplesToGroups, parser -> numSamples, lodestar_config -> k, numGroups);
+        targetPointsColMeans = (double*) calloc(lodestar_config -> k, sizeof(double));
+        center_matrix(targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k);
+        // Destroy our user points. Not needed anymore.
+        destroy_matrix(double, userPoints, parser -> numSamples);
+    // Group by global coordinates.
+    } else if (samplesToGroups != NULL && windows != NULL && windows[0] -> X != NULL) {
+        targetPoints = assign_centroid_of_group(windows[0] -> X, samplesToGroups, parser -> numSamples, lodestar_config -> k, numGroups);
+        targetPointsColMeans = (double*) calloc(lodestar_config -> k, sizeof(double));
+        center_matrix(targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k);
+    // Use the user supplied coordinates.
+    } else if (userPoints != NULL) {
+        targetPoints = userPoints;
+        // Mean center input target points.
+        targetPointsColMeans = (double*) calloc(lodestar_config -> k, sizeof(double));
+        center_matrix(targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k);
+    // Use the global coordinates.
+    } else if (windows[0] -> X != NULL) {
+        targetPoints = windows[0] -> X;
+        targetPointsColMeans = NULL;
+    // Otherwise, error. We do not have a valid matrix to perform Procrustes against.
+    } else if (!lodestar_config -> global) {
+        LOG_WARNING("Unable to perform Procrustes. Either no user supplied points were given or global did not converge!\n");
+    }
+
     // Used for Procrustes analysis and to transform points.
     RealSymEigen_t* eigen = init_real_sym_eigen(parser -> numSamples);
 
-    LOG_INFO("Beginning Procrustes Analysis ...\n");
-    printf("Beginning Procrustes Analysis ...\n\n");
+    // We only perform Procrustes if the target points was set.
+    if (targetPoints != NULL) {
+        LOG_INFO("Beginning Procrustes Analysis ...\n");
+        printf("Beginning Procrustes Analysis ...\n\n");
 
-    // If we are just calculating global with a defined target.
-    if (lodestar_config -> targetFileName != NULL && global -> X != NULL) {
-        double** shuffleX = create_matrix(double, parser -> numSamples, lodestar_config -> k);
-        global -> t = procrustes_statistic(global -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, false, lodestar_config -> similarity);
-        global -> pval = permutation_test(global -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, global -> t, lodestar_config -> NUM_PERMS);
-        // Trasnsform global set of points.
-        global -> t = procrustes_statistic(global -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, true, lodestar_config -> similarity);
-        destroy_matrix(double, shuffleX, encoder -> numSamples);
-    
-    // If we are performing a sliding window with a defined target.
-    } else if (lodestar_config -> targetFileName != NULL) {
-        procrustes_sliding_window(windows, numWindows, targetPoints, parser -> numSamples, lodestar_config -> k, lodestar_config -> similarity, lodestar_config -> pthresh == 0 ? 0 : lodestar_config -> NUM_PERMS, lodestar_config -> threads);
-    
-    // If our target is the global.
-    } else {
-        targetPoints = windows[0] -> X;
-        if (targetPoints != NULL) {
-            procrustes_sliding_window(windows, numWindows, targetPoints, parser -> numSamples, lodestar_config -> k, lodestar_config -> similarity, lodestar_config -> pthresh == 0 ? 0 : lodestar_config -> NUM_PERMS, lodestar_config -> threads);
+        // Just global against the target.
+        if (global != NULL) {
+            double** shuffleX = create_matrix(double, parser -> numSamples, lodestar_config -> k);
+            global -> t = procrustes_statistic(global -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, false, lodestar_config -> similarity);
+            global -> pval = permutation_test(global -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, global -> t, lodestar_config -> NUM_PERMS);
+            // Trasnsform global set of points.
+            global -> t = procrustes_statistic(global -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, true, lodestar_config -> similarity);
+            destroy_matrix(double, shuffleX, encoder -> numSamples);
+        // Sliding window against the target.
         } else {
-            LOG_ERROR("Could not perform Procrustes Analysis between windows and genome-wide coordinates because genome-wide coordinates were of low rank.\n");
+            procrustes_sliding_window(windows, numWindows, targetPoints, parser -> numSamples, lodestar_config -> k, lodestar_config -> similarity, lodestar_config -> pthresh == 0 ? 0 : lodestar_config -> NUM_PERMS, lodestar_config -> threads);
         }
+
+        LOG_INFO("Finished Procrustes Analysis ...\n");
+        printf("Finished Procrustes Analysis ...\n\n");
     }
 
-    LOG_INFO("Finished Procrustes Analysis ...\n");
-    printf("Finished Procrustes Analysis ...\n\n");
     LOG_INFO("Saving results to output files ...\n");
     printf("Saving results to output files ...\n\n");
 
     // Output results.
-    if (lodestar_config -> global) {
+    if (targetPoints == NULL) {
         if (lodestar_config -> useJsonOutput) fprintf(windowPoints, "{\n\t\"windows\": [");
         print_window(windowPoints, parser -> sampleNames, windows[0], parser -> numSamples, lodestar_config -> k, lodestar_config -> useJsonOutput, true);
         if (lodestar_config -> useJsonOutput) fprintf(windowPoints, "\n\t]\n}\n");
@@ -196,6 +217,14 @@ int main (int argc, char *argv[]) {
         fprintf(windowPoints, "\n");
         print_window(windowPoints, parser -> sampleNames, windows[0], parser -> numSamples, lodestar_config -> k, lodestar_config -> useJsonOutput, true);
         if (lodestar_config -> useJsonOutput) fprintf(windowPoints, "\n\t]\n}\n");
+
+        // Print the target used.
+        for (int i = 0; i < parser -> numSamples; i++) {
+            for (int j = 0; j < lodestar_config -> k - 1; j++) {
+                fprintf(windowTarget, "%lf\t", targetPoints[i][j]);
+            }
+            fprintf(windowTarget, "%lf\n", targetPoints[i][lodestar_config -> k - 1]);
+        }
     }
 
     LOG_INFO("Finished Analysis! Exiting ...\n");
@@ -206,13 +235,15 @@ int main (int argc, char *argv[]) {
         fclose(windowSummaries);
     if (windowPoints)
         fclose(windowPoints);
+    if (windowTarget)
+        fclose(windowTarget);
     CLOSE_LOG();
 
     // Free all used memory.
-    if (lodestar_config -> targetFileName != NULL) {
+    if (targetPoints != NULL && targetPoints != windows[0] -> X)
         destroy_matrix(double, targetPoints, parser -> numSamples);
+    if (targetPointsColMeans != NULL)
         free(targetPointsColMeans);
-    } 
     if (windows != NULL) {
         for (int i = 0; i < numWindows; i++)
             destroy_window(windows[i], parser -> numSamples);

@@ -15,6 +15,35 @@ MATRIX_INIT(double, double)
 KHASH_MAP_INIT_STR(strToStr, char*)
 KHASH_MAP_INIT_STR(strToInt, int)
 
+double** assign_centroid_of_group(double** points, int* samplesToGroups, int N, int K, int numGroups) {
+    // To calculate our centroids.
+    double** centroids = create_matrix(double, numGroups, K);
+    int* totals = calloc(numGroups, sizeof(int));
+
+    // Our new get of points.
+    double** pointsCentroids = create_matrix(double, N, K);
+
+    // Calculate totals.
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < K; j++) {
+            centroids[samplesToGroups[i]][j] += points[i][j]; 
+            totals[samplesToGroups[i]]++; 
+        }
+    }
+
+    // Caclulate centroids.
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < K; j++) {
+            pointsCentroids[i][j] = centroids[samplesToGroups[i]][j] / totals[samplesToGroups[i]];
+        }
+    }
+
+    destroy_matrix(double, centroids, numGroups);
+    free(totals);
+
+    return pointsCentroids;
+}
+
 int* open_group_file(char* groupFileName, kstring_t** sampleNames, int N, int* numGroups) {
 
     // Open tsv file.
@@ -362,8 +391,8 @@ void print_help() {
     fprintf(stderr, "   --global                Compute only the global set of points.\n");
     fprintf(stderr, "                               Takes presedence over windowing parameters.\n");
     fprintf(stderr, "   --target file.tsv       A n-by-k tsv file containing user defined coordinates to perform Procrustes analysis.\n");
-    fprintf(stderr, "   --group files.tsv       A tsv file assigning each sample a group. Procrustes is perfromed against the centroid\n");
-    fprintf(stderr, "                               of the group the given sample belongs.\n");
+    fprintf(stderr, "   --group files.tsv       A tsv file assigning each sample a group. Procrustes is perfromed against the centroids\n");
+    fprintf(stderr, "                               of the groups between the two sets of points.\n");
     fprintf(stderr, "   --pthresh DOUBLE        Print coordinates of all windows less than or equal to threshold.\n");
     fprintf(stderr, "                               Window must also satisfy --tthresh. Default 0.\n");
     fprintf(stderr, "   --perms INT             The number of permutations to execute.\n");

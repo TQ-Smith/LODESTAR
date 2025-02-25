@@ -294,7 +294,7 @@ void* procrustes_permutation_multi_thread(void* arg) {
     for (int i = record -> startWindow; i <= record -> endWindow; i++) {
         // Get current window.
         window = record -> windows[i];
-        LOG_INFO("Performing Procrustes for window %d ...\n", window -> winNum);
+        // LOG_INFO("Performing Procrustes for window %d ...\n", window -> winNum);
         // Calculate Procrustes statistic for window.
         t = procrustes_statistic(window -> X, NULL, record -> target, NULL, eigen, record -> N, record -> K, false, record -> similarity);
         window -> t = t;
