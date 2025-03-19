@@ -134,8 +134,11 @@ int main (int argc, char *argv[]) {
     double** targetPoints = NULL;
     double* targetPointsColMeans = NULL;
 
+    // Use origin as target points has highest precedence.
+    if (lodestar_config -> useOriginTarget) {
+        targetPoints = create_matrix(double, parser -> numSamples, lodestar_config -> k);
     // Group by user coordinates.
-    if (samplesToGroups != NULL && userPoints != NULL) {
+    } else if (samplesToGroups != NULL && userPoints != NULL) {
         targetPoints = assign_centroid_of_group(userPoints, samplesToGroups, parser -> numSamples, lodestar_config -> k, numGroups);
         targetPointsColMeans = (double*) calloc(lodestar_config -> k, sizeof(double));
         center_matrix(targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k);

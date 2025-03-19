@@ -28,19 +28,18 @@ main <- function() {
             # Create our plot.
             df <- read.delim(fileName, skip=1, header=TRUE)
             df <- df[!df$t.stat == -1,]
+            df[9] <- lapply(df[9], function (x) 1 - x)
             manhat <- data.frame(
                 SNP <- ".",
                 CHR <- as.numeric(factor(df$Chr, levels = unique(df$Chr))),
                 BP <- df["Start"],
-                P <- df["p.val"]
+                P <- df["t.stat"]
             )
             if (useT) {
-                # Remove undefined t-stat windows. Take difference to observe magnitude.
-                manhat$P <- df["t.stat"]
-                manhat$P <- lapply(manhat$P, function (x) 1 - x)
+                # Take difference to observe magnitude.
                 print(paste("Output file: ", substr(fileName, 1, nchar(fileName) - 4), "_t.png", sep = ""))
             } else {
-                # Remove p values of 0.
+                manhat$P <- df["p.val"]
                 print(paste("Output file: ", substr(fileName, 1, nchar(fileName) - 4), "_p.png", sep = ""))
             }
             colnames(manhat) <- c("SNP", "CHR", "BP", "P")

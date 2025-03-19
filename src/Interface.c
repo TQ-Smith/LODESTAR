@@ -168,10 +168,11 @@ void print_configuration(FILE* output, LodestarConfiguration_t* lodestar_config)
     fprintf(output, "Biallelic minor allele frequency threshold: %lf\n", lodestar_config -> maf);
     fprintf(output, "Missing allele frequency threshold: %lf\n", lodestar_config -> afMissing);
     fprintf(output, "Max range of window in basepairs: %d\n", lodestar_config -> MAX_GAP);
-    if (lodestar_config -> groupFileName != NULL) 
+    if (!lodestar_config -> useOriginTarget && lodestar_config -> groupFileName != NULL) 
         fprintf(output, "File of samples to groups: %s\n", lodestar_config -> groupFileName);
-    if (lodestar_config -> targetFileName != NULL)
+    if (!lodestar_config -> useOriginTarget && lodestar_config -> targetFileName != NULL)
         fprintf(output, "File of coordinates to perform Procrustes analysis against: %s\n", lodestar_config -> targetFileName);
+    fprintf(output, "Use origin as target points: %s\n", PRINT_BOOL(lodestar_config -> useOriginTarget));
     fprintf(output, "Save as JSON file: %s\n", PRINT_BOOL(lodestar_config -> useJsonOutput));
 }
 
@@ -183,13 +184,8 @@ void print_window_summary(FILE* output, Window_t* window) {
     fprintf(output, "%d\t", window -> endCoord);
     fprintf(output, "%d\t", window -> numLoci);
     fprintf(output, "%d\t", window -> numHaps);
-    if (window -> t == -1) {
-        fprintf(output, "-1\t");
-        fprintf(output, "-1\n");
-    } else {
-        fprintf(output, "%lf\t", window -> pval);
-        fprintf(output, "%lf\n", window -> t);
-    }
+    fprintf(output, "%lf\t", window -> pval);
+    fprintf(output, "%lf\n", window -> t);
 }
 
 // Print a row of a matrix.
@@ -393,6 +389,7 @@ void print_help() {
     fprintf(stderr, "   --target file.tsv       A n-by-k tsv file containing user defined coordinates to perform Procrustes analysis.\n");
     fprintf(stderr, "   --group files.tsv       A tsv file assigning each sample a group. Procrustes is perfromed against the centroids\n");
     fprintf(stderr, "                               of the groups between the two sets of points.\n");
+    fprintf(stderr, "   --origin                Use the origin as every target point. Ignores --target and --group.\n");
     fprintf(stderr, "   --pthresh DOUBLE        Print coordinates of all windows less than or equal to threshold.\n");
     fprintf(stderr, "                               Window must also satisfy --tthresh. Default 0.\n");
     fprintf(stderr, "   --perms INT             The number of permutations to execute.\n");
@@ -424,6 +421,7 @@ static ko_longopt_t long_options[] = {
     {"json",            ko_no_argument,         314},
     {"target",          ko_required_argument,   315},
     {"group",           ko_required_argument,   317},
+    {"origin",          ko_no_argument,         318},
     {"gap",             ko_required_argument,   316},
     {"input",           ko_required_argument,   'i'},
     {"output",          ko_required_argument,   'o'},
@@ -472,6 +470,7 @@ LodestarConfiguration_t* init_lodestar_config(int argc, char *argv[]) {
     lodestar_config -> global = false;
     lodestar_config -> targetFileName = NULL;
     lodestar_config -> groupFileName = NULL;
+    lodestar_config -> useOriginTarget = false;
     lodestar_config -> pthresh = 0;
     lodestar_config -> NUM_PERMS = 10000;
     lodestar_config -> tthresh = 0.95;
@@ -502,6 +501,7 @@ LodestarConfiguration_t* init_lodestar_config(int argc, char *argv[]) {
             case 315: lodestar_config -> targetFileName = options.arg; break;
             case 316: lodestar_config -> MAX_GAP = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 317: lodestar_config -> groupFileName = options.arg; break;
+            case 318: lodestar_config -> useOriginTarget = true; break;
         }
 	}
 

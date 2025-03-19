@@ -44,6 +44,8 @@ typedef struct {
     char* targetFileName;
     // Name of the file assigning each sample to a group.
     char* groupFileName;
+    // Use the origin as the target point.
+    bool useOriginTarget;
     // Pvalue threshold used to print points.
     double pthresh;
     // Number of permutations to execute in permutation test.
