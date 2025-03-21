@@ -108,7 +108,7 @@ void perform_mds_on_window(Window_t* window, RealSymEigen_t* eigen, double* asd,
         destroy_matrix(double, X, eigen -> N);
         return;
     } else {
-        LOG_INFO("Finished MDS for window %d on %s from %d to %d.\n", window -> winNum, window -> chromosome, window -> startCoord, window -> endCoord);
+        LOG_INFO("Finished MDS for window %d on %s from %d to %d.\n", window -> winNum, ks_str(window -> chromosome), window -> startCoord, window -> endCoord);
     }
     window -> X = X;
 }

@@ -126,7 +126,7 @@ int main (int argc, char *argv[]) {
         printf("Beginning Procrustes Analysis ...\n\n");
 
         // Just global against the target.
-        if (global != targetPoints) {
+        if (global != NULL) {
             double** shuffleX = create_matrix(double, parser -> numSamples, lodestar_config -> k);
             global -> t = procrustes_statistic(global -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, false, lodestar_config -> similarity);
             global -> pval = permutation_test(global -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, global -> t, lodestar_config -> NUM_PERMS);
@@ -148,7 +148,7 @@ int main (int argc, char *argv[]) {
     // Print configuration in JSON.
     fprintf(windowPoints, "{\n");
     print_configuration(windowPoints, lodestar_config);
-    fprintf(windowPoints, "\t\"sample_names\": [");
+    fprintf(windowPoints, "\t\"sample_names\": [\n");
     for (int i = 0; i < parser -> numSamples - 1; i++)
         fprintf(windowPoints, "\t\t\"%s\",\n", ks_str(parser -> sampleNames[i]));
     fprintf(windowPoints, "\t\t\"%s\"\n", ks_str(parser -> sampleNames[parser -> numSamples - 1]));
