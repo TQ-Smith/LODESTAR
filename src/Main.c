@@ -1,5 +1,5 @@
 
-// File: main.c
+// File: Main.c
 // Date: 
 // Version 1: 
 // Author: T. Quinn Smith
@@ -58,21 +58,6 @@ int main (int argc, char *argv[]) {
         }
     }
 
-    // Our group information.
-    int* samplesToGroups = NULL;
-    int numGroups = 0;
-
-    // If group file supplied, make sure it is valid. numSamples-by-2
-    if (lodestar_config -> groupFileName != NULL) {
-        samplesToGroups = open_group_file(lodestar_config -> groupFileName, parser -> sampleNames, parser -> numSamples, &numGroups);
-        if (samplesToGroups == NULL) {
-            fprintf(stderr, "--group %s does not contain sample-group pairs. Exiting.\n", lodestar_config -> targetFileName);
-            free(lodestar_config);
-            destroy_vcf_locus_parser(parser);
-            return -1;
-        }
-    }
-
     // Create the haplotype encoder.
     HaplotypeEncoder_t* encoder = init_haplotype_encoder(parser -> numSamples);
 
@@ -81,7 +66,6 @@ int main (int argc, char *argv[]) {
     // Create output files.
     FILE* windowSummaries = NULL;
     FILE* windowPoints = NULL;
-    FILE* windowTarget = NULL;
     kstring_t* outputBasename = init_kstring(lodestar_config -> outputBasename);
     printf("\nLogging progress in %s.log\n\n", ks_str(outputBasename));
     kputs(".log", outputBasename);
@@ -92,25 +76,9 @@ int main (int argc, char *argv[]) {
         windowSummaries = fopen(ks_str(outputBasename), "w");
         ks_overwrite(lodestar_config -> outputBasename, outputBasename);
     }
-    // If we are using JSON output.
-    if (lodestar_config -> useJsonOutput) {
-        kputs("_windows.json", outputBasename);
-        windowPoints = fopen(ks_str(outputBasename), "w");
-    } else {
-        kputs("_windows.txt", outputBasename);
-        windowPoints = fopen(ks_str(outputBasename), "w");
-    }
-    ks_overwrite(lodestar_config -> outputBasename, outputBasename);
-    kputs("_target.tsv", outputBasename);
-    windowTarget = fopen(ks_str(outputBasename), "w");
+    kputs("_windows.json", outputBasename);
+    windowPoints = fopen(ks_str(outputBasename), "w");
     destroy_kstring(outputBasename);
-
-    // Print initial configuration to log file.
-    print_configuration(logger -> file, lodestar_config);
-    fprintf(logger -> file, "\nSample Names:\n");
-    for (int i = 0; i < parser -> numSamples; i++)
-        fprintf(logger -> file, "%s\n", ks_str(parser -> sampleNames[i]));
-    fprintf(logger -> file, "\n");
 
     Window_t* global = NULL;
     Window_t** windows = NULL;
@@ -134,23 +102,8 @@ int main (int argc, char *argv[]) {
     double** targetPoints = NULL;
     double* targetPointsColMeans = NULL;
 
-    // Use origin as target points has highest precedence.
-    if (lodestar_config -> useOriginTarget) {
-        targetPoints = create_matrix(double, parser -> numSamples, lodestar_config -> k);
-    // Group by user coordinates.
-    } else if (samplesToGroups != NULL && userPoints != NULL) {
-        targetPoints = assign_centroid_of_group(userPoints, samplesToGroups, parser -> numSamples, lodestar_config -> k, numGroups);
-        targetPointsColMeans = (double*) calloc(lodestar_config -> k, sizeof(double));
-        center_matrix(targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k);
-        // Destroy our user points. Not needed anymore.
-        destroy_matrix(double, userPoints, parser -> numSamples);
-    // Group by global coordinates.
-    } else if (samplesToGroups != NULL && windows != NULL && windows[0] -> X != NULL) {
-        targetPoints = assign_centroid_of_group(windows[0] -> X, samplesToGroups, parser -> numSamples, lodestar_config -> k, numGroups);
-        targetPointsColMeans = (double*) calloc(lodestar_config -> k, sizeof(double));
-        center_matrix(targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k);
     // Use the user supplied coordinates.
-    } else if (userPoints != NULL) {
+    if (userPoints != NULL) {
         targetPoints = userPoints;
         // Mean center input target points.
         targetPointsColMeans = (double*) calloc(lodestar_config -> k, sizeof(double));
@@ -173,16 +126,16 @@ int main (int argc, char *argv[]) {
         printf("Beginning Procrustes Analysis ...\n\n");
 
         // Just global against the target.
-        if (global != NULL) {
+        if (global != targetPoints) {
             double** shuffleX = create_matrix(double, parser -> numSamples, lodestar_config -> k);
             global -> t = procrustes_statistic(global -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, false, lodestar_config -> similarity);
             global -> pval = permutation_test(global -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, global -> t, lodestar_config -> NUM_PERMS);
-            // Trasnsform global set of points.
-            global -> t = procrustes_statistic(global -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, true, lodestar_config -> similarity);
+            // Transform global set of points.
+            procrustes_statistic(global -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, true, lodestar_config -> similarity);
             destroy_matrix(double, shuffleX, encoder -> numSamples);
         // Sliding window against the target.
         } else {
-            procrustes_sliding_window(windows, numWindows, targetPoints, parser -> numSamples, lodestar_config -> k, lodestar_config -> similarity, lodestar_config -> pthresh == 0 ? 0 : lodestar_config -> NUM_PERMS, lodestar_config -> threads);
+            procrustes_sliding_window(windows, numWindows, targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k, lodestar_config -> similarity, lodestar_config -> NUM_PERMS, lodestar_config -> threads);
         }
 
         LOG_INFO("Finished Procrustes Analysis ...\n");
@@ -192,43 +145,35 @@ int main (int argc, char *argv[]) {
     LOG_INFO("Saving results to output files ...\n");
     printf("Saving results to output files ...\n\n");
 
+    // Print configuration in JSON.
+    fprintf(windowPoints, "{\n");
+    print_configuration(windowPoints, lodestar_config);
+    fprintf(windowPoints, "\t\"sample_names\": [");
+    for (int i = 0; i < parser -> numSamples - 1; i++)
+        fprintf(windowPoints, "\t\t\"%s\",\n", ks_str(parser -> sampleNames[i]));
+    fprintf(windowPoints, "\t\t\"%s\"\n", ks_str(parser -> sampleNames[parser -> numSamples - 1]));
+    fprintf(windowPoints, "\t],\n");
+
     // Output results.
-    if (targetPoints == NULL) {
-        if (lodestar_config -> useJsonOutput) fprintf(windowPoints, "{\n\t\"windows\": [");
-        print_window(windowPoints, parser -> sampleNames, windows[0], parser -> numSamples, lodestar_config -> k, lodestar_config -> useJsonOutput, true);
-        if (lodestar_config -> useJsonOutput) fprintf(windowPoints, "\n\t]\n}\n");
-    } else {
+    fprintf(windowPoints, "\t\"windows\": [");
+    if (targetPoints != NULL) {
         // Echo command in summary file for convience.
         fprintf(windowSummaries, "#Command: ");
         for (int i = 0; i < argc; i++) 
             fprintf(windowSummaries, "%s ", argv[i]);
         fprintf(windowSummaries, "\nWin\tWinChr\tChr\tStart\tEnd\tnLoci\tnHaps\tp-val\tt-stat\n");
-        if (lodestar_config -> useJsonOutput) fprintf(windowPoints, "{\n\t\"windows\": [");
         for (int i = 1; i < numWindows; i++) {
             print_window_summary(windowSummaries, windows[i]);
             fprintf(windowPoints, "\n");
-            // Print points if thersholds are met. Print window points.
-            if ((windows[i] -> X != NULL) && ((lodestar_config -> pthresh != 0 && windows[i] -> pval < lodestar_config -> pthresh) || (windows[i] -> t >= lodestar_config -> tthresh))) {
-                procrustes_statistic(windows[i] -> X, NULL, targetPoints, targetPointsColMeans, eigen, parser -> numSamples, lodestar_config -> k, true, lodestar_config -> similarity);
-                print_window(windowPoints, parser -> sampleNames, windows[i], parser -> numSamples, lodestar_config -> k, lodestar_config -> useJsonOutput, true);
-            } else {
-                print_window(windowPoints, parser -> sampleNames, windows[i], parser -> numSamples, lodestar_config -> k, lodestar_config -> useJsonOutput, false);
-            }
-            if (lodestar_config -> useJsonOutput) fprintf(windowPoints, ",");
+            // Print the window information.
+            print_window(windowPoints, parser -> sampleNames, windows[i], parser -> numSamples, lodestar_config -> k);
+            fprintf(windowPoints, ",");
         }
-        // Print the global window.
-        fprintf(windowPoints, "\n");
-        print_window(windowPoints, parser -> sampleNames, windows[0], parser -> numSamples, lodestar_config -> k, lodestar_config -> useJsonOutput, true);
-        if (lodestar_config -> useJsonOutput) fprintf(windowPoints, "\n\t]\n}\n");
-
-        // Print the target used.
-        for (int i = 0; i < parser -> numSamples; i++) {
-            for (int j = 0; j < lodestar_config -> k - 1; j++) {
-                fprintf(windowTarget, "%lf\t", targetPoints[i][j]);
-            }
-            fprintf(windowTarget, "%lf\n", targetPoints[i][lodestar_config -> k - 1]);
-        }
+        fprintf(windowPoints, "\n");        
     }
+    // Print the global window.
+    print_window(windowPoints, parser -> sampleNames, windows[0], parser -> numSamples, lodestar_config -> k);
+    fprintf(windowPoints, "\n\t]\n}\n");
 
     LOG_INFO("Finished Analysis! Exiting ...\n");
     printf("Finished Analysis! Exiting ...\n\n");
@@ -238,8 +183,6 @@ int main (int argc, char *argv[]) {
         fclose(windowSummaries);
     if (windowPoints)
         fclose(windowPoints);
-    if (windowTarget)
-        fclose(windowTarget);
     CLOSE_LOG();
 
     // Free all used memory.
@@ -255,8 +198,6 @@ int main (int argc, char *argv[]) {
     if (global != NULL) {
         destroy_window(global, parser -> numSamples);
     }
-    if (samplesToGroups)
-        free(samplesToGroups);
     free(lodestar_config);
     destroy_vcf_locus_parser(parser);
     destroy_haplotype_encoder(encoder);

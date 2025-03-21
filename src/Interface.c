@@ -11,117 +11,6 @@
 #include "../lib/ketopt.h"
 #include "Matrix.h"
 MATRIX_INIT(double, double)
-#include "../lib/khash.h"
-KHASH_MAP_INIT_STR(strToStr, char*)
-KHASH_MAP_INIT_STR(strToInt, int)
-
-double** assign_centroid_of_group(double** points, int* samplesToGroups, int N, int K, int numGroups) {
-    // To calculate our centroids.
-    double** centroids = create_matrix(double, numGroups, K);
-    int* totals = calloc(numGroups, sizeof(int));
-
-    // Our new get of points.
-    double** pointsCentroids = create_matrix(double, N, K);
-
-    // Calculate totals.
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < K; j++) {
-            centroids[samplesToGroups[i]][j] += points[i][j]; 
-            totals[samplesToGroups[i]]++; 
-        }
-    }
-
-    // Caclulate centroids.
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < K; j++) {
-            pointsCentroids[i][j] = centroids[samplesToGroups[i]][j] / totals[samplesToGroups[i]];
-        }
-    }
-
-    destroy_matrix(double, centroids, numGroups);
-    free(totals);
-
-    return pointsCentroids;
-}
-
-int* open_group_file(char* groupFileName, kstring_t** sampleNames, int N, int* numGroups) {
-
-    // Open tsv file.
-    FILE* groupFile = fopen(groupFileName, "r");
-    char* name = calloc(1024, sizeof(char));
-    char* group = calloc(1024, sizeof(char));
-
-    // Sample-to-group and group-to-number hash tables.
-    khash_t(strToStr) *sampleToGroup;
-    khint_t k;
-    sampleToGroup = kh_init(strToStr);
-    khash_t(strToInt) *groupToNum;
-    khint_t h;
-    groupToNum = kh_init(strToInt);
-
-    // Parser file
-    int numLines = 0, numFields, numGs = 0, absent;
-    while ( !feof(groupFile) ) {
-
-        numFields = fscanf(groupFile, "%s\t%s\n", name, group);
-        numLines++;
-
-        // Invalid file. Free memory and return.
-        if (numFields != 2 && numLines > N) {
-            // Breaking here will result in returning NULL below.
-            break;
-        }
-
-        // Insert into hash table.
-        k = kh_put(strToStr, sampleToGroup, name, &absent);
-        if (absent) kh_key(sampleToGroup, k) = strdup(name);
-        kh_val(sampleToGroup, k) = strdup(group);
-
-        h = kh_put(strToInt, groupToNum, group, &absent);
-        if (absent) {
-            kh_key(groupToNum, h) = strdup(group);
-            kh_val(groupToNum, h) = numGs;
-            numGs++;
-        }
-    }
-
-    // Create association array.
-    int* samplesToNum = calloc(N, sizeof(int));
-    *numGroups = numGs;
-
-    // Assign group number to sample.
-    for (int i = 0; i < N; i++) {
-        k = kh_get(strToStr, sampleToGroup, ks_str(sampleNames[i]));
-        // If samples does not exit, then break and free memory. NULL will be returned.
-        if (!kh_exist(sampleToGroup, k)) {
-            free(samplesToNum);
-            samplesToNum = NULL;
-            *numGroups = 0;
-            break;
-        }
-        h = kh_get(strToInt, groupToNum, kh_val(sampleToGroup, k));
-        samplesToNum[i] = kh_val(groupToNum, h);
-    }
-
-    // Free used memory.
-    free(name);
-    free(group);
-    fclose(groupFile);
-    for (k = 0; k < kh_end(sampleToGroup); k++) {
-        if (kh_exist(sampleToGroup, k)) {
-            free((char*) kh_val(sampleToGroup, k));
-            free((char*) kh_key(sampleToGroup, k));
-        }
-    }
-    kh_destroy(strToStr, sampleToGroup);
-    for (h = 0; h < kh_end(groupToNum); h++) {
-        if (kh_exist(groupToNum, h)) {
-            free((char*) kh_key(groupToNum, h));
-        }
-    }
-    kh_destroy(strToInt, groupToNum);
-    return samplesToNum;
-}
 
 double** open_target_file(char* targetFileName, int N, int K) {
     double inVal;
@@ -145,35 +34,24 @@ double** open_target_file(char* targetFileName, int N, int K) {
 
 #define PRINT_BOOL(X) (X ? "true" : "false")
 
-// Print verbose LODESTAR configuration.
-// Accepts:
-//  FILE* output -> The output stream to print the configuration.
-//  LodestarConfiguration_t* lodestart_config -> The configuration to print.
-// Returns: void.
 void print_configuration(FILE* output, LodestarConfiguration_t* lodestar_config) {
-    fprintf(output, "LODESTAR Configuration\n");
-    fprintf(output, "----------------------\n");
-    fprintf(output, "Input file: %s\n", lodestar_config -> inputFileName);
-    fprintf(output, "Output basename: %s\n", lodestar_config -> outputBasename);
-    fprintf(output, "Calculate genome-wide only: %s\n", PRINT_BOOL(lodestar_config -> global));
-    fprintf(output, "Haplotype size: %d\n", lodestar_config -> HAP_SIZE);
-    fprintf(output, "Window size: %d\n", lodestar_config -> WINDOW_SIZE);
-    fprintf(output, "Step size: %d\n", lodestar_config -> STEP_SIZE);
-    fprintf(output, "K: %d\n", lodestar_config -> k);
-    fprintf(output, "Use similarity: %s\n", PRINT_BOOL(lodestar_config -> similarity));
-    fprintf(output, "Number of threads used: %d\n", lodestar_config -> threads);
-    fprintf(output, "P-value threshold (Disabled if -1): %lf\n", lodestar_config -> pthresh);
-    fprintf(output, "Number of permutations (Disabled when p-value is -1): %d\n", lodestar_config -> NUM_PERMS);
-    fprintf(output, "Procrustes statistic threshold: %lf\n", lodestar_config -> tthresh);
-    fprintf(output, "Biallelic minor allele frequency threshold: %lf\n", lodestar_config -> maf);
-    fprintf(output, "Missing allele frequency threshold: %lf\n", lodestar_config -> afMissing);
-    fprintf(output, "Max range of window in basepairs: %d\n", lodestar_config -> MAX_GAP);
-    if (!lodestar_config -> useOriginTarget && lodestar_config -> groupFileName != NULL) 
-        fprintf(output, "File of samples to groups: %s\n", lodestar_config -> groupFileName);
-    if (!lodestar_config -> useOriginTarget && lodestar_config -> targetFileName != NULL)
-        fprintf(output, "File of coordinates to perform Procrustes analysis against: %s\n", lodestar_config -> targetFileName);
-    fprintf(output, "Use origin as target points: %s\n", PRINT_BOOL(lodestar_config -> useOriginTarget));
-    fprintf(output, "Save as JSON file: %s\n", PRINT_BOOL(lodestar_config -> useJsonOutput));
+    fprintf(output, "\t\"input_file\": \"%s\",\n", lodestar_config -> inputFileName);
+    fprintf(output, "\t\"output_basename\": \"%s\",\n", lodestar_config -> outputBasename);
+    if (lodestar_config -> targetFileName == NULL)
+        fprintf(output, "\t\"target_file\": null,\n");
+    else 
+        fprintf(output, "\t\"target_file\": \"%s\",\n", lodestar_config -> targetFileName);
+    fprintf(output, "\t\"haplotype_size\": %d,\n", lodestar_config -> HAP_SIZE);
+    fprintf(output, "\t\"window_size\": %d,\n", lodestar_config -> WINDOW_SIZE);
+    fprintf(output, "\t\"step_size\": %d,\n", lodestar_config -> STEP_SIZE);
+    fprintf(output, "\t\"k\": %d,\n", lodestar_config -> k);
+    fprintf(output, "\t\"threads\": %d,\n", lodestar_config -> threads);
+    fprintf(output, "\t\"global\": %s,\n", PRINT_BOOL(lodestar_config -> global));
+    fprintf(output, "\t\"similarity\": %s,\n", PRINT_BOOL(lodestar_config -> similarity));
+    fprintf(output, "\t\"num_permutations\": %d,\n", lodestar_config -> NUM_PERMS);
+    fprintf(output, "\t\"maf\": %lf,\n", lodestar_config -> maf);
+    fprintf(output, "\t\"af_missing\": %lf,\n", lodestar_config -> afMissing);
+    fprintf(output, "\t\"max_gap\": %d,\n", lodestar_config -> MAX_GAP);
 }
 
 void print_window_summary(FILE* output, Window_t* window) {
@@ -193,85 +71,48 @@ void print_window_summary(FILE* output, Window_t* window) {
 //  FILE* output -> The output stream to print to.
 //  double* row -> The array to print.
 //  int K -> The number of elements of row to print.
-//  bool useJsonOutput -> Flag to indicate if row should be JSON formatted.
 // Returns: void.
-void print_row(FILE* output, double* row, int K, bool useJsonOutput) {
-    if (useJsonOutput) {
-        for (int i = 0; i < K - 1; i++)
-            fprintf(output, "%lf, ", row[i]);
-        fprintf(output, "%lf]", row[K - 1]);
-    } else {
-        for (int i = 0; i < K - 1; i++)
-            fprintf(output, "%lf\t", row[i]);
-        fprintf(output, "%lf", row[K - 1]);
-    }
+void print_row(FILE* output, double* row, int K) {
+    fprintf(output, "[");
+    for (int i = 0; i < K - 1; i++)
+        fprintf(output, "%lf, ", row[i]);
+    fprintf(output, "%lf]", row[K - 1]);
 }
 
-void print_window(FILE* output, kstring_t** sampleNames, Window_t* window, int N, int K, bool useJsonOutput, bool printCoords) {
-    // Print JSON.
-    if (useJsonOutput) {
-        // Print single fields.
-        fprintf(output, "\t\t{\n");
-        fprintf(output, "\t\t\t\"Window Number\": %d,\n", window -> winNum);
-        fprintf(output, "\t\t\t\"Window Number on Chromosome\": %d,\n", window -> winNumOnChrom);
-        fprintf(output, "\t\t\t\"Chromosome\": \"%s\",\n", ks_str(window -> chromosome));
-        fprintf(output, "\t\t\t\"Start Coordinate\": %d,\n", window -> startCoord);
-        fprintf(output, "\t\t\t\"End Coordinate\": %d,\n", window -> endCoord);
-        fprintf(output, "\t\t\t\"Number of Loci\": %d,\n", window -> numLoci);
-        fprintf(output, "\t\t\t\"Number of Haplotypes\": %d,\n", window -> numHaps);
-        if (window -> t == -1) {
-            fprintf(output, "\t\t\t\"P-Value\": -1,\n");
-            fprintf(output, "\t\t\t\"t-statistic\": -1,\n");
-        } else {
-            fprintf(output, "\t\t\t\"P-Value\": %lf,\n", window -> pval);
-            fprintf(output, "\t\t\t\"t-statistic\": %lf,\n", window -> t);
-        }
-        // Print points.
-        fprintf(output, "\t\t\t\"Points\": ");
-        if (!printCoords || window -> X == NULL) {
-            fprintf(output, "null\n");
-        } else {
-            fprintf(output, "[\n");
-            for (int i = 0; i < N; i++) {
-                fprintf(output, "\t\t\t\t[");
-                print_row(output, window -> X[i], K, true);
-                if (i != N - 1)
-                    fprintf(output, ",\n");
-                else
-                    fprintf(output, "\n");
-            }
-            fprintf(output, "\t\t\t]\n");
-        }
-        fprintf(output, "\t\t}");
-    // Print as plain text.
+void print_window(FILE* output, kstring_t** sampleNames, Window_t* window, int N, int K) {
+    // Print single fields.
+    fprintf(output, "\t\t{\n");
+    fprintf(output, "\t\t\t\"Window Number\": %d,\n", window -> winNum);
+    fprintf(output, "\t\t\t\"Window Number on Chromosome\": %d,\n", window -> winNumOnChrom);
+    fprintf(output, "\t\t\t\"Chromosome\": \"%s\",\n", ks_str(window -> chromosome));
+    fprintf(output, "\t\t\t\"Start Coordinate\": %d,\n", window -> startCoord);
+    fprintf(output, "\t\t\t\"End Coordinate\": %d,\n", window -> endCoord);
+    fprintf(output, "\t\t\t\"Number of Loci\": %d,\n", window -> numLoci);
+    fprintf(output, "\t\t\t\"Number of Haplotypes\": %d,\n", window -> numHaps);
+    if (window -> t == -1) {
+        fprintf(output, "\t\t\t\"P-Value\": -1,\n");
+        fprintf(output, "\t\t\t\"t-statistic\": -1,\n");
     } else {
-        // Print single fields.
-        fprintf(output, "Window Number: %d\n", window -> winNum);
-        fprintf(output, "Window Number on Chromosome: %d\n", window -> winNumOnChrom);
-        fprintf(output, "Chromosome: %s\n", ks_str(window -> chromosome));
-        fprintf(output, "Start Coordinate: %d\n", window -> startCoord);
-        fprintf(output, "End Coordinate: %d\n", window -> endCoord);
-        fprintf(output, "Number of Loci: %d\n", window -> numLoci);
-        fprintf(output, "Number of Haplotypes: %d\n", window -> numHaps);
-        if (window -> t == -1) {
-            fprintf(output, "P-Value: -1\n");
-            fprintf(output, "t-statistic: -1\n");
-        } else {
-            fprintf(output, "P-Value: %lf\n", window -> pval);
-            fprintf(output, "t-statistic: %lf\n", window -> t);
-        }
-        // Print points.
-        fprintf(output, "Points: ");
-        if (!printCoords || window -> X == NULL) {
-            fprintf(output, "null\n");
-        } else {
-            fprintf(output, "\n");
-            for (int i = 0; i < N; i++) {
-                print_row(output, window -> X[i], K, false);
-                fprintf(output, "\n");
-            }
-        }
+        fprintf(output, "\t\t\t\"P-Value\": %lf,\n", window -> pval);
+        fprintf(output, "\t\t\t\"t-statistic\": %lf,\n", window -> t);
     }
+    // Print points.
+    fprintf(output, "\t\t\t\"Points\": ");
+    if (window -> X == NULL) {
+        fprintf(output, "null\n");
+    } else {
+        fprintf(output, "[\n");
+        for (int i = 0; i < N; i++) {
+            fprintf(output, "\t\t\t\t");
+            print_row(output, window -> X[i], K);
+            if (i != N - 1)
+                fprintf(output, ",\n");
+            else
+                fprintf(output, "\n");
+        }
+        fprintf(output, "\t\t\t]\n");
+    }
+    fprintf(output, "\t\t}");
 }
 
 // Make sure user defined arguments are valid.
@@ -328,29 +169,14 @@ int check_configuration(LodestarConfiguration_t* lodestar_config) {
         fprintf(stderr, "--gap %d must be INT > 0.\n", lodestar_config -> MAX_GAP); 
         return -1;
     }
-    // Check pthresh.
-    if (lodestar_config -> pthresh < 0 || lodestar_config -> pthresh > 1) { 
-        fprintf(stderr, "--pthresh %lf must be in (0, 1].\n", lodestar_config -> pthresh); 
-        return -1;
-    }
     // Check number of permutation.
     if (lodestar_config -> NUM_PERMS <= 0) { 
         fprintf(stderr, "--perms %d must be INT > 0.\n", lodestar_config -> NUM_PERMS); 
         return -1;
     }
-    // Check tthresh.
-    if (lodestar_config -> tthresh < 0 || lodestar_config -> tthresh > 1) { 
-        fprintf(stderr, "--tthresh %lf must be in [0, 1].\n", lodestar_config -> tthresh); 
-        return -1;
-    }
     // Check target file if exists.
     if (lodestar_config -> targetFileName != NULL && access(lodestar_config -> targetFileName, F_OK) != 0) {
         fprintf(stderr, "--target %s does not exist.\n", lodestar_config -> targetFileName); 
-        return -1;
-    }
-    // Check target file if exists.
-    if (lodestar_config -> groupFileName != NULL && access(lodestar_config -> groupFileName, F_OK) != 0) {
-        fprintf(stderr, "--group %s does not exist.\n", lodestar_config -> groupFileName); 
         return -1;
     }
     // All parameters are valid, return success.
@@ -383,26 +209,18 @@ void print_help() {
     fprintf(stderr, "                               Default 2. Must be less than number of samples in VCF.\n");
     fprintf(stderr, "   --threads INT           Number of threads to use in computation.\n");
     fprintf(stderr, "                               Default 1.\n");
-    fprintf(stderr, "   --similarity            Compute similarity between sets of points instead of dissimilarity.\n");
+    fprintf(stderr, "   --dissimilarity         Compute dissimilarity between sets of points instead of similarity.\n");
     fprintf(stderr, "   --global                Compute only the global set of points.\n");
     fprintf(stderr, "                               Takes presedence over windowing parameters.\n");
     fprintf(stderr, "   --target file.tsv       A n-by-k tsv file containing user defined coordinates to perform Procrustes analysis.\n");
-    fprintf(stderr, "   --group files.tsv       A tsv file assigning each sample a group. Procrustes is perfromed against the centroids\n");
-    fprintf(stderr, "                               of the groups between the two sets of points.\n");
-    fprintf(stderr, "   --origin                Use the origin as every target point. Ignores --target and --group.\n");
-    fprintf(stderr, "   --pthresh DOUBLE        Print coordinates of all windows less than or equal to threshold.\n");
-    fprintf(stderr, "                               Window must also satisfy --tthresh. Default 0.\n");
     fprintf(stderr, "   --perms INT             The number of permutations to execute.\n");
-    fprintf(stderr, "                               Default 10000. Permutation test does not execute if --pthresh is 0.\n");
-    fprintf(stderr, "   --tthresh DOUBLE        Print coordinates of all windows greater than or equal to threshold.\n");
-    fprintf(stderr, "                               Window must also satisfy --pthresh. Default 0.95.\n");
+    fprintf(stderr, "                               Default 10000.\n");
     fprintf(stderr, "   --maf DOUBLE            Drops biallelic VCF records with a MAF less than threshold.\n");
     fprintf(stderr, "                               Default 0.05\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of genotypes missing greater than threshold.\n");
     fprintf(stderr, "                               Default 0.1\n");
     fprintf(stderr, "   --gap INT               Drops window if window covers more than gap value in basepairs.\n");
     fprintf(stderr, "                               Default 1000000\n");
-    fprintf(stderr, "   --json                  Prints window information in JSON format instead of TXT.\n");
     fprintf(stderr, "\n");
 }
 
@@ -410,18 +228,13 @@ void print_help() {
 static ko_longopt_t long_options[] = {
     {"help",            ko_no_argument,         300},
     {"version",         ko_no_argument,         'v'},
-    {"similarity",      ko_no_argument,         302},
+    {"dissimilarity",   ko_no_argument,         302},
     {"global",          ko_no_argument,         303},
     {"threads",         ko_required_argument,   304},
-    {"pthresh",         ko_required_argument,   305},
     {"perms",           ko_required_argument,   306},
-    {"tthresh",         ko_required_argument,   307},
     {"maf",             ko_required_argument,   309},
     {"afMissing",       ko_required_argument,   310},
-    {"json",            ko_no_argument,         314},
     {"target",          ko_required_argument,   315},
-    {"group",           ko_required_argument,   317},
-    {"origin",          ko_no_argument,         318},
     {"gap",             ko_required_argument,   316},
     {"input",           ko_required_argument,   'i'},
     {"output",          ko_required_argument,   'o'},
@@ -466,18 +279,13 @@ LodestarConfiguration_t* init_lodestar_config(int argc, char *argv[]) {
     lodestar_config -> STEP_SIZE = -1;
     lodestar_config -> k = 2;
     lodestar_config -> threads = 1;
-    lodestar_config -> similarity = false;
+    lodestar_config -> similarity = true;
     lodestar_config -> global = false;
     lodestar_config -> targetFileName = NULL;
-    lodestar_config -> groupFileName = NULL;
-    lodestar_config -> useOriginTarget = false;
-    lodestar_config -> pthresh = 0;
     lodestar_config -> NUM_PERMS = 10000;
-    lodestar_config -> tthresh = 0.95;
     lodestar_config -> maf = 0.05;
     lodestar_config -> afMissing = 0.1;
     lodestar_config -> MAX_GAP = 1000000;
-    lodestar_config -> useJsonOutput = false;
 
     // Parse command line arguments.
     options = KETOPT_INIT;
@@ -489,19 +297,14 @@ LodestarConfiguration_t* init_lodestar_config(int argc, char *argv[]) {
             case 'w': lodestar_config -> WINDOW_SIZE = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 's': lodestar_config -> STEP_SIZE = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 'k': lodestar_config -> k = (int) strtol(options.arg, (char**) NULL, 10); break;
-            case 302: lodestar_config -> similarity = true; break;
+            case 302: lodestar_config -> similarity = false; break;
             case 303: lodestar_config -> global = true; break;
             case 304: lodestar_config -> threads = (int) strtol(options.arg, (char**) NULL, 10); break;
-            case 305: lodestar_config -> pthresh = strtod(options.arg, (char**) NULL); break;
             case 306: lodestar_config -> NUM_PERMS = (int) strtol(options.arg, (char**) NULL, 10); break;
-            case 307: lodestar_config -> tthresh = strtod(options.arg, (char**) NULL); break;
             case 309: lodestar_config -> maf = strtod(options.arg, (char**) NULL); break;
             case 310: lodestar_config -> afMissing = strtod(options.arg, (char**) NULL); break;
-            case 314: lodestar_config -> useJsonOutput = true; break;
             case 315: lodestar_config -> targetFileName = options.arg; break;
             case 316: lodestar_config -> MAX_GAP = (int) strtol(options.arg, (char**) NULL, 10); break;
-            case 317: lodestar_config -> groupFileName = options.arg; break;
-            case 318: lodestar_config -> useOriginTarget = true; break;
         }
 	}
 
