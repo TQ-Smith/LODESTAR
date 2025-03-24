@@ -4,7 +4,7 @@
 // Author: T. Quinn Smith
 // Principal Investigator: Dr. Zachary A. Szpiech
 // Purpose: Compute Procrustes statistic between two sets of points and perform permutation test.
-// References: Wang et al, Procrustes Analysis in Population Genetics, 2010.
+// References: Wang et al. 2010. and Mardia's Multivariate Analysis.
 
 #include "ProcrustesAnalysis.h"
 #include <stdio.h>
@@ -84,13 +84,13 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
     if (Xc == NULL || Yc == NULL)
         return -1;
 
-    // Trace of (Xc^T)Xc, trace of (Yc^T)Yc.
+    // Calculate tr(X^TX) and tr(Y^TY). In VEGAN, called ctrace.
     double trX = 0, trY = 0;
 
     // For convience we rename eigen -> Z to C.
     double* C = eigen -> Z;
 
-    // Calculate C = (Yc^T)Xc. Simultaneously calculate the trace of (Xc^T)Xc and trace of (Yc^T)Yc.
+    // Calculate C = (Yc^T)Xc. Simultaneously calculate the sum(X^2) and the sum(Y^2).
     for (int i = 0; i < K; i++) {
         for (int j = 0; j < K; j++) {
             C[COL_MAJOR(i, j, K)] = 0;
@@ -104,8 +104,21 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         }
     }
 
+    printf("C = \n");
+    for (int i = 0; i < K; i++) {
+        for (int j = 0; j < K; j++) {
+            printf("\t%lf", C[COL_MAJOR(i, j, K)]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+
+    printf("ctraceX = %lf\n", trX);
+    printf("ctraceY = %lf\n", trY);
+    printf("\n");
+
     // Trace of the lambda matrix.
-    double trLambda = 0;
+    double rho, trLambda = 0;
 
     // In the case we do not transform the X coordinates, we just need the trace of the lambda matrix.
     //  When K = 1, 2, 3, we can calculate the eigenvalues of covC directly as the roots of its characteric equation.
@@ -125,6 +138,15 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                     covC[COL_MAJOR(i, j, K)] += C[COL_MAJOR(k, i, K)] * C[COL_MAJOR(k, j, K)];
             }
         }
+
+        printf("covC = \n");
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < K; j++) {
+                printf("\t%lf", covC[COL_MAJOR(i, j, K)]);
+            }
+            printf("\n");
+        }
+        printf("\n");
 
         switch (K) {
             case 1:
@@ -152,7 +174,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                 root1 = 2 * sqrt(-q) * cos(theta / 3) - (a2 / 3);
                 root2 = 2 * sqrt(-q) * cos((theta / 3) - (2 * M_PI / 3)) - (a2 / 3);
                 root3 = 2 * sqrt(-q) * cos((theta / 3) + (2 * M_PI / 3)) - (a2 / 3);
-                trLambda += sqrt(fabs(root1)) + sqrt(fabs(root2)) + sqrt(fabs(root3));
+                trLambda += sqrt(root1) + sqrt(root2) + sqrt(root3);
                 break;
             default:
                 // When K > 3, we use LAPACK to calculate the eigenvalues.
@@ -161,6 +183,12 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                     trLambda += sqrt(eigen -> W[i]);
                 break;
         }
+
+        rho = trLambda / trX;
+
+        printf("rho = %lf\n", rho);
+        printf("\n");
+
     } else {
 
         // Calculate SVD on C.
@@ -188,8 +216,17 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             trLambda += eigen -> W[i];
         }
 
+        printf("A^T = \n");
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < K; j++) {
+                printf("\t%lf", eigen -> Z[COL_MAJOR(i, j, K)]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+
         // Calculate rho.
-        double rho = trLambda / trX;
+        rho = trLambda / trX;
 
         // Calculate b and store in WORK.
         //  K is usually small so we can seperate
@@ -208,6 +245,11 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             }
         }
 
+        printf("Translation = \n");
+        for (int i = 0; i < K; i++)
+            printf("\t%lf", eigen -> WORK[i]);
+        printf("\n\n");
+
         // Transform points.
         //  rho * A^T * x + b.
         //  Use eigen -> W as extra space.
@@ -224,10 +266,12 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
 
     }
     
-    double statistic = 1 - (trLambda * trLambda) / (trX * trY);
+    double ss = trY + rho * rho * trX - 2 * rho * trLambda;
+    printf("ss = %lf\n", ss);
+    printf("\n");
 
     // Convert to either similarity or dissimilarity.
-    return similarity ? sqrt(1 - statistic) : 1 - sqrt(1 - statistic);
+    return similarity ? sqrt(1 - ss) : 1 - sqrt(1 - ss);
 
 }
 
@@ -373,4 +417,55 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
     for (int i = 0; i < NUM_THREADS - 1; i++)
         pthread_join(threads[i], NULL);
     free(threads);
+}
+
+int main() {
+
+    double** X = create_matrix(double, 3, 2);
+    double* x0 = calloc(2, sizeof(double));
+    double** Y = create_matrix(double, 3, 2);
+    double* y0 = calloc(2, sizeof(double));
+    X[0][0] = 0; X[0][1] = 0;
+    X[1][0] = 1; X[1][1] = 0;
+    X[2][0] = 0; X[2][1] = 1;
+    center_matrix(X, x0, 3, 2);
+
+    Y[0][0] = 0; Y[0][1] = 0;
+    Y[1][0] = 1; Y[1][1] = 0;
+    Y[2][0] = 0; Y[2][1] = sqrt(3);
+    center_matrix(Y, y0, 3, 2);
+
+    RealSymEigen_t* eigen = init_real_sym_eigen(2);
+
+    printf("X = \n");
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 2; j++) {
+            printf("\t%lf", X[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+
+    printf("Y = \n");
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 2; j++) {
+            printf("\t%lf", Y[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+
+    printf("Similarity statistic: %lf\n\n", procrustes_statistic(X, x0, Y, y0, eigen, 3, 2, true, true));
+
+    printf("Transformed X = \n");
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 2; j++) {
+            printf("\t%lf", X[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+
+    return 0;
+
 }
