@@ -13,10 +13,6 @@ bin/lodestar: src/Main.o
 	mkdir -p bin
 	$(CC) $(LFLAGS) bin/lodestar src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
 
-bin/procrustes: src/ProcrustesAnalysis.o
-	mkdir -p bin 
-	$(CC) $(LFLAGS) bin/procrustes src/*.o lib/lapack/*.o -lz -lm -lpthread -lgfortran
-
 src/Main.o: src/SlidingWindow.o src/ProcrustesAnalysis.o src/Interface.o
 	$(CC) $(CFLAGS) src/Main.c -o src/Main.o
 

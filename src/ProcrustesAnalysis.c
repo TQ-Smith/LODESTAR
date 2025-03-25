@@ -12,8 +12,11 @@
 #include <math.h>
 #include <pthread.h>
 #include "Logger.h"
-#include "Matrix.h"
-MATRIX_INIT(double, double)
+// #include "Matrix.h"
+// MATRIX_INIT(double, double)
+
+// Define machine percision for floating point comparison.
+#define EPS 1.49e-08
 
 // Fortran matrices are stored as vectors in column-major form.
 //  Covariance matrices are symmetric so this is not explicitly necessary,
@@ -77,19 +80,18 @@ void shuffle_real_matrix(double** matrix, int m) {
     }
 }
 
-double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, RealSymEigen_t* eigen, int N, int K, bool transform, bool similarity) {
-
-    // If either set of points were not given, 
-    //  return -1. t-statistic can never be negative.
-    if (Xc == NULL || Yc == NULL)
-        return -1;
-
-    // Calculate tr(X^TX) and tr(Y^TY). In VEGAN, called ctrace.
-    double trX = 0, trY = 0;
-
-    // For convience we rename eigen -> Z to C.
-    double* C = eigen -> Z;
-
+// Calculate Xc^TYc.
+// Accepts:
+//  double** Xc -> The Xc matrix.
+//  double** Yc -> The Yc matrix.
+//  int N -> The number of samples.
+//  int K -> The dimension to project down into.
+//  double* C -> The lower triangle to hold Xc^TYc.
+//  double* trX -> Sets tr(Xc^TXc).
+//  double* trY -> Sets tr(Yc^TYc).
+void crossprod(double** Xc, double** Yc, int N, int K, double* C, double* trX, double* trY) {
+    *trX = 0;
+    *trY = 0;
     // Calculate C = (Yc^T)Xc. Simultaneously calculate the sum(X^2) and the sum(Y^2).
     for (int i = 0; i < K; i++) {
         for (int j = 0; j < K; j++) {
@@ -97,13 +99,92 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             for (int k = 0; k < N; k++) {
                 C[COL_MAJOR(i, j, K)] += Yc[k][i] * Xc[k][j];
                 if (j == 0) {
-                    trX += Xc[k][i] * Xc[k][i];
-                    trY += Yc[k][i] * Yc[k][i]; 
+                    *trX += Xc[k][i] * Xc[k][i];
+                    *trY += Yc[k][i] * Yc[k][i]; 
                 }
             }
         }
     }
+}
 
+// Calculates the trace of the singular values from the eigenvalue decomposition of C.
+// Accepts:
+//  double* C -> The matrix to decompose.
+//  RealSymEigen_t* eigen -> Used for eigen analysis.
+//  int N -> The number of rows.
+//  int K -> The number of columns.
+//  double* covC -> Holds the covariance matrix of C.
+// Returns: double, the trace of singular value matrix.
+double trace(double* C, RealSymEigen_t* eigen, int N, int K, double* covC) {
+    // Variables to calculate singular values when K = 1, 2, or 3.
+    double a0, a1, a2, b, c, det, q, r, theta, root1, root2, root3;
+
+    // Calculate covC = (C^T)C.
+    for (int i = 0; i < K; i++) {
+        for (int j = 0; j < K; j++) {
+            covC[COL_MAJOR(i, j, K)] = 0;
+            for (int k = 0; k < K; k++)
+                covC[COL_MAJOR(i, j, K)] += C[COL_MAJOR(k, i, K)] * C[COL_MAJOR(k, j, K)];
+        }
+    }
+
+    double trLambda = 0;
+
+    // Calculate roots of the characteristic equation.
+    switch (K) {
+        case 1:
+            trLambda += sqrt(covC[COL_MAJOR(0, 0, K)]);
+            break;
+        case 2:
+            b = -(covC[COL_MAJOR(0, 0, K)] + covC[COL_MAJOR(1, 1, K)]);
+            c = (covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(1, 1, K)]) - (covC[COL_MAJOR(0, 1, K)] * covC[COL_MAJOR(1, 0, K)]);
+            det = sqrt(b * b - 4 * c);
+            q = b < 0 ? -0.5 * (b - det) : -0.5 * (b + det);
+            trLambda += sqrt(q) + sqrt(c / q);
+            break;
+        case 3:
+            // Cubic is in the form x^3 + a0x^2 + a1x^1 + a0 = 0.
+            a2 = -(covC[COL_MAJOR(0, 0, K)] + covC[COL_MAJOR(1, 1, K)] + covC[COL_MAJOR(2, 2, K)]);
+            a1 = ((covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(1, 2, K)] * covC[COL_MAJOR(2, 1, K)]))
+                + ((covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(0, 2, K)] * covC[COL_MAJOR(2, 0, K)]))
+                + ((covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(1, 1, K)]) - (covC[COL_MAJOR(0, 1, K)] * covC[COL_MAJOR(1, 0, K)]));
+            a0 = -(covC[COL_MAJOR(0, 0, K)] * ((covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(2, 1, K)] * covC[COL_MAJOR(1, 2, K)])) 
+                - covC[COL_MAJOR(0, 1, K)] * ((covC[COL_MAJOR(1, 0, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(1, 2, K)] * covC[COL_MAJOR(2, 0, K)])) 
+                + covC[COL_MAJOR(0, 2, K)] * ((covC[COL_MAJOR(1, 0, K)] * covC[COL_MAJOR(2, 1, K)]) - (covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 0, K)])));
+            q = a1 / 3 - (a2 * a2) / 9;
+            r = (a1 * a2 - 3 * a0) / 6 - (a2 * a2 * a2) / 27;
+            theta = (q == 0) ? 0 : acos(r / sqrt(-q * -q * -q));
+            root1 = 2 * sqrt(-q) * cos(theta / 3) - (a2 / 3);
+            root2 = 2 * sqrt(-q) * cos((theta / 3) - (2 * M_PI / 3)) - (a2 / 3);
+            root3 = 2 * sqrt(-q) * cos((theta / 3) + (2 * M_PI / 3)) - (a2 / 3);
+            trLambda += sqrt(root1) + sqrt(root2) + sqrt(root3);
+            break;
+        default:
+            // When K > 3, we use LAPACK to calculate the eigenvalues.
+            compute_k_eigenvalues(eigen, K);
+            for (int i = 0; i < K; i++)
+                trLambda += sqrt(eigen -> W[i]);
+            break;
+    }
+    return trLambda;
+}
+
+double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, RealSymEigen_t* eigen, int N, int K, bool transform, bool similarity) {
+
+    // If either set of points were not given, 
+    //  return -1. t-statistic can never be negative.
+    if (Xc == NULL || Yc == NULL)
+        return -1;
+
+    // Trace of (Xc^T)Xc, trace of (Yc^T)Yc.
+    double trX = 0, trY = 0;
+
+    // For convience we rename eigen -> Z to C.
+    double* C = eigen -> Z;
+
+    crossprod(Xc, Yc, N, K, C, &trX, &trY);
+
+    /*
     printf("C = \n");
     for (int i = 0; i < K; i++) {
         for (int j = 0; j < K; j++) {
@@ -116,6 +197,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
     printf("ctraceX = %lf\n", trX);
     printf("ctraceY = %lf\n", trY);
     printf("\n");
+    */
 
     // Trace of the lambda matrix.
     double rho, trLambda = 0;
@@ -127,18 +209,9 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         // We rename eigen -> A to covC to get the singular values.
         double* covC = eigen -> A;
 
-        // Variables to calculate singular values when K = 1, 2, or 3.
-        double a0, a1, a2, b, c, det, q, r, theta, root1, root2, root3;
+        trLambda = trace(C, eigen, N, K, covC);
 
-        // Calculate covC = (C^T)C.
-        for (int i = 0; i < K; i++) {
-            for (int j = 0; j < K; j++) {
-                covC[COL_MAJOR(i, j, K)] = 0;
-                for (int k = 0; k < K; k++)
-                    covC[COL_MAJOR(i, j, K)] += C[COL_MAJOR(k, i, K)] * C[COL_MAJOR(k, j, K)];
-            }
-        }
-
+        /*
         printf("covC = \n");
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < K; j++) {
@@ -147,47 +220,9 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             printf("\n");
         }
         printf("\n");
-
-        switch (K) {
-            case 1:
-                trLambda += sqrt(covC[COL_MAJOR(0, 0, K)]);
-                break;
-            case 2:
-                b = -(covC[COL_MAJOR(0, 0, K)] + covC[COL_MAJOR(1, 1, K)]);
-                c = (covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(1, 1, K)]) - (covC[COL_MAJOR(0, 1, K)] * covC[COL_MAJOR(1, 0, K)]);
-                det = sqrt(b * b - 4 * c);
-                q = b < 0 ? -0.5 * (b - det) : -0.5 * (b + det);
-                trLambda += sqrt(q) + sqrt(c / q);
-                break;
-            case 3:
-                // Cubic is in the form x^3 + a0x^2 + a1x^1 + a0 = 0.
-                a2 = -(covC[COL_MAJOR(0, 0, K)] + covC[COL_MAJOR(1, 1, K)] + covC[COL_MAJOR(2, 2, K)]);
-                a1 = ((covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(1, 2, K)] * covC[COL_MAJOR(2, 1, K)]))
-                    + ((covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(0, 2, K)] * covC[COL_MAJOR(2, 0, K)]))
-                    + ((covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(1, 1, K)]) - (covC[COL_MAJOR(0, 1, K)] * covC[COL_MAJOR(1, 0, K)]));
-                a0 = -(covC[COL_MAJOR(0, 0, K)] * ((covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(2, 1, K)] * covC[COL_MAJOR(1, 2, K)])) 
-                    - covC[COL_MAJOR(0, 1, K)] * ((covC[COL_MAJOR(1, 0, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(1, 2, K)] * covC[COL_MAJOR(2, 0, K)])) 
-                    + covC[COL_MAJOR(0, 2, K)] * ((covC[COL_MAJOR(1, 0, K)] * covC[COL_MAJOR(2, 1, K)]) - (covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 0, K)])));
-                q = a1 / 3 - (a2 * a2) / 9;
-                r = (a1 * a2 - 3 * a0) / 6 - (a2 * a2 * a2) / 27;
-                theta = (q == 0) ? 0 : acos(r / sqrt(-q * -q * -q));
-                root1 = 2 * sqrt(-q) * cos(theta / 3) - (a2 / 3);
-                root2 = 2 * sqrt(-q) * cos((theta / 3) - (2 * M_PI / 3)) - (a2 / 3);
-                root3 = 2 * sqrt(-q) * cos((theta / 3) + (2 * M_PI / 3)) - (a2 / 3);
-                trLambda += sqrt(root1) + sqrt(root2) + sqrt(root3);
-                break;
-            default:
-                // When K > 3, we use LAPACK to calculate the eigenvalues.
-                compute_k_eigenvalues(eigen, K);
-                for (int i = 0; i < K; i++)
-                    trLambda += sqrt(eigen -> W[i]);
-                break;
-        }
+        */
 
         rho = trLambda / trX;
-
-        printf("rho = %lf\n", rho);
-        printf("\n");
 
     } else {
 
@@ -216,6 +251,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             trLambda += eigen -> W[i];
         }
 
+        /*
         printf("A^T = \n");
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < K; j++) {
@@ -224,6 +260,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             printf("\n");
         }
         printf("\n");
+        */
 
         // Calculate rho.
         rho = trLambda / trX;
@@ -245,10 +282,12 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
             }
         }
 
+        /*
         printf("Translation = \n");
         for (int i = 0; i < K; i++)
             printf("\t%lf", eigen -> WORK[i]);
         printf("\n\n");
+        */
 
         // Transform points.
         //  rho * A^T * x + b.
@@ -265,14 +304,31 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         }
 
     }
+
+    // printf("trLambda = %lf rho = %lf\n", trLambda, rho);
+    // printf("\n");
     
     double ss = trY + rho * rho * trX - 2 * rho * trLambda;
-    printf("ss = %lf\n", ss);
-    printf("\n");
+    // printf("ss = %lf\n", ss);
+    // printf("\n");
 
     // Convert to either similarity or dissimilarity.
     return similarity ? sqrt(1 - ss) : 1 - sqrt(1 - ss);
 
+}
+
+double correlation(double** Xc, double** Yc, RealSymEigen_t* eigen, int n, int k, bool similarity) {
+    // For convience we rename eigen -> Z to C.
+    double* C = eigen -> Z;
+    // Not used.
+    double trX, trY;
+    // Calculate crossproduct.
+    crossprod(Xc, Yc, n, k, C, &trX, &trY);
+    // We rename eigen -> A to covC to get the singular values.
+    double* covC = eigen -> A;
+    // Calculate trace.
+    double trLambda = trace(C, eigen, n, k, covC);
+    return similarity ? trLambda : (1 - trLambda);
 }
 
 double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEigen_t* eigen, int n, int k, bool similarity, double t0, int NUM_PERMS) {
@@ -294,10 +350,12 @@ double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEige
     for (int i = 0; i < NUM_PERMS; i++) {
         // Shuffle the rows of X.
         shuffle_real_matrix(shuffleX, n);
-        // Compute statistic between the two sets of points. Do not transform.
-        t = procrustes_statistic(shuffleX, NULL, Yc, NULL, eigen, n, k, false, similarity);
+        
+        // Calculate correlation
+        t = correlation(shuffleX, Yc, eigen, n, k, similarity);
+
         // If our statistic exceeds our threshold, increment counter.
-        if (t > t0) {
+        if (t > t0 - EPS) {
             numSig++;
         }
     }
@@ -332,8 +390,8 @@ void* procrustes_permutation_multi_thread(void* arg) {
     // Current window thread is performing Procrustes Analysis on.
     Window_t* window = NULL;
     RealSymEigen_t* eigen = init_real_sym_eigen(record -> K);
-    double** shuffleX = create_matrix(double, record -> N, record -> K);
-    double t;
+    // double** shuffleX = create_matrix(double, record -> N, record -> K);
+    // double t;
 
     // Iterate through thread's partition.
     for (int i = record -> startWindow; i <= record -> endWindow; i++) {
@@ -341,19 +399,18 @@ void* procrustes_permutation_multi_thread(void* arg) {
         window = record -> windows[i];
         // LOG_INFO("Performing Procrustes for window %d ...\n", window -> winNum);
         // Calculate Procrustes statistic for window.
-        t = procrustes_statistic(window -> X, NULL, record -> target, NULL, eigen, record -> N, record -> K, false, record -> similarity);
-        window -> t = t;
-        window -> pval = permutation_test(window -> X, record -> target, shuffleX, eigen, record -> N, record -> K, record -> similarity, t, record -> NUM_PERMS);
+        window -> t = procrustes_statistic(window -> X, NULL, record -> target, record -> target0, eigen, record -> N, record -> K, true, record -> similarity);
+        // window -> t = t;
+        // window -> pval = permutation_test(window -> X, record -> target, shuffleX, eigen, record -> N, record -> K, record -> similarity, t, record -> NUM_PERMS);
         // Transform.
-        procrustes_statistic(window -> X, NULL, record -> target, record -> target0, eigen, record -> N, record -> K, true, record -> similarity);
+        // procrustes_statistic(window -> X, NULL, record -> target, record -> target0, eigen, record -> N, record -> K, true, record -> similarity);
     }
     
     destroy_real_sym_eigen(eigen);
-    destroy_matrix(double, shuffleX, record -> N);
+    // destroy_matrix(double, shuffleX, record -> N);
     free(record);
     return NULL;
 }
-
 
 void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, double* target0, int N, int K, bool similarity, int NUM_PERMS, int NUM_THREADS) {
     
@@ -366,19 +423,18 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
     // If a single thread or we are not executing a permutation test.
     if (NUM_THREADS == 1) {
         RealSymEigen_t* eigen = init_real_sym_eigen(K);
-        double t;
+        // double t;
         // For each window, perform Procrustes analysis.
-        double** shuffleX = create_matrix(double, N, K);
+        // double** shuffleX = create_matrix(double, N, K);
         for (int i = startWindow; i < numWindows; i++) {
             LOG_INFO("Performing Procrustes for window %d ...\n", windows[i] -> winNum);
-            t = procrustes_statistic(windows[i] -> X, NULL, target, NULL, eigen, N, K, false, similarity);
-            windows[i] -> t = t;
+            windows[i] -> t = procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, N, K, true, similarity);
             // Execute permutation test.
-            windows[i] -> pval = permutation_test(windows[i] -> X, target, shuffleX, eigen, N, K, similarity, t, NUM_PERMS);
+            // windows[i] -> pval = permutation_test(windows[i] -> X, target, shuffleX, eigen, N, K, similarity, t, NUM_PERMS);
             // Transform.
-            procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, N, K, true, similarity);
+            // procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, N, K, true, similarity);
         }
-        destroy_matrix(double, shuffleX, N);
+        // destroy_matrix(double, shuffleX, N);
         destroy_real_sym_eigen(eigen);
         return;
     }
@@ -419,6 +475,8 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
     free(threads);
 }
 
+
+/*
 int main() {
 
     double** X = create_matrix(double, 3, 2);
@@ -466,6 +524,13 @@ int main() {
     }
     printf("\n");
 
+    destroy_matrix(double, X, 3);
+    destroy_matrix(double, Y, 3);
+    free(x0);
+    free(y0);
+    destroy_real_sym_eigen(eigen);
+
     return 0;
 
 }
+*/

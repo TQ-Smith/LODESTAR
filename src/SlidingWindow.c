@@ -91,7 +91,7 @@ typedef struct {
 //  int k -> The dimension to project down into.
 // Returns: void.
 void perform_mds_on_window(Window_t* window, RealSymEigen_t* eigen, double* asd, int k) {
-    // If we drop a window due to a broken haplotype, then we do not perform MDS.
+    // If we drop a window due to it spanning to long of a region, then we do not perform MDS.
     if (window -> dropWindow) {
         LOG_WARNING("Drop window %d on %s because it exceeds gap threshold.\n", window -> winNumOnChrom, ks_str(window -> chromosome));
         window -> X = NULL;
@@ -110,6 +110,7 @@ void perform_mds_on_window(Window_t* window, RealSymEigen_t* eigen, double* asd,
     } else {
         LOG_INFO("Finished MDS for window %d on %s from %d to %d.\n", window -> winNum, ks_str(window -> chromosome), window -> startCoord, window -> endCoord);
     }
+    normalize_matrix(X, eigen -> N, k);
     window -> X = X;
 }
 

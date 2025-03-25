@@ -20,6 +20,21 @@ void center_matrix(double** X, double* x0, int n, int k) {
             X[i][j] -= x0[j];
 }
 
+void normalize_matrix(double** X, int n, int k) {
+    // trx is equivalent to trX^TX.
+    double trX = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            trX += X[i][j] * X[i][j];
+        }
+    }
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < k; j++) {
+            X[i][j] = X[i][j] / sqrt(trX);
+        }
+    }
+}
+
 void uncenter_matrix(double** X, double* x0, int n, int k) {
     for (int i = 0; i < n; i++) 
         for (int j = 0; j < k; j++)

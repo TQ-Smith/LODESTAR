@@ -49,6 +49,14 @@ typedef struct {
     int MAX_GAP;
 } LodestarConfiguration_t;
 
+// Print a row of a matrix.
+// Accepts:
+//  FILE* output -> The output stream to print to.
+//  double* row -> The array to print.
+//  int K -> The number of elements of row to print.
+// Returns: void.
+void print_row(FILE* output, double* row, int K);
+
 // Prints the configuration of the LODESTAR in JSON format.
 // Accepts:
 //  FILE* output -> The output stream to print to.

@@ -9,6 +9,7 @@
 #define _MATRIX_H_
 
 #include <stdlib.h>
+#include <math.h>
 
 // The number of elements in the upper triangle of a symmetric matrix.
 #define PACKED_SIZE(N) ((N * (N + 1)) / 2)
@@ -48,6 +49,14 @@
 //  int k -> The number of columns in X.
 // Returns: void.
 void center_matrix(double** X, double* x0, int n, int k);
+
+// Normalize a matrix by sqrt(trX^TX).
+// Accepts:
+//  double** X -> The matrix to normalize.
+//  int n -> The number of rows in X.
+//  int k -> The number of columns in X.
+// Returns: void.
+void normalize_matrix(double** X, int n, int k);
 
 // Uncenter a matrix.
 // Accepts:
