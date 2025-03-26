@@ -128,12 +128,12 @@ int main (int argc, char *argv[]) {
 
         // Just global against the target.
         if (global != NULL) {
-            // double** shuffleX = create_matrix(double, parser -> numSamples, lodestar_config -> k);
-            global -> t = procrustes_statistic(global -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, true, lodestar_config -> similarity);
-            // global -> pval = permutation_test(global -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, global -> t, lodestar_config -> NUM_PERMS);
+            double** shuffleX = create_matrix(double, parser -> numSamples, lodestar_config -> k);
+            global -> t = procrustes_statistic(global -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, false, lodestar_config -> similarity);
+            global -> pval = permutation_test(global -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, global -> t, lodestar_config -> NUM_PERMS);
             // Transform global set of points.
-            // procrustes_statistic(global -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, true, lodestar_config -> similarity);
-            // destroy_matrix(double, shuffleX, encoder -> numSamples);
+            procrustes_statistic(global -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, true, lodestar_config -> similarity);
+            destroy_matrix(double, shuffleX, encoder -> numSamples);
         // Sliding window against the target.
         } else {
             procrustes_sliding_window(windows, numWindows, targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k, lodestar_config -> similarity, lodestar_config -> NUM_PERMS, lodestar_config -> threads);
@@ -182,8 +182,7 @@ int main (int argc, char *argv[]) {
         fprintf(windowSummaries, "#Command: ");
         for (int i = 0; i < argc; i++) 
             fprintf(windowSummaries, "%s ", argv[i]);
-        // fprintf(windowSummaries, "\nWin\tWinChr\tChr\tStart\tEnd\tnLoci\tnHaps\tp-val\tt-stat\n");
-        fprintf(windowSummaries, "\nWin\tWinChr\tChr\tStart\tEnd\tnLoci\tnHaps\tt-stat\n");
+        fprintf(windowSummaries, "\nWin\tWinChr\tChr\tStart\tEnd\tnLoci\tnHaps\tp-val\tt-stat\n");
         for (int i = 1; i < numWindows; i++) {
             print_window_summary(windowSummaries, windows[i]);
             fprintf(windowPoints, "\n");

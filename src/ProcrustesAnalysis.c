@@ -12,8 +12,8 @@
 #include <math.h>
 #include <pthread.h>
 #include "Logger.h"
-// #include "Matrix.h"
-// MATRIX_INIT(double, double)
+#include "Matrix.h"
+MATRIX_INIT(double, double)
 
 // Define machine percision for floating point comparison.
 #define EPS 1.49e-08
@@ -390,8 +390,8 @@ void* procrustes_permutation_multi_thread(void* arg) {
     // Current window thread is performing Procrustes Analysis on.
     Window_t* window = NULL;
     RealSymEigen_t* eigen = init_real_sym_eigen(record -> K);
-    // double** shuffleX = create_matrix(double, record -> N, record -> K);
-    // double t;
+    double** shuffleX = create_matrix(double, record -> N, record -> K);
+    double t;
 
     // Iterate through thread's partition.
     for (int i = record -> startWindow; i <= record -> endWindow; i++) {
@@ -399,15 +399,15 @@ void* procrustes_permutation_multi_thread(void* arg) {
         window = record -> windows[i];
         // LOG_INFO("Performing Procrustes for window %d ...\n", window -> winNum);
         // Calculate Procrustes statistic for window.
-        window -> t = procrustes_statistic(window -> X, NULL, record -> target, record -> target0, eigen, record -> N, record -> K, true, record -> similarity);
-        // window -> t = t;
-        // window -> pval = permutation_test(window -> X, record -> target, shuffleX, eigen, record -> N, record -> K, record -> similarity, t, record -> NUM_PERMS);
+        t = procrustes_statistic(window -> X, NULL, record -> target, NULL, eigen, record -> N, record -> K, false, record -> similarity);
+        window -> t = t;
+        window -> pval = permutation_test(window -> X, record -> target, shuffleX, eigen, record -> N, record -> K, record -> similarity, t, record -> NUM_PERMS);
         // Transform.
-        // procrustes_statistic(window -> X, NULL, record -> target, record -> target0, eigen, record -> N, record -> K, true, record -> similarity);
+        procrustes_statistic(window -> X, NULL, record -> target, record -> target0, eigen, record -> N, record -> K, true, record -> similarity);
     }
     
     destroy_real_sym_eigen(eigen);
-    // destroy_matrix(double, shuffleX, record -> N);
+    destroy_matrix(double, shuffleX, record -> N);
     free(record);
     return NULL;
 }
@@ -423,18 +423,19 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
     // If a single thread or we are not executing a permutation test.
     if (NUM_THREADS == 1) {
         RealSymEigen_t* eigen = init_real_sym_eigen(K);
-        // double t;
+        double t;
         // For each window, perform Procrustes analysis.
-        // double** shuffleX = create_matrix(double, N, K);
+        double** shuffleX = create_matrix(double, N, K);
         for (int i = startWindow; i < numWindows; i++) {
             LOG_INFO("Performing Procrustes for window %d ...\n", windows[i] -> winNum);
-            windows[i] -> t = procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, N, K, true, similarity);
+            t = procrustes_statistic(windows[i] -> X, NULL, target, NULL, eigen, N, K, false, similarity);
+            windows[i] -> t = t;
             // Execute permutation test.
-            // windows[i] -> pval = permutation_test(windows[i] -> X, target, shuffleX, eigen, N, K, similarity, t, NUM_PERMS);
+            windows[i] -> pval = permutation_test(windows[i] -> X, target, shuffleX, eigen, N, K, similarity, t, NUM_PERMS);
             // Transform.
-            // procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, N, K, true, similarity);
+            procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, N, K, true, similarity);
         }
-        // destroy_matrix(double, shuffleX, N);
+        destroy_matrix(double, shuffleX, N);
         destroy_real_sym_eigen(eigen);
         return;
     }
