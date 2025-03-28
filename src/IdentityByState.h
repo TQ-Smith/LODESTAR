@@ -53,11 +53,10 @@ static inline void subtract_ibs(IBS_t* left, IBS_t* right) {
 // Converts IBS counts to asd.
 // Accepts:
 //  IBS_t ibs -> The IBS counts.
-// Returns: double, The ln of asd represented by the IBS counts.
-//              -1, if ASD is undefined.
+// Returns: double, the transformed distance.
 static inline double ibs_to_asd(IBS_t ibs) {
-    double L = 2 * (ibs.ibs0 + ibs.ibs1 + ibs.ibs2);
-    return sqrt(2 * L - 2 * (ibs.ibs1 + 2 * ibs.ibs2));
+    double L = (ibs.ibs0 + ibs.ibs1 + ibs.ibs2);
+    return sqrt(4 * L - 2 * (ibs.ibs1 + 2 * ibs.ibs2));
 }
 
 #endif

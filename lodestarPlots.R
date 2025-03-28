@@ -24,7 +24,6 @@ printUsage <- function() {
     cat("----\n");
     cat("mds w i j              Plot component j v. component i of the w'th window.\n");
     cat("axis i                 Plot the values of the i's component along the genome.\n");
-    cat("pvals                  Plot the pvalues along the genome. Ignores <pops.txt>.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
     cat("\n");
 }
@@ -44,30 +43,6 @@ tvals <- function(windowsJSON) {
         geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3) +
         scale_color_manual(values = rep(c("grey", "skyblue"), 22 )) +
         labs(x = "Chromosome", y = "-log10(t)", title=windowsJSON$input_file) +
-        theme_bw() +
-        theme( 
-            legend.position="none",
-            panel.border = element_blank(),
-            panel.grid.major.x = element_blank(),
-            panel.grid.minor.x = element_blank()
-        )
-    ggsave(filename=filename, plot=g, width = 10, height = 5, dpi = 300);
-}
-
-# Plot p values along the genome.
-pvals <- function(windowsJSON) {
-    windowsJSON$windows = windowsJSON$windows[windowsJSON$windows["t-statistic"] != -1,];
-    filename = paste(windowsJSON$output_basename, "_pvals.png", sep = "");
-    data <- data.frame(
-        CHR = as.numeric(factor(windowsJSON$windows["Chromosome"], levels = unique(windowsJSON$windows["Chromosome"]))),  
-        BP = windowsJSON$windows["Start Coordinate"],  
-        P = -log10(windowsJSON$windows["p-value"])
-    );
-    colnames(data) <- c("CHR", "BP", "P");
-    g <- ggplot(data, aes(x = BP, y = P, color = as.factor(CHR))) +
-        geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3) +
-        scale_color_manual(values = rep(c("grey", "skyblue"), 22 )) +
-        labs(x = "Chromosome", y = "-log10(p)", title=windowsJSON$input_file) +
         theme_bw() +
         theme( 
             legend.position="none",
@@ -177,9 +152,6 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
             }
             mds(windowsJSON, popsFile, args[1], args[2], args[3]);
         },
-        pvals={
-            pvals(windowsJSON);
-        },
         tvals={
             tvals(windowsJSON);
         },
@@ -209,7 +181,7 @@ if (length(args) < 2) {
     exit();
 }
 
-if (args[1] != "mds" && args[1] != "pvals" && args[1] != "tvals" && args[1] != "axis") {
+if (args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
     cat("Unrecognized command! Exiting!\n");
     exit();
 }
