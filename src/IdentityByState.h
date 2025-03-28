@@ -56,15 +56,8 @@ static inline void subtract_ibs(IBS_t* left, IBS_t* right) {
 // Returns: double, The ln of asd represented by the IBS counts.
 //              -1, if ASD is undefined.
 static inline double ibs_to_asd(IBS_t ibs) {
-    if (ibs.ibs0 == 0 && ibs.ibs1 == 0 && ibs.ibs2 == 0)
-        return -1;
-    double asd = 1.0 - (ibs.ibs1 + (2.0 * ibs.ibs2)) / (2.0 * (ibs.ibs0 + ibs.ibs1 + ibs.ibs2));
-    return asd;
-    // if (asd == 0)
-    //    return 1;
-    //else 
-    //    return -log(asd);
-    //return (ibs.ibs1 + (2.0 * ibs.ibs2));
+    double L = 2 * (ibs.ibs0 + ibs.ibs1 + ibs.ibs2);
+    return sqrt(2 * L - 2 * (ibs.ibs1 + 2 * ibs.ibs2));
 }
 
 #endif

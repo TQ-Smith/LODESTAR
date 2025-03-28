@@ -62,7 +62,10 @@ void print_window_summary(FILE* output, Window_t* window) {
     fprintf(output, "%d\t", window -> endCoord);
     fprintf(output, "%d\t", window -> numLoci);
     fprintf(output, "%d\t", window -> numHaps);
-    fprintf(output, "%lf\t", window -> pval);
+    if (window -> t == -1)
+        fprintf(output, "%lf\t", -1.0);
+    else
+        fprintf(output, "%lf\t", window -> pval);
     fprintf(output, "%lf\n", window -> t);
 }
 

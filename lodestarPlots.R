@@ -171,7 +171,7 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
                 cat("Window for MDS plot does not exist! Exiting!\n");
                 return;
             }
-            if (args[1] != 0 && windowsJSON$windows["t-statistic"][windowsJSON$windows["Window Number"] == w] == -1) {
+            if (args[1] != 0 && windowsJSON$windows["t-statistic"][windowsJSON$windows["Window Number"] == args[1]] == -1) {
                 cat("Window for MDS plot does not exist! Exiting!\n");
                 return;
             }
