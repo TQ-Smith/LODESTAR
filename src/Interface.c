@@ -86,7 +86,7 @@ void print_window(FILE* output, kstring_t** sampleNames, Window_t* window, int N
     fprintf(output, "\t\t\t\"End Coordinate\": %d,\n", window -> endCoord);
     fprintf(output, "\t\t\t\"Number of Loci\": %d,\n", window -> numLoci);
     fprintf(output, "\t\t\t\"Number of Haplotypes\": %d,\n", window -> numHaps);
-    if (window -> t == -1) {
+    if (window -> t != window -> t || window -> t == -1) {
         //fprintf(output, "\t\t\t\"p-value\": -1,\n");
         fprintf(output, "\t\t\t\"t-statistic\": -1,\n");
     } else {
