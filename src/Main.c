@@ -132,11 +132,11 @@ int main (int argc, char *argv[]) {
             // global -> t = procrustes_statistic(global -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, false, lodestar_config -> similarity);
             // global -> pval = permutation_test(global -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, global -> t, lodestar_config -> NUM_PERMS);
             // Transform global set of points.
-            global -> t = procrustes_statistic(global -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, true, lodestar_config -> similarity);
+            global -> t = procrustes_statistic(global -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> transform, lodestar_config -> similarity);
             // destroy_matrix(double, shuffleX, encoder -> numSamples);
         // Sliding window against the target.
         } else {
-            procrustes_sliding_window(windows, numWindows, targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k, lodestar_config -> similarity, lodestar_config -> NUM_PERMS, lodestar_config -> threads);
+            procrustes_sliding_window(windows, numWindows, targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k, lodestar_config-> transform, lodestar_config -> similarity, lodestar_config -> NUM_PERMS, lodestar_config -> threads);
         }
 
         LOG_INFO("Finished Procrustes Analysis ...\n");

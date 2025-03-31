@@ -48,6 +48,7 @@ void print_configuration(FILE* output, LodestarConfiguration_t* lodestar_config)
     fprintf(output, "\t\"threads\": %d,\n", lodestar_config -> threads);
     fprintf(output, "\t\"global\": %s,\n", PRINT_BOOL(lodestar_config -> global));
     fprintf(output, "\t\"similarity\": %s,\n", PRINT_BOOL(lodestar_config -> similarity));
+    fprintf(output, "\t\"transform\": %s,\n", PRINT_BOOL(lodestar_config -> transform));
     // fprintf(output, "\t\"num_permutations\": %d,\n", lodestar_config -> NUM_PERMS);
     fprintf(output, "\t\"maf\": %lf,\n", lodestar_config -> maf);
     fprintf(output, "\t\"af_missing\": %lf,\n", lodestar_config -> afMissing);
@@ -207,6 +208,7 @@ void print_help() {
     fprintf(stderr, "   --threads INT           Number of threads to use in computation.\n");
     fprintf(stderr, "                               Default 1.\n");
     fprintf(stderr, "   --dissimilarity         Compute dissimilarity between sets of points instead of similarity.\n");
+    fprintf(stderr, "   --noTransform           Do NOT transform points during Procrustes analysis.\n");
     fprintf(stderr, "   --global                Compute only the global set of points.\n");
     fprintf(stderr, "                               Takes presedence over windowing parameters.\n");
     fprintf(stderr, "   --target file.tsv       A n-by-k tsv file containing user defined coordinates to perform Procrustes analysis.\n");
@@ -226,6 +228,7 @@ static ko_longopt_t long_options[] = {
     {"help",            ko_no_argument,         300},
     {"version",         ko_no_argument,         'v'},
     {"dissimilarity",   ko_no_argument,         302},
+    {"noTransform",     ko_no_argument,         317},
     {"global",          ko_no_argument,         303},
     {"threads",         ko_required_argument,   304},
     //{"perms",           ko_required_argument,   306},
@@ -277,6 +280,7 @@ LodestarConfiguration_t* init_lodestar_config(int argc, char *argv[]) {
     lodestar_config -> k = 2;
     lodestar_config -> threads = 1;
     lodestar_config -> similarity = true;
+    lodestar_config -> transform = true;
     lodestar_config -> global = false;
     lodestar_config -> targetFileName = NULL;
     lodestar_config -> NUM_PERMS = 10000;
@@ -302,6 +306,7 @@ LodestarConfiguration_t* init_lodestar_config(int argc, char *argv[]) {
             case 310: lodestar_config -> afMissing = strtod(options.arg, (char**) NULL); break;
             case 315: lodestar_config -> targetFileName = options.arg; break;
             case 316: lodestar_config -> MAX_GAP = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 317: lodestar_config -> transform = false; break;
         }
 	}
 

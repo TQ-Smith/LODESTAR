@@ -376,6 +376,7 @@ typedef struct {
     int N;
     int K;
     bool similarity;
+    bool transform;
     int NUM_PERMS;
 } ProcrustesRecord_t;
 
@@ -403,7 +404,7 @@ void* procrustes_permutation_multi_thread(void* arg) {
         // window -> t = t;
         // window -> pval = permutation_test(window -> X, record -> target, shuffleX, eigen, record -> N, record -> K, record -> similarity, t, record -> NUM_PERMS);
         // Transform.
-        window -> t = procrustes_statistic(window -> X, NULL, record -> target, record -> target0, eigen, record -> N, record -> K, true, record -> similarity);
+        window -> t = procrustes_statistic(window -> X, NULL, record -> target, record -> target0, eigen, record -> N, record -> K, record -> transform, record -> similarity);
     }
     
     destroy_real_sym_eigen(eigen);
@@ -412,7 +413,7 @@ void* procrustes_permutation_multi_thread(void* arg) {
     return NULL;
 }
 
-void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, double* target0, int N, int K, bool similarity, int NUM_PERMS, int NUM_THREADS) {
+void procrustes_sliding_window(Window_t** windows, int numWindows, double** target, double* target0, int N, int K, bool transform, bool similarity, int NUM_PERMS, int NUM_THREADS) {
     
     // If the user did not enter coordinates, perform Procrustes against genome-wide.
     //  Otherwise, we compare the global to the target, entered by the user.
@@ -433,7 +434,7 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
             // Execute permutation test.
             // windows[i] -> pval = permutation_test(windows[i] -> X, target, shuffleX, eigen, N, K, similarity, t, NUM_PERMS);
             // Transform.
-            windows[i] -> t = procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, N, K, true, similarity);
+            windows[i] -> t = procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, N, K, transform, similarity);
         }
         // destroy_matrix(double, shuffleX, N);
         destroy_real_sym_eigen(eigen);
@@ -455,6 +456,7 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
         record -> N = N;
         record -> K = K;
         record -> similarity = similarity;
+        record -> transform = transform;
         record -> NUM_PERMS = NUM_PERMS;
         pthread_create(&threads[i], NULL, procrustes_permutation_multi_thread, (void*) record);
         startWindow = startWindow + chunkSize + 1;

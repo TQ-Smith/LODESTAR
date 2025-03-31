@@ -34,6 +34,8 @@ typedef struct {
     // Flag to indicate if Procrustes analysis is measuring
     //  similarity or dissimilarity.
     bool similarity;
+    // If we transform the points during Procrustes.
+    bool transform;
     // Flag to indicate if we are just calculating global window.
     bool global;
     // Name of file for user specified points to perform Procrustes
