@@ -5,7 +5,8 @@
 # Principal Investigator: Dr. Zachary A. Szpiech
 # Purpose: Create plots from LODESTAR analysis.
 
-library(ggplot2)
+library(ggplot2, quietly = TRUE, warn.conflicts = FALSE)
+suppressMessages(library(qqman, quietly = TRUE, warn.conflicts = FALSE))
 library(jsonlite)
 
 exit <- function() { invokeRestart("abort") }
@@ -25,32 +26,41 @@ printUsage <- function() {
     cat("mds w i j              Plot component j v. component i of the w'th window.\n");
     cat("axis i                 Plot the values of the i's component along the genome.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
+    cat("print w                Prints the coordinates of the w'th window.\n")
     cat("\n");
 }
 
 # Plot the t-statistic along the genome.
 tvals <- function(windowsJSON) {
     # Drop invalid windows.
-    windowsJSON$windows = windowsJSON$windows[windowsJSON$windows["t-statistic"] != -1,];
+    windowsJSON$windows = windowsJSON$windows[windowsJSON$windows["Chromosome"] != "Global" & windowsJSON$windows["t-statistic"] != -1,];
     filename = paste(windowsJSON$output_basename, "_tvals.png", sep = "");
+    ylab = ""
+    if (windowsJSON$similarity) {
+        ylab = expression("-log"["10"] ~ "(1-t"["s"] ~ ")");
+    } else { 
+        ylab = expression("-log"["10"] ~ "(1-t"["d"] ~ ")");
+    }
     data <- data.frame(
-        CHR = as.numeric(factor(windowsJSON$windows["Chromosome"], levels = unique(windowsJSON$windows["Chromosome"]))),  
+        CHR = as.numeric(factor(windowsJSON$windows["Chromosome"][,1]), label = unique(windowsJSON$windows["Chromosome"][,1])),  
         BP = windowsJSON$windows["Start Coordinate"],  
-        P = -log10(windowsJSON$windows["t-statistic"])
+        P = lapply(windowsJSON$windows["t-statistic"], function (x) 1-x),
+        SNP = "."
     );
-    colnames(data) <- c("CHR", "BP", "P");
-    g <- ggplot(data, aes(x = BP, y = P, color = as.factor(CHR))) +
-        geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3) +
-        scale_color_manual(values = rep(c("grey", "skyblue"), 22 )) +
-        labs(x = "Chromosome", y = "-log10(t)", title=windowsJSON$input_file) +
-        theme_bw() +
-        theme( 
-            legend.position="none",
-            panel.border = element_blank(),
-            panel.grid.major.x = element_blank(),
-            panel.grid.minor.x = element_blank()
-        )
-    ggsave(filename=filename, plot=g, width = 10, height = 5, dpi = 300);
+    colnames(data) <- c("CHR", "BP", "P", "SNP");
+    png(filename, width = 800, height = 600);
+    manhattan(data, 
+          chr = "CHR", 
+          bp = "BP", 
+          p = "P",
+          SNP = "SNP",
+          main = "Manhattan Plot", 
+          col = c("blue", "orange"),
+          title=windowsJSON$input_file,
+          ylab=ylab,
+          ylim=c(0, max(-log10(data$P)) + 0.5),
+          chrlab = unique(windowsJSON$windows["Chromosome"][,1]));
+    dev.off();
 }
 
 # Plot an axis's value at each window for all samples.
@@ -129,6 +139,12 @@ mds <- function(windowsJSON, popsFile, w, i, j) {
     }
 }
 
+# Print the coordinates of the window.
+printWindow <- function(windowsJSON, w) {
+    points <- as.data.frame(windowsJSON$windows$X[windowsJSON$windows["Window Number"] == w]);
+    write.table(points, sep = "\t", row.names = FALSE, col.names = FALSE);
+}
+
 # Warning messages and run a give command.
 cmd <- function(cmd, windowsFile, popsFile, args) {
     windowsJSON = fromJSON(windowsFile);
@@ -166,6 +182,13 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
             }
             axis(windowsJSON, popsFile, args[1]);
         },
+        print={
+            if (args[1] != 0 && windowsJSON$windows["t-statistic"][windowsJSON$windows["Window Number"] == args[1]] == -1) {
+                cat("Window for MDS plot does not exist! Exiting!\n");
+                return;
+            }
+            printWindow(windowsJSON, args[1]);
+        },
         {
             return;
         }
@@ -181,7 +204,7 @@ if (length(args) < 2) {
     exit();
 }
 
-if (args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
+if (args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
     cat("Unrecognized command! Exiting!\n");
     exit();
 }
