@@ -6,8 +6,8 @@
 # Purpose: Create plots from LODESTAR analysis.
 
 library(ggplot2, quietly = TRUE, warn.conflicts = FALSE)
-suppressMessages(library(qqman, quietly = TRUE, warn.conflicts = FALSE))
 library(jsonlite)
+library(dplyr, quietly = TRUE, warn.conflicts = FALSE)
 
 exit <- function() { invokeRestart("abort") }
 
@@ -37,30 +37,50 @@ tvals <- function(windowsJSON) {
     filename = paste(windowsJSON$output_basename, "_tvals.png", sep = "");
     ylab = ""
     if (windowsJSON$similarity) {
-        ylab = expression("-log"["10"] ~ "(1-t"["s"] ~ ")");
+        ylab = expression("t"["s"]);
     } else { 
-        ylab = expression("-log"["10"] ~ "(1-t"["d"] ~ ")");
+        ylab = expression("t"["d"]);
     }
     data <- data.frame(
-        CHR = as.numeric(factor(windowsJSON$windows["Chromosome"][,1]), label = unique(windowsJSON$windows["Chromosome"][,1])),  
-        BP = windowsJSON$windows["Start Coordinate"],  
-        P = lapply(windowsJSON$windows["t-statistic"], function (x) 1-x),
+        CHR = windowsJSON$windows["Chromosome"],  
+        BP = as.numeric(windowsJSON$windows["Start Coordinate"][,1]),  
+        T = as.numeric(windowsJSON$windows["t-statistic"][,1]),
         SNP = "."
     );
-    colnames(data) <- c("CHR", "BP", "P", "SNP");
-    png(filename, width = 800, height = 600);
-    manhattan(data, 
-          chr = "CHR", 
-          bp = "BP", 
-          p = "P",
-          SNP = "SNP",
-          main = "Manhattan Plot", 
-          col = c("blue", "orange"),
-          title=windowsJSON$input_file,
-          ylab=ylab,
-          ylim=c(0, max(-log10(data$P)) + 0.5),
-          chrlab = unique(windowsJSON$windows["Chromosome"][,1]));
-    dev.off();
+    colnames(data) <- c("CHR", "BP", "T", "SNP");
+    data <- data %>%
+        mutate(CHR = as.numeric(gsub("chr", "", CHR)));
+    # https://r-graph-gallery.com/101_Manhattan_plot.html
+    don <- data %>% 
+        group_by(CHR) %>% 
+        summarise(chr_len=max(BP)) %>% 
+        mutate(tot=cumsum(chr_len)-chr_len) %>%
+        select(-chr_len) %>%
+        left_join(data, ., by=c("CHR"="CHR")) %>%
+        arrange(CHR, BP) %>%
+        mutate( BPcum=BP+tot);
+    axisdf = don %>%
+        group_by(CHR) %>%
+        summarize(center=( max(BPcum) + min(BPcum) ) / 2 );
+
+    plot <- ggplot(don, aes(x=BPcum, y=T)) +
+        geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3) +
+        scale_color_manual(values = rep(c("red", "blue"), 22 )) +
+        scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center ) +
+        scale_y_continuous(expand = c(0, 0)) + 
+        theme_bw() +
+        theme( 
+            legend.position="none",
+            panel.border = element_blank(),
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor.x = element_blank()
+        ) +
+        labs(
+            title = windowsJSON$input_file,
+            x = "Chromosome Position",
+            y = ylab,
+        ) + ylim(0, 1);
+    ggsave(filename, plot, width = 10, height = 6, dpi = 300);
 }
 
 # Plot an axis's value at each window for all samples.
