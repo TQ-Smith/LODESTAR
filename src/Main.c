@@ -183,7 +183,7 @@ int main (int argc, char *argv[]) {
         for (int i = 0; i < argc; i++) 
             fprintf(windowSummaries, "%s ", argv[i]);
         // fprintf(windowSummaries, "\nWin\tWinChr\tChr\tStart\tEnd\tnLoci\tnHaps\tp-val\tt-stat\n");
-        fprintf(windowSummaries, "\nWin\tWinChr\tChr\tStart\tEnd\tnLoci\tnHaps\tt-stat\n");
+        fprintf(windowSummaries, "\nWin\tWinChr\tChr\tStart\tEnd\tnLoci\tnHaps\tvar\tt-stat\n");
         for (int i = 1; i < numWindows; i++) {
             print_window_summary(windowSummaries, windows[i]);
             fprintf(windowPoints, "\n");

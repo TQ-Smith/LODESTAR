@@ -55,8 +55,8 @@ void center_matrix(double** X, double* x0, int n, int k);
 //  double** X -> The matrix to normalize.
 //  int n -> The number of rows in X.
 //  int k -> The number of columns in X.
-// Returns: void.
-void normalize_matrix(double** X, int n, int k);
+// Returns: double, tr(X^TX).
+double normalize_matrix(double** X, int n, int k);
 
 // Uncenter a matrix.
 // Accepts:

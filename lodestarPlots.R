@@ -26,9 +26,55 @@ printUsage <- function() {
     cat("mds w i j              Plot component j v. component i of the w'th window.\n");
     cat("axis i                 Plot the values of the i's component along the genome.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
-    cat("print w                Prints the coordinates of the w'th window.\n")
+    cat("print w                Prints the coordinates of the w'th window.\n");
+    cat("covar                  Plot the variance along the genome.\n");
     cat("\n");
 }
+
+# Plot the variance along the genome.
+variance <- function(windowsJSON) {
+    # Drop invalid windows.
+    windowsJSON$windows = windowsJSON$windows[windowsJSON$windows["Chromosome"] != "Global" & windowsJSON$windows["t-statistic"] != -1,];
+    filename = paste(windowsJSON$output_basename, "_var.png", sep = "");
+    data <- data.frame(
+        CHR = windowsJSON$windows["Chromosome"],  
+        BP = as.numeric(windowsJSON$windows["Start Coordinate"][,1]),  
+        V = as.numeric(windowsJSON$windows["Untransformed Variance"][,1]),
+        SNP = "."
+    );
+    colnames(data) <- c("CHR", "BP", "V", "SNP");
+    data <- data %>%
+        mutate(CHR = as.numeric(gsub("chr", "", CHR)));
+    don <- data %>% 
+        group_by(CHR) %>% 
+        summarise(chr_len=max(BP)) %>% 
+        mutate(tot=cumsum(chr_len)-chr_len) %>%
+        select(-chr_len) %>%
+        left_join(data, ., by=c("CHR"="CHR")) %>%
+        arrange(CHR, BP) %>%
+        mutate( BPcum=BP+tot);
+    axisdf = don %>%
+        group_by(CHR) %>%
+        summarize(center=( max(BPcum) + min(BPcum) ) / 2 );
+    plot <- ggplot(don, aes(x=BPcum, y=V)) +
+        geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3) +
+        scale_color_manual(values = rep(c("red", "blue"), 22 )) +
+        scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center ) +
+        scale_y_continuous(expand = c(0, 0)) + 
+        theme_bw() +
+        theme( 
+            legend.position="none",
+            panel.border = element_blank(),
+            panel.grid.major.x = element_blank(),
+            panel.grid.minor.x = element_blank()
+        ) +
+        labs(
+            title = windowsJSON$input_file,
+            x = "Chromosome Position",
+            y = "Covar"
+        ) + ylim(0, max(data$V) + 1);
+    ggsave(filename, plot, width = 10, height = 6, dpi = 300);
+} 
 
 # Plot the t-statistic along the genome.
 tvals <- function(windowsJSON) {
@@ -174,7 +220,7 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
                 cat("mds takes 3 arguments! Exiting!\n");
                 return;
             }
-            if (args[2] > windowsJSON$k || args[3] > windowsJSON$k || args[2] < 0 || args[3] < 0) {
+            if (args[2] != windowsJSON$k || args[3] > windowsJSON$k || args[2] < 0 || args[3] < 0) {
                 cat("Component for MDS plot does not exist! Exiting!\n");
                 return;
             }
@@ -209,6 +255,9 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
             }
             printWindow(windowsJSON, args[1]);
         },
+        var={
+            variance(windowsJSON);
+        },
         {
             return;
         }
@@ -224,7 +273,7 @@ if (length(args) < 2) {
     exit();
 }
 
-if (args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
+if (args[1] != "covar" && args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
     cat("Unrecognized command! Exiting!\n");
     exit();
 }
