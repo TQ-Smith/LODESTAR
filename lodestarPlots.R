@@ -5,6 +5,8 @@
 # Principal Investigator: Dr. Zachary A. Szpiech
 # Purpose: Create plots from LODESTAR analysis.
 
+# This script can be cleaned up. A lot of redundant code.
+
 library(ggplot2, quietly = TRUE, warn.conflicts = FALSE)
 library(jsonlite)
 library(dplyr, quietly = TRUE, warn.conflicts = FALSE)
@@ -24,18 +26,18 @@ printUsage <- function() {
     cat("CMD:\n");
     cat("----\n");
     cat("mds w i j              Plot component j v. component i of the w'th window.\n");
-    cat("axis i                 Plot the values of the i's component along the genome.\n");
+    cat("axis i                 Plot the variance of the i'th component along the genome.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
-    cat("print w                Prints the coordinates of the w'th window.\n");
     cat("covar                  Plot the variance along the genome.\n");
+    cat("print w                Prints the coordinates of the w'th window.\n");
     cat("\n");
 }
 
-# Plot the variance along the genome.
-variance <- function(windowsJSON) {
+# Plot the covariance along the genome.
+covariance <- function(windowsJSON) {
     # Drop invalid windows.
     windowsJSON$windows = windowsJSON$windows[windowsJSON$windows["Chromosome"] != "Global" & windowsJSON$windows["t-statistic"] != -1,];
-    filename = paste(windowsJSON$output_basename, "_var.png", sep = "");
+    filename = paste(windowsJSON$output_basename, "_covar.png", sep = "");
     data <- data.frame(
         CHR = windowsJSON$windows["Chromosome"],  
         BP = as.numeric(windowsJSON$windows["Start Coordinate"][,1]),  
@@ -56,23 +58,25 @@ variance <- function(windowsJSON) {
     axisdf = don %>%
         group_by(CHR) %>%
         summarize(center=( max(BPcum) + min(BPcum) ) / 2 );
+    if (length(unique(data$CHR)) > 1) {
+        geopoint = geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3);
+        xlab = scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center);
+    } else {
+        geopoint = geom_point();
+        xlab = scale_x_continuous("Chromosome Position");
+    }
     plot <- ggplot(don, aes(x=BPcum, y=V)) +
-        geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3) +
+        geopoint +
         scale_color_manual(values = rep(c("red", "blue"), 22 )) +
-        scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center ) +
-        scale_y_continuous(expand = c(0, 0)) + 
+        scale_y_continuous("Covar", expand = c(0, 0), limits = c(0, max(data$V) + 10) ) + 
+        xlab + geopoint +
         theme_bw() +
         theme( 
             legend.position="none",
             panel.border = element_blank(),
             panel.grid.major.x = element_blank(),
             panel.grid.minor.x = element_blank()
-        ) +
-        labs(
-            title = windowsJSON$input_file,
-            x = "Chromosome Position",
-            y = "Covar"
-        ) + ylim(0, max(data$V) + 1);
+        ) + ggtitle(windowsJSON$input_file);
     ggsave(filename, plot, width = 10, height = 6, dpi = 300);
 } 
 
@@ -108,11 +112,18 @@ tvals <- function(windowsJSON) {
     axisdf = don %>%
         group_by(CHR) %>%
         summarize(center=( max(BPcum) + min(BPcum) ) / 2 );
-
+    if (length(unique(data$CHR)) > 1) {
+        geopoint = geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3);
+        xlab = scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center);
+    } else {
+        geopoint = geom_point();
+        xlab = scale_x_continuous("Chromosome Position");
+    }
     plot <- ggplot(don, aes(x=BPcum, y=T)) +
         geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3) +
         scale_color_manual(values = rep(c("red", "blue"), 22 )) +
-        scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center ) +
+        scale_y_continuous(ylab, expand = c(0, 0), limits = c(0, 1) ) + 
+        xlab + geopoint +
         scale_y_continuous(expand = c(0, 0)) + 
         theme_bw() +
         theme( 
@@ -120,12 +131,7 @@ tvals <- function(windowsJSON) {
             panel.border = element_blank(),
             panel.grid.major.x = element_blank(),
             panel.grid.minor.x = element_blank()
-        ) +
-        labs(
-            title = windowsJSON$input_file,
-            x = "Chromosome Position",
-            y = ylab,
-        ) + ylim(0, 1);
+        ) + ggtitle(windowsJSON$input_file);
     ggsave(filename, plot, width = 10, height = 6, dpi = 300);
 }
 
@@ -134,22 +140,20 @@ axis <- function(windowsJSON, popsFile, i) {
     windowsJSON$windows = windowsJSON$windows[windowsJSON$windows["t-statistic"] != -1,];
     filename = paste(windowsJSON$output_basename, "_axis_", i, ".png", sep = "");
 
-    # Expand chrom and position for all samples in every window.
-    numSamples = length(windowsJSON$samples);
-    chroms = unlist(lapply(windowsJSON$windows$Chromosome, function(x) rep(x, numSamples)));
-    bp = unlist(lapply(windowsJSON$windows["Start Coordinate"], function(x) rep(x, numSamples)));
-    components = unlist(lapply(windowsJSON$windows$X, function(x) x[,as.integer(i)]));
+    chroms = windowsJSON$windows["Chromosome"];
+    bp = as.numeric(windowsJSON$windows["Start Coordinate"][,1]);
+    components = unlist(lapply(windowsJSON$windows$X, function(x) var(x[,as.integer(i)])));
 
     # If we have population membership, then label the points.
     if (popsFile != "") {
         labels <- read.delim(popsFile, header = FALSE)[,1];
-        labels <- unlist(rep(labels, length(windowsJSON$windows$X)));
         data <- data.frame(
             CHR = chroms,
             BP = bp,
             COMP = components,
             Populations = labels
         );
+        colnames(data) <- c("CHR", "BP", "COMP", "Populations");
         g <- ggplot(data, aes(x = BP, y = COMP, color = as.factor(Populations))) +
             geom_point( aes(color=as.factor(Populations)), alpha=0.8, size=1.3) +
             labs(x = "Chromosome", y = paste("Axis ", i), title=windowsJSON$input_file) +
@@ -167,9 +171,10 @@ axis <- function(windowsJSON, popsFile, i) {
             BP = bp,
             COMP = components
         );
+        colnames(data) <- c("CHR", "BP", "COMP");
         g <- ggplot(data, aes(x = BP, y = COMP)) +
             geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3) +
-            scale_color_manual(values = rep(c("grey", "skyblue"), 22 )) +
+            scale_color_manual(values = rep(c("red", "blue"), 22 )) +
             labs(x = "Chromosome", y = paste("Axis ", i), title=windowsJSON$input_file) +
             theme_bw() +
             theme( 
@@ -220,7 +225,7 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
                 cat("mds takes 3 arguments! Exiting!\n");
                 return;
             }
-            if (args[2] != windowsJSON$k || args[3] > windowsJSON$k || args[2] < 0 || args[3] < 0) {
+            if (args[2] > windowsJSON$k || args[3] > windowsJSON$k || args[2] < 0 || args[3] < 0) {
                 cat("Component for MDS plot does not exist! Exiting!\n");
                 return;
             }
@@ -255,8 +260,8 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
             }
             printWindow(windowsJSON, args[1]);
         },
-        var={
-            variance(windowsJSON);
+        covar={
+            covariance(windowsJSON);
         },
         {
             return;
