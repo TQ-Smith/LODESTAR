@@ -140,9 +140,10 @@ axis <- function(windowsJSON, popsFile, i) {
     windowsJSON$windows = windowsJSON$windows[windowsJSON$windows["t-statistic"] != -1,];
     filename = paste(windowsJSON$output_basename, "_axis_", i, ".png", sep = "");
 
-    chroms = windowsJSON$windows["Chromosome"];
-    bp = as.numeric(windowsJSON$windows["Start Coordinate"][,1]);
-    components = unlist(lapply(windowsJSON$windows$X, function(x) var(x[,as.integer(i)])));
+    numSamples = length(windowsJSON$samples);
+    chroms = unlist(lapply(windowsJSON$windows["Chromosome"], function (x) rep(x, numSamples)));
+    bp = unlist(lapply(as.numeric(windowsJSON$windows["Start Coordinate"][,1], function (x) rep(x, numSamples))));
+    components = unlist(lapply(windowsJSON$windows$X, function(x) x[,as.integer(i)]));
 
     # If we have population membership, then label the points.
     if (popsFile != "") {
