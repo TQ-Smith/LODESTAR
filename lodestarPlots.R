@@ -142,12 +142,13 @@ axis <- function(windowsJSON, popsFile, i) {
 
     numSamples = length(windowsJSON$samples);
     chroms = unlist(lapply(windowsJSON$windows["Chromosome"], function (x) rep(x, numSamples)));
-    bp = unlist(lapply(as.numeric(windowsJSON$windows["Start Coordinate"][,1], function (x) rep(x, numSamples))));
+    bp = unlist(lapply(as.numeric(windowsJSON$windows["Start Coordinate"][,1]), function (x) rep(x, numSamples)));
     components = unlist(lapply(windowsJSON$windows$X, function(x) x[,as.integer(i)]));
 
     # If we have population membership, then label the points.
     if (popsFile != "") {
         labels <- read.delim(popsFile, header = FALSE)[,1];
+        labels <- unlist(rep(labels, length(windowsJSON$windows$X)));
         data <- data.frame(
             CHR = chroms,
             BP = bp,
@@ -230,7 +231,7 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
                 cat("Component for MDS plot does not exist! Exiting!\n");
                 return;
             }
-            if (args[1] > max(unlist(windowsJSON$windows["Window Number"]))) {
+            if (as.numeric(args[1]) > as.numeric(max(windowsJSON$windows["Window Number"]))) {
                 cat("Window for MDS plot does not exist! Exiting!\n");
                 return;
             }
