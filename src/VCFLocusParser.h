@@ -8,9 +8,9 @@
 #ifndef _VCF_LOCUS_PARSER_H_
 #define _VCF_LOCUS_PARSER_H_
 
-#include "../lib/zlib.h"
-#include "../lib/kstring.h"
-#include "../lib/kseq.h"
+#include "zlib.h"
+#include "kstring.h"
+#include "kseq.h"
 #include <stdbool.h>
 
 // We use kseq as a stream to read in GZ files.

@@ -6,7 +6,7 @@
 # Purpose: Build LODESTAR. 
 
 CC?=gcc
-CFLAGS = -c -Wall -g
+CFLAGS = -c -Wall -g -I lib
 LFLAGS = -g -o
 
 bin/lodestar: src/Main.o

@@ -8,7 +8,7 @@
 
 #include "Interface.h"
 #include <unistd.h> // Check if file exits.
-#include "../lib/ketopt.h"
+#include "ketopt.h"
 #include "Matrix.h"
 MATRIX_INIT(double, double)
 

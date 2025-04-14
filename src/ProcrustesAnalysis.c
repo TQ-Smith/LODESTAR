@@ -466,9 +466,11 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
     record -> startWindow = startWindow;
     record -> endWindow = numWindows - 1;
     record -> target = target;
+    record -> target0 = target0;
     record -> N = N;
     record -> K = K;
     record -> similarity = similarity;
+    record -> transform = transform;
     record -> NUM_PERMS = NUM_PERMS;
     procrustes_permutation_multi_thread((void*) record);
 

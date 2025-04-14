@@ -7,7 +7,7 @@
 
 #include "SlidingWindow.h"
 
-#include "../lib/klist.h"
+#include "klist.h"
 #define do_not_free_window_ptr(w)
 KLIST_INIT(WindowPtr, Window_t*, do_not_free_window_ptr)
 

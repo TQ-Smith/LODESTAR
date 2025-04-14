@@ -12,7 +12,7 @@
 #include "Window.h"
 #include "VCFLocusParser.h"
 #include "HaplotypeEncoder.h"
-#include "../lib/kstring.h"
+#include "kstring.h"
 
 // Defines all the command line options supplied
 //  by user and parameters to run the LODESTAR analysis.

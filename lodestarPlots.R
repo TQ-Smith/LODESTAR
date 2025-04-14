@@ -5,7 +5,7 @@
 # Principal Investigator: Dr. Zachary A. Szpiech
 # Purpose: Create plots from LODESTAR analysis.
 
-# This script can be cleaned up. A lot of redundant code.
+# I am keeping this code redundant so it can be copied and modified.
 
 library(ggplot2, quietly = TRUE, warn.conflicts = FALSE)
 library(jsonlite)
@@ -68,7 +68,7 @@ covariance <- function(windowsJSON) {
     plot <- ggplot(don, aes(x=BPcum, y=V)) +
         geopoint +
         scale_color_manual(values = rep(c("red", "blue"), 22 )) +
-        scale_y_continuous("Covar", expand = c(0, 0), limits = c(0, max(data$V) + 10) ) + 
+        scale_y_continuous(expression(paste("tr(", Sigma, ")/(N-1)")), expand = c(0, 0), limits = c(0, max(data$V) + 0.1) ) + 
         xlab + geopoint +
         theme_bw() +
         theme( 
@@ -97,7 +97,7 @@ tvals <- function(windowsJSON) {
         T = as.numeric(windowsJSON$windows["t-statistic"][,1]),
         SNP = "."
     );
-    colnames(data) <- c("CHR", "BP", "T", "SNP");
+    colnames(data) <- c("CHR", "BP", "t", "SNP");
     data <- data %>%
         mutate(CHR = as.numeric(gsub("chr", "", CHR)));
     # https://r-graph-gallery.com/101_Manhattan_plot.html
@@ -114,17 +114,16 @@ tvals <- function(windowsJSON) {
         summarize(center=( max(BPcum) + min(BPcum) ) / 2 );
     if (length(unique(data$CHR)) > 1) {
         geopoint = geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3);
-        xlab = scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center);
+        xlab = scale_x_continuous("Chromosome", label = axisdf$CHR, breaks= axisdf$center);
     } else {
         geopoint = geom_point();
         xlab = scale_x_continuous("Chromosome Position");
     }
-    plot <- ggplot(don, aes(x=BPcum, y=T)) +
+    plot <- ggplot(don, aes(x=BPcum, y=t)) +
         geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3) +
         scale_color_manual(values = rep(c("red", "blue"), 22 )) +
         scale_y_continuous(ylab, expand = c(0, 0), limits = c(0, 1) ) + 
         xlab + geopoint +
-        scale_y_continuous(expand = c(0, 0)) + 
         theme_bw() +
         theme( 
             legend.position="none",
@@ -160,8 +159,8 @@ axis <- function(windowsJSON, popsFile, i) {
             geom_point( aes(color=as.factor(Populations)), alpha=0.8, size=1.3) +
             labs(x = "Chromosome", y = paste("Axis ", i), title=windowsJSON$input_file) +
             theme_bw() +
-            theme( 
-                legend.position="none",
+            labs(color = "Populations") +
+            theme(
                 panel.border = element_blank(),
                 panel.grid.major.x = element_blank(),
                 panel.grid.minor.x = element_blank()
@@ -197,6 +196,7 @@ mds <- function(windowsJSON, popsFile, w, i, j) {
         labels <- read.delim(popsFile, header = FALSE)[,1];
         df <- data.frame(x = points[,as.integer(i)], y = points[,as.integer(j)], Populations = labels);
         p <- ggplot(df, aes(x = x, y = y, color = Populations)) +
+            labs(Populations = "Populations") +
             geom_point() + 
             labs(x = paste("Axis ", i), y = paste("Axis ", j)) +
             theme(plot.background = element_rect(fill = "white") );

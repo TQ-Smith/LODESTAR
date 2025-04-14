@@ -12,7 +12,7 @@
 
 // Initialize klib hash table.
 //  Used to relabel haplotype encodings.
-#include "../lib/khash.h"
+#include "khash.h"
 KHASH_MAP_INIT_INT(haplotype, unsigned long)
 
 // A haplotype is encoded as an unsigned long.
