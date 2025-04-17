@@ -202,12 +202,12 @@ void print_help() {
     fprintf(stderr, "   -k INT                  Dimension to project samples into. Must be less than number of samples.\n");
     fprintf(stderr, "                               Default 2. Must be less than number of samples in VCF.\n");
     fprintf(stderr, "   --threads INT           Number of threads to use in computation.\n");
-    fprintf(stderr, "                               Default 1.\n");
+    fprintf(stderr, "                               Default 1\n");
     fprintf(stderr, "   --dissimilarity         Compute dissimilarity between sets of points instead of similarity.\n");
     fprintf(stderr, "   --noTransform           Do NOT transform points during Procrustes analysis.\n");
     fprintf(stderr, "   --global                Compute only the global set of points.\n");
-    fprintf(stderr, "                               Takes presedence over windowing parameters.\n");
-    fprintf(stderr, "   --target file.tsv       A n-by-k tsv file containing user defined coordinates to perform Procrustes analysis.\n");
+    fprintf(stderr, "                               Ignores windowing parameters.\n");
+    fprintf(stderr, "   --target file.tsv       A n-by-k tsv file containing user defined coordinates to use in Procrustes analysis.\n");
     //fprintf(stderr, "   --perms INT             The number of permutations to execute.\n");
     //fprintf(stderr, "                               Default 10000.\n");
     fprintf(stderr, "   --maf DOUBLE            Drops biallelic VCF records with a MAF less than threshold.\n");

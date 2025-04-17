@@ -20,16 +20,16 @@ printUsage <- function() {
     cat("Written by T. Quinn Smith\n");
     cat("Principal Investigator: Zachary A. Szpiech\n");
     cat("The Pennsylvania State University\n\n");
-    cat("Usage: Rscript lodestarPlots.R CMD <windows.json> (<pops.txt>)\n");
+    cat("Usage: Rscript lodestarPlots.R [option] <windows.json> (<pops.txt>)\n");
     cat("       <windows.json> is the JSON file produced by LODESTAR.\n");
     cat("       <pops.txt> is optional. Labels sample by population.\n");
-    cat("CMD:\n");
-    cat("----\n");
+    cat("option:\n");
+    cat("-------\n");
     cat("mds w i j              Plot component j v. component i of the w'th window.\n");
-    cat("axis i                 Plot the variance of the i'th component along the genome.\n");
+    cat("axis i                 Plot the i'th component along the genome for each sample.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
-    cat("covar                  Plot the variance along the genome.\n");
-    cat("print w                Prints the coordinates of the w'th window.\n");
+    cat("covar                  Plot the variance along the genome. Ignores <pops.txt>.\n");
+    cat("print w                Prints the coordinates of the w'th window. Ignores <pops.txt>.\n");
     cat("\n");
 }
 
