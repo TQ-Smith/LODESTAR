@@ -60,7 +60,7 @@ covariance <- function(windowsJSON) {
         summarize(center=( max(BPcum) + min(BPcum) ) / 2 );
     if (length(unique(data$CHR)) > 1) {
         geopoint = geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3);
-        xlab = scale_x_continuous( label = axisdf$CHR, breaks= axisdf$center);
+        xlab = scale_x_continuous("Chromosome Position", label = axisdf$CHR, breaks= axisdf$center);
     } else {
         geopoint = geom_point();
         xlab = scale_x_continuous("Chromosome Position");
