@@ -80,14 +80,14 @@ int main (int argc, char *argv[]) {
     windowPoints = fopen(ks_str(outputBasename), "w");
     destroy_kstring(outputBasename);
 
-    Window_t* global = NULL;
     Window_t** windows = NULL;
     int numWindows = 0;
 
     if (lodestar_config -> global) {
         LOG_INFO("Performing genome-wide calculations ...\n");
         printf("Performing genome-wide calculations ...\n\n");
-        global = global_window(parser, encoder, lodestar_config -> k, lodestar_config -> HAP_SIZE, lodestar_config -> threads);
+        windows = calloc(1, sizeof(Window_t*));
+        windows[0] = global_window(parser, encoder, lodestar_config -> k, lodestar_config -> HAP_SIZE, lodestar_config -> threads);
         LOG_INFO("Finished genome-wide calculations ...\n");
         printf("Finished genome-wide calculations ...\n\n");
     } else {
@@ -118,6 +118,7 @@ int main (int argc, char *argv[]) {
         LOG_WARNING("Unable to perform Procrustes. Either no user supplied points were given or global did not converge!\n");
     }
 
+
     // Used for Procrustes analysis and to transform points.
     RealSymEigen_t* eigen = init_real_sym_eigen(parser -> numSamples);
 
@@ -127,12 +128,12 @@ int main (int argc, char *argv[]) {
         printf("Beginning Procrustes Analysis ...\n\n");
 
         // Just global against the target.
-        if (global != NULL) {
+        if (lodestar_config -> global) {
             // double** shuffleX = create_matrix(double, parser -> numSamples, lodestar_config -> k);
             // global -> t = procrustes_statistic(global -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, false, lodestar_config -> similarity);
             // global -> pval = permutation_test(global -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, global -> t, lodestar_config -> NUM_PERMS);
             // Transform global set of points.
-            global -> t = procrustes_statistic(global -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> transform, lodestar_config -> similarity);
+            windows[0] -> t = procrustes_statistic(windows[0] -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> transform, lodestar_config -> similarity);
             // destroy_matrix(double, shuffleX, encoder -> numSamples);
         // Sliding window against the target.
         } else {
@@ -177,7 +178,7 @@ int main (int argc, char *argv[]) {
 
     // Output results.
     fprintf(windowPoints, "\t\"windows\": [");
-    if (targetPoints != NULL) {
+    if (!lodestar_config -> global && targetPoints != NULL) {
         // Echo command in summary file for convience.
         fprintf(windowSummaries, "#Command: ");
         for (int i = 0; i < argc; i++) 
@@ -216,9 +217,6 @@ int main (int argc, char *argv[]) {
         for (int i = 0; i < numWindows; i++)
             destroy_window(windows[i], parser -> numSamples);
         free(windows);
-    }
-    if (global != NULL) {
-        destroy_window(global, parser -> numSamples);
     }
     free(lodestar_config);
     destroy_vcf_locus_parser(parser);

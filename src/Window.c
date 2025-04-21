@@ -38,4 +38,5 @@ void destroy_window(Window_t* window, int n) {
         free(window -> ibs);
     destroy_kstring(window -> chromosome);
     free(window);
+    window = NULL;
 }

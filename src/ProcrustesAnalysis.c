@@ -184,6 +184,10 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
 
     crossprod(Xc, Yc, N, K, C, &trX, &trY);
 
+    // If either set of points is one point, then we cannot preform Procrustes analysis.
+    if (fabs(trX) <= EPS || fabs(trY) <= EPS)
+        return -1;
+
     /*
     printf("C = \n");
     for (int i = 0; i < K; i++) {

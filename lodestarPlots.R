@@ -68,7 +68,7 @@ covariance <- function(windowsJSON) {
     plot <- ggplot(don, aes(x=BPcum, y=V)) +
         geopoint +
         scale_color_manual(values = rep(c("red", "blue"), 22 )) +
-        scale_y_continuous(expression(paste("tr(", Sigma, ")/(N-1)")), expand = c(0, 0), limits = c(0, max(data$V) + 0.1) ) + 
+        scale_y_continuous(expression(paste(sqrt(paste("tr", Sigma)), "/(N-1)")), expand = c(0, 0), limits = c(0, max(data$V) + 0.1) ) + 
         xlab + geopoint +
         theme_bw() +
         theme( 
@@ -198,7 +198,7 @@ mds <- function(windowsJSON, popsFile, w, i, j) {
         p <- ggplot(df, aes(x = x, y = y, color = Populations)) +
             labs(Populations = "Populations") +
             geom_point() + 
-            labs(x = paste("Axis ", i), y = paste("Axis ", j)) +
+            labs(x = paste("Axis ", i), y = paste("Axis ", j), title=windowsJSON$input_file) +
             theme(plot.background = element_rect(fill = "white") );
         ggsave(filename, plot = p, width = 6, height = 4, dpi = 300);
     } else {
@@ -206,8 +206,8 @@ mds <- function(windowsJSON, popsFile, w, i, j) {
         df <- data.frame(x = points[,as.integer(i)], y = points[,as.integer(j)]);
         p <- ggplot(df, aes(x = x, y = y)) +
             geom_point() + 
-            labs(x = paste("Axis ", i), y = paste("Axis ", j)) +
-            theme(plot.background = element_rect(fill = "white") );
+            labs(x = paste("Axis ", i), y = paste("Axis ", j), title=windowsJSON$input_file) +
+            theme(plot.background = element_rect(fill = "white"));
         ggsave(filename, plot = p, width = 6, height = 4, dpi = 300);
     }
 }
