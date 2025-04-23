@@ -28,20 +28,20 @@ printUsage <- function() {
     cat("mds w i j              Plot component j v. component i of the w'th window.\n");
     cat("axis i                 Plot the i'th component along the genome for each sample.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
-    cat("stddev                 Plot the standard deviation along the genome. Ignores <pops.txt>.\n");
+    cat("sigma                  Plot the standard deviation along the genome. Ignores <pops.txt>.\n");
     cat("print w                Prints the coordinates of the w'th window. Ignores <pops.txt>.\n");
     cat("\n");
 }
 
 # Plot the standard deviation along the genome.
-stddev <- function(windowsJSON) {
+sigma <- function(windowsJSON) {
     # Drop invalid windows.
     windowsJSON$windows = windowsJSON$windows[windowsJSON$windows["Chromosome"] != "Global" & windowsJSON$windows["t-statistic"] != -1,];
     filename = paste(windowsJSON$output_basename, "_stddev.png", sep = "");
     data <- data.frame(
         CHR = windowsJSON$windows["Chromosome"],  
         BP = as.numeric(windowsJSON$windows["Start Coordinate"][,1]),  
-        V = as.numeric(windowsJSON$windows["Untransformed Standard Deviation"][,1]),
+        V = as.numeric(windowsJSON$windows["Untransformed Sigma"][,1]),
         SNP = "."
     );
     colnames(data) <- c("CHR", "BP", "V", "SNP");
@@ -262,8 +262,8 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
             }
             printWindow(windowsJSON, args[1]);
         },
-        stddev={
-            stddev(windowsJSON);
+        sigma={
+            sigma(windowsJSON);
         },
         {
             return;
@@ -280,7 +280,7 @@ if (length(args) < 2) {
     exit();
 }
 
-if (args[1] != "stddev" && args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
+if (args[1] != "sigma" && args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
     cat("Unrecognized command! Exiting!\n");
     exit();
 }

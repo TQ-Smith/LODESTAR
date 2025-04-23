@@ -46,7 +46,7 @@ typedef struct {
     double t;
 
     // The standard deviation of X around the origin. sqrt(tr(X^TX) / (N - 1)).
-    double stddev;
+    double sigma;
 
     // A flag to indicate if we drop the window because it exceeds gap threshold.
     bool dropWindow;
