@@ -63,7 +63,7 @@ void print_window_summary(FILE* output, Window_t* window) {
     fprintf(output, "%d\t", window -> endCoord);
     fprintf(output, "%d\t", window -> numLoci);
     fprintf(output, "%d\t", window -> numHaps);
-    fprintf(output, "%lf\t", window -> var);
+    fprintf(output, "%lf\t", window -> stddev);
     //if (window -> t == -1)
     //    fprintf(output, "%lf\t", -1.0);
     //else
@@ -88,7 +88,7 @@ void print_window(FILE* output, kstring_t** sampleNames, Window_t* window, int N
     fprintf(output, "\t\t\t\"End Coordinate\": %d,\n", window -> endCoord);
     fprintf(output, "\t\t\t\"Number of Loci\": %d,\n", window -> numLoci);
     fprintf(output, "\t\t\t\"Number of Haplotypes\": %d,\n", window -> numHaps);
-    fprintf(output, "\t\t\t\"Untransformed Variance\": %lf,\n", window -> var);
+    fprintf(output, "\t\t\t\"Untransformed Standard Deviation\": %lf,\n", window -> stddev);
     fprintf(output, "\t\t\t\"t-statistic\": %lf,\n", window -> t);
     // Print points.
     fprintf(output, "\t\t\t\"X\": ");

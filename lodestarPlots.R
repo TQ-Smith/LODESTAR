@@ -28,20 +28,20 @@ printUsage <- function() {
     cat("mds w i j              Plot component j v. component i of the w'th window.\n");
     cat("axis i                 Plot the i'th component along the genome for each sample.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
-    cat("covar                  Plot the variance along the genome. Ignores <pops.txt>.\n");
+    cat("stddev                 Plot the standard deviation along the genome. Ignores <pops.txt>.\n");
     cat("print w                Prints the coordinates of the w'th window. Ignores <pops.txt>.\n");
     cat("\n");
 }
 
-# Plot the covariance along the genome.
-covariance <- function(windowsJSON) {
+# Plot the standard deviation along the genome.
+stddev <- function(windowsJSON) {
     # Drop invalid windows.
     windowsJSON$windows = windowsJSON$windows[windowsJSON$windows["Chromosome"] != "Global" & windowsJSON$windows["t-statistic"] != -1,];
-    filename = paste(windowsJSON$output_basename, "_covar.png", sep = "");
+    filename = paste(windowsJSON$output_basename, "_stddev.png", sep = "");
     data <- data.frame(
         CHR = windowsJSON$windows["Chromosome"],  
         BP = as.numeric(windowsJSON$windows["Start Coordinate"][,1]),  
-        V = as.numeric(windowsJSON$windows["Untransformed Variance"][,1]),
+        V = as.numeric(windowsJSON$windows["Untransformed Standard Deviation"][,1]),
         SNP = "."
     );
     colnames(data) <- c("CHR", "BP", "V", "SNP");
@@ -68,7 +68,7 @@ covariance <- function(windowsJSON) {
     plot <- ggplot(don, aes(x=BPcum, y=V)) +
         geopoint +
         scale_color_manual(values = rep(c("red", "blue"), 22 )) +
-        scale_y_continuous(expression(paste(sqrt(paste("tr", Sigma)), "/(N-1)")), expand = c(0, 0), limits = c(0, max(data$V) + 0.1) ) + 
+        scale_y_continuous(expression(sigma), expand = c(0, 0), limits = c(0, max(data$V) + 1) ) + 
         xlab + geopoint +
         theme_bw() +
         theme( 
@@ -262,8 +262,8 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
             }
             printWindow(windowsJSON, args[1]);
         },
-        covar={
-            covariance(windowsJSON);
+        stddev={
+            stddev(windowsJSON);
         },
         {
             return;
@@ -280,7 +280,7 @@ if (length(args) < 2) {
     exit();
 }
 
-if (args[1] != "covar" && args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
+if (args[1] != "stddev" && args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
     cat("Unrecognized command! Exiting!\n");
     exit();
 }

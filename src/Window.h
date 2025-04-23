@@ -45,8 +45,8 @@ typedef struct {
     // The t-statistic associated with the window.
     double t;
 
-    // The variance of X around the origin. tr(X^TX).
-    double var;
+    // The standard deviation of X around the origin. sqrt(tr(X^TX) / (N - 1)).
+    double stddev;
 
     // A flag to indicate if we drop the window because it exceeds gap threshold.
     bool dropWindow;
