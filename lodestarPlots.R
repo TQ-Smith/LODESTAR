@@ -37,7 +37,7 @@ printUsage <- function() {
 sigma <- function(windowsJSON) {
     # Drop invalid windows.
     windowsJSON$windows = windowsJSON$windows[windowsJSON$windows["Chromosome"] != "Global" & windowsJSON$windows["t-statistic"] != -1,];
-    filename = paste(windowsJSON$output_basename, "_stddev.png", sep = "");
+    filename = paste(windowsJSON$output_basename, "_sigma.png", sep = "");
     data <- data.frame(
         CHR = windowsJSON$windows["Chromosome"],  
         BP = as.numeric(windowsJSON$windows["Start Coordinate"][,1]),  
