@@ -88,7 +88,7 @@ void print_window(FILE* output, kstring_t** sampleNames, Window_t* window, int N
     fprintf(output, "\t\t\t\"End Coordinate\": %d,\n", window -> endCoord);
     fprintf(output, "\t\t\t\"Number of Loci\": %d,\n", window -> numLoci);
     fprintf(output, "\t\t\t\"Number of Haplotypes\": %d,\n", window -> numHaps);
-    fprintf(output, "\t\t\t\"Untransformed Sigma\": %lf,\n", window -> sigma);
+    fprintf(output, "\t\t\t\"sigma\": %lf,\n", window -> sigma);
     fprintf(output, "\t\t\t\"t-statistic\": %lf,\n", window -> t);
     // Print points.
     fprintf(output, "\t\t\t\"X\": ");

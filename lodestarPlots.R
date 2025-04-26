@@ -28,9 +28,34 @@ printUsage <- function() {
     cat("mds w i j              Plot component j v. component i of the w'th window.\n");
     cat("axis i                 Plot the i'th component along the genome for each sample.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
-    cat("sigma                  Plot the standard deviation along the genome. Ignores <pops.txt>.\n");
+    cat("sigma                  Plot sigma along the genome. Ignores <pops.txt>.\n");
+    cat("targ                   Plot the centered and normalized points Procrustes is performed against (k = 2 only).\n");
     cat("print w                Prints the coordinates of the w'th window. Ignores <pops.txt>.\n");
     cat("\n");
+}
+
+# Plot the target points.
+targ <- function(windowsJSON, popsFile) {
+    filename = paste(windowsJSON$output_basename, "_target.png", sep = "");
+    if (popsFile != "") {
+        points <- as.data.frame(windowsJSON$Y);
+        labels <- read.delim(popsFile, header = FALSE)[,1];
+        df <- data.frame(x = points[,1], y = points[,2], Populations = labels);
+        p <- ggplot(df, aes(x = x, y = y, color = Populations)) +
+            labs(Populations = "Populations") +
+            geom_point() + 
+            labs(x = paste("Axis ", 1), y = paste("Axis ", 1), title=windowsJSON$input_file) +
+            theme(text = element_text(size = 12), plot.background = element_rect(fill = "white") );
+        ggsave(filename, plot = p, width = 6, height = 4, dpi = 300);
+    } else {
+        points <- as.data.frame(windowsJSON$Y);
+        df <- data.frame(x = points[,1], y = points[,2]);
+        p <- ggplot(df, aes(x = x, y = y)) +
+            geom_point() + 
+            labs(x = paste("Axis ", 1), y = paste("Axis ", 2), title=windowsJSON$input_file) +
+            theme(text = element_text(size = 12), plot.background = element_rect(fill = "white"));
+        ggsave(filename, plot = p, width = 6, height = 4, dpi = 300);
+    }
 }
 
 # Plot the standard deviation along the genome.
@@ -41,7 +66,7 @@ sigma <- function(windowsJSON) {
     data <- data.frame(
         CHR = windowsJSON$windows["Chromosome"],  
         BP = as.numeric(windowsJSON$windows["Start Coordinate"][,1]),  
-        V = as.numeric(windowsJSON$windows["Untransformed Sigma"][,1]),
+        V = as.numeric(windowsJSON$windows["sigma"][,1]),
         SNP = "."
     );
     colnames(data) <- c("CHR", "BP", "V", "SNP");
@@ -72,6 +97,7 @@ sigma <- function(windowsJSON) {
         xlab + geopoint +
         theme_bw() +
         theme( 
+            text = element_text(size = 12),
             legend.position="none",
             panel.border = element_blank(),
             panel.grid.major.x = element_blank(),
@@ -126,6 +152,7 @@ tvals <- function(windowsJSON) {
         xlab + geopoint +
         theme_bw() +
         theme( 
+            text = element_text(size = 12),
             legend.position="none",
             panel.border = element_blank(),
             panel.grid.major.x = element_blank(),
@@ -179,6 +206,7 @@ axis <- function(windowsJSON, popsFile, i) {
             labs(x = "Chromosome", y = paste("Axis ", i), title=windowsJSON$input_file) +
             theme_bw() +
             theme( 
+                text = element_text(size = 12),
                 legend.position="none",
                 panel.border = element_blank(),
                 panel.grid.major.x = element_blank(),
@@ -199,7 +227,7 @@ mds <- function(windowsJSON, popsFile, w, i, j) {
             labs(Populations = "Populations") +
             geom_point() + 
             labs(x = paste("Axis ", i), y = paste("Axis ", j), title=windowsJSON$input_file) +
-            theme(plot.background = element_rect(fill = "white") );
+            theme(text = element_text(size = 12), plot.background = element_rect(fill = "white") );
         ggsave(filename, plot = p, width = 6, height = 4, dpi = 300);
     } else {
         points <- as.data.frame(windowsJSON$windows$X[windowsJSON$windows["Window Number"] == w])
@@ -207,7 +235,7 @@ mds <- function(windowsJSON, popsFile, w, i, j) {
         p <- ggplot(df, aes(x = x, y = y)) +
             geom_point() + 
             labs(x = paste("Axis ", i), y = paste("Axis ", j), title=windowsJSON$input_file) +
-            theme(plot.background = element_rect(fill = "white"));
+            theme(text = element_text(size = 12), plot.background = element_rect(fill = "white"));
         ggsave(filename, plot = p, width = 6, height = 4, dpi = 300);
     }
 }
@@ -265,6 +293,13 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
         sigma={
             sigma(windowsJSON);
         },
+        targ={
+            if (windowsJSON$k != 2) {
+                cat("Can only plot points in dimension k = 2! Exiting!\n");
+                return;
+            }
+            targ(windowsJSON, popsFile);
+        },
         {
             return;
         }
@@ -280,7 +315,7 @@ if (length(args) < 2) {
     exit();
 }
 
-if (args[1] != "sigma" && args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
+if (args[1] != "targ" && args[1] != "sigma" && args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis") {
     cat("Unrecognized command! Exiting!\n");
     exit();
 }

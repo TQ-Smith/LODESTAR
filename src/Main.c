@@ -1,7 +1,7 @@
 
 // File: Main.c
 // Date: 28 March 2025
-// Version 1: 28 March 2025
+// Version 1: 26 April 2025
 // Author: T. Quinn Smith
 // Principal Investigator: Dr. Zachary A. Szpiech
 // Purpose: Command-line interface for LODESTAR and main analysis.
