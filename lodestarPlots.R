@@ -26,33 +26,33 @@ printUsage <- function() {
     cat("option:\n");
     cat("-------\n");
     cat("mds w i j              Plot component j v. component i of the w'th window.\n");
+    cat("targ i j               Plot the centered and normalized components j v. i Procrustes is performed against.\n");
     cat("axis i                 Plot the i'th component along the genome for each sample.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
     cat("sigma                  Plot sigma along the genome. Ignores <pops.txt>.\n");
-    cat("targ                   Plot the centered and normalized points Procrustes is performed against (k = 2 only).\n");
     cat("print w                Prints the coordinates of the w'th window. Ignores <pops.txt>.\n");
     cat("\n");
 }
 
 # Plot the target points.
-targ <- function(windowsJSON, popsFile) {
+targ <- function(windowsJSON, popsFile, i , j) {
     filename = paste(windowsJSON$output_basename, "_target.png", sep = "");
     if (popsFile != "") {
         points <- as.data.frame(windowsJSON$Y);
         labels <- read.delim(popsFile, header = FALSE)[,1];
-        df <- data.frame(x = points[,1], y = points[,2], Populations = labels);
+        df <- data.frame(x = points[,as.integer(i)], y = points[,as.integer(j)], Populations = labels);
         p <- ggplot(df, aes(x = x, y = y, color = Populations)) +
             labs(Populations = "Populations") +
             geom_point() + 
-            labs(x = paste("Axis ", 1), y = paste("Axis ", 1), title=windowsJSON$input_file) +
+            labs(x = paste("Axis ", i), y = paste("Axis ", j), title=windowsJSON$input_file) +
             theme(text = element_text(size = 12), plot.background = element_rect(fill = "white") );
         ggsave(filename, plot = p, width = 6, height = 4, dpi = 300);
     } else {
         points <- as.data.frame(windowsJSON$Y);
-        df <- data.frame(x = points[,1], y = points[,2]);
+        df <- data.frame(x = points[,as.integer(i)], y = points[,as.integer(j)]);
         p <- ggplot(df, aes(x = x, y = y)) +
             geom_point() + 
-            labs(x = paste("Axis ", 1), y = paste("Axis ", 2), title=windowsJSON$input_file) +
+            labs(x = paste("Axis ", i), y = paste("Axis ", j), title=windowsJSON$input_file) +
             theme(text = element_text(size = 12), plot.background = element_rect(fill = "white"));
         ggsave(filename, plot = p, width = 6, height = 4, dpi = 300);
     }
@@ -294,11 +294,15 @@ cmd <- function(cmd, windowsFile, popsFile, args) {
             sigma(windowsJSON);
         },
         targ={
-            if (windowsJSON$k != 2) {
-                cat("Can only plot points in dimension k = 2! Exiting!\n");
+            if (length(args) != 2) {
+                cat("targ takes 2 arguments! Exiting!\n");
                 return;
             }
-            targ(windowsJSON, popsFile);
+            if (args[1] > windowsJSON$k || args[1] > windowsJSON$k || args[2] < 0 || args[2] < 0) {
+                cat("Component for MDS plot does not exist! Exiting!\n");
+                return;
+            }
+            targ(windowsJSON, popsFile, args[1], args[2]);
         },
         {
             return;
