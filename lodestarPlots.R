@@ -26,7 +26,8 @@ printUsage <- function() {
     cat("option:\n");
     cat("-------\n");
     cat("mds w i j              Plot component j v. component i of the w'th window.\n");
-    cat("targ i j               Plot the centered and normalized components j v. i Procrustes is performed against.\n");
+    cat("targ i j               Plot the centered and normalized components j v. i  of\n");
+    cat("                           points Procrustes is performed against.\n");
     cat("axis i                 Plot the i'th component along the genome for each sample.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
     cat("sigma                  Plot sigma along the genome. Ignores <pops.txt>.\n");

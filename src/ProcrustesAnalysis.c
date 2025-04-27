@@ -16,7 +16,7 @@
 MATRIX_INIT(double, double)
 
 // Define machine percision for floating point comparison.
-#define EPS 1.49e-08
+#define EPS 1e-08
 
 // Fortran matrices are stored as vectors in column-major form.
 //  Covariance matrices are symmetric so this is not explicitly necessary,

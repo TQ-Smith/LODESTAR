@@ -8,7 +8,7 @@
 #include "Matrix.h"
 
 // Define machine percision for floating point comparison.
-#define EPS 1.49e-08
+#define EPS 1e-08
 
 void center_matrix(double** X, double* x0, int n, int k) {
     // Calculate the center.
