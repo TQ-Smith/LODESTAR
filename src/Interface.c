@@ -194,10 +194,10 @@ void print_help() {
     fprintf(stderr, "   -i file.vcf.gz          Path to input VCF file.\n");
     fprintf(stderr, "   -o STR                  Output base names for files.\n");
     fprintf(stderr, "   -h INT                  Number of loci in a haplotype.\n");
-    fprintf(stderr, "                               Default 1. Not used when --global is set.\n");
-    fprintf(stderr, "   -w INT                  Number of haplotypes in a window.\n");
+    fprintf(stderr, "                               Default 1.\n");
+    fprintf(stderr, "   -w INT                  <WINDOW_SIZE> Number of haplotypes in a window.\n");
     fprintf(stderr, "                               Must be set by user. Not used when --global is set.\n");
-    fprintf(stderr, "   -s INT                  Number of haplotypes to increment the sliding window.\n");
+    fprintf(stderr, "   -s INT                  <STEP_SIZE> Number of haplotypes to increment the sliding window.\n");
     fprintf(stderr, "                               Must be set by user. Not used when --global is set.\n");
     fprintf(stderr, "   -k INT                  Dimension to project samples into. Must be less than number of samples.\n");
     fprintf(stderr, "                               Default 2. Must be less than number of samples in VCF.\n");
@@ -207,7 +207,9 @@ void print_help() {
     fprintf(stderr, "   --noTransform           Do NOT transform points during Procrustes analysis.\n");
     fprintf(stderr, "   --global                Compute only the global set of points.\n");
     fprintf(stderr, "                               Ignores windowing parameters.\n");
-    fprintf(stderr, "   --target file.tsv       A n-by-k tsv file containing user defined coordinates to use in Procrustes analysis.\n");
+    fprintf(stderr, "   --target file.tsv       A n-by-k tsv file containing user defined coordinates.\n");
+    fprintf(stderr, "                               All local relatedness plots will be compared to this set of points in\n");
+    fprintf(stderr, "                               Procrustes analysis.\n");
     //fprintf(stderr, "   --perms INT             The number of permutations to execute.\n");
     //fprintf(stderr, "                               Default 10000.\n");
     fprintf(stderr, "   --maf DOUBLE            Drops biallelic VCF records with a MAF less than threshold.\n");

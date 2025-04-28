@@ -51,7 +51,7 @@ src/Logger.o:
 
 .PHONY: lib/lapack
 lib/lapack:
-	gfortran $(CFLAGS) lib/lapack/*.f
+	$(CC) $(CFLAGS) lib/lapack/*.f
 	mv *.o lib/lapack
 
 .PHONY: clean
