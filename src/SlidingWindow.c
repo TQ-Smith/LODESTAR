@@ -408,7 +408,7 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
 
     // Convert the list of windows to an array.
     *numWindows = record -> curWinNum;
-    windows = (Window_t**) malloc(*numWindows * sizeof(Window_t*));
+    windows = (Window_t**) calloc(*numWindows, sizeof(Window_t*));
     int i = 1;
     for (kliter_t(WindowPtr)* it = kl_begin(record -> winList); it != kl_end(record -> winList); it = kl_next(it)) {
         windows[i] = kl_val(it);
