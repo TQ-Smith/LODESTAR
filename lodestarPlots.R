@@ -37,7 +37,7 @@ printUsage <- function() {
 
 # Plot the target points.
 targ <- function(windowsJSON, popsFile, i , j) {
-    filename = paste(windowsJSON$output_basename, "_target.png", sep = "");
+    filename = paste(windowsJSON$output_basename, "_targ_", i, "_", j, ".png", sep = "");
     if (popsFile != "") {
         points <- as.data.frame(windowsJSON$Y);
         labels <- read.delim(popsFile, header = FALSE)[,1];
