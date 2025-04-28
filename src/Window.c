@@ -11,7 +11,7 @@
 Window_t* init_window() {
     // Allocate memory and set defaults.
     Window_t* window = (Window_t*) calloc(1, sizeof(Window_t));
-    window -> chromosome = init_kstring(NULL);
+    window -> chromosome = NULL;
     window -> X = NULL;
     window -> x0 = NULL;
     window -> saveIBS = false;

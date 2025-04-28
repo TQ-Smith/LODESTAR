@@ -127,7 +127,7 @@ Window_t* get_next_window(WindowRecord_t* record, Genotype_t** threadGeno) {
     Window_t* window = init_window();
     window -> winNum = record -> curWinNum++;
     window -> winNumOnChrom = record -> curWinNumOnChrom++;
-    ks_overwrite(ks_str(record -> curChrom), window -> chromosome);
+    window -> chromosome = init_kstring(ks_str(record -> curChrom));
     window -> numLoci = record -> numHapsInOverlap * record -> HAP_SIZE;
 
     LOG_INFO("Started ASD calculations for window %d.\n", window -> winNum);
@@ -387,7 +387,7 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
     // Create the genome-wide window.
     //  Will be the first window in the array.
     Window_t* global = init_window();
-    ks_overwrite("Global", global -> chromosome);
+    global -> chromosome = init_kstring("Global");
     global -> winNum = 0;
     global -> winNumOnChrom = 0;
     global -> startCoord = 0;
