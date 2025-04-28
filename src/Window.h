@@ -40,7 +40,7 @@ typedef struct {
     IBS_t* ibs;
 
     // The p-value associated with the window.
-    double pval;
+    // double pval;
 
     // The t-statistic associated with the window.
     double t;
