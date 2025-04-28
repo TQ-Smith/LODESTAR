@@ -496,7 +496,7 @@ Window_t* global_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, i
     Window_t* window = init_window();
     window -> winNum = 0;
     window -> winNumOnChrom = 0;
-    ks_overwrite("Global", window -> chromosome);
+    window -> chromosome = init_kstring("Global");
     window -> startCoord = 0;
     window -> endCoord = 0;
 
