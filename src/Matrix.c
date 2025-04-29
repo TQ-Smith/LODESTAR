@@ -39,7 +39,8 @@ double normalize_matrix(double** X, int n, int k) {
             X[i][j] = X[i][j] / sqrt(trX);
         }
     }
-    return sqrt(trX / (n - 1));
+    double sigma = sqrt(trX / (n - 1));
+    return sigma;
 }
 
 void uncenter_matrix(double** X, double* x0, int n, int k) {
