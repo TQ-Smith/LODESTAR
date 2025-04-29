@@ -127,6 +127,8 @@ static inline int kputl(long c, kstring_t *s)
 // Create a kstring_t*.
 static inline kstring_t* init_kstring(const char* s) {
 	kstring_t* k = (kstring_t*) calloc(1, sizeof(kstring_t));
+	k -> s = NULL;
+	k -> l = 0; k -> = 0;
 	if (s == NULL)
 		return k;
 	kputs(s, k);
