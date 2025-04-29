@@ -395,6 +395,7 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
     global -> winNumOnChrom = 0;
     global -> startCoord = 0;
     global -> endCoord = 0;
+    global -> sigma = -1;
     global -> numLoci = record -> globalNumLoci;
     global -> numHaps = record -> globalNumHaps;
     global -> saveIBS = true;
