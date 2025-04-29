@@ -135,6 +135,9 @@ static inline void destroy_kstring(kstring_t* k) {
 // Overwrites contents of s with l characters from p.
 static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
 	s -> l = 0;
+	s -> m = 0;
+	free(s -> s);
+	s -> s = 0;
 	return kputsn(p, l, s);
 }
 
@@ -142,6 +145,9 @@ static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
 // Overwrites contents of s with p.
 static inline int ks_overwrite(const char* p, kstring_t *s) {
 	s -> l = 0;
+	s -> m = 0;
+	free(s -> s);
+	s -> s = 0;
 	return kputs(p, s);
 }
 

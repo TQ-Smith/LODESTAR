@@ -110,7 +110,8 @@ void perform_mds_on_window(Window_t* window, RealSymEigen_t* eigen, double* asd,
     } else {
         LOG_INFO("Finished MDS for window %d on %s from %d to %d.\n", window -> winNum, ks_str(window -> chromosome), window -> startCoord, window -> endCoord);
     }
-    window -> sigma = normalize_matrix(X, eigen -> N, k);
+    double sigma = normalize_matrix(X, eigen -> N, k);
+    window -> sigma = sigma;
     window -> X = X;
 }
 
@@ -395,7 +396,6 @@ Window_t** sliding_window(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder,
     global -> winNumOnChrom = 0;
     global -> startCoord = 0;
     global -> endCoord = 0;
-    global -> sigma = -1;
     global -> numLoci = record -> globalNumLoci;
     global -> numHaps = record -> globalNumHaps;
     global -> saveIBS = true;
