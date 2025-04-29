@@ -126,7 +126,7 @@ static inline int kputl(long c, kstring_t *s)
 static inline void destroy_kstring(kstring_t* k) {
 	if (k == NULL)
 		return;
-	if (ks_str(k) != NULL)
+	if (k -> m != 0)
 		free(ks_str(k)); 
 	free(k);
 }
