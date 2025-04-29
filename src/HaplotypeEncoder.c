@@ -16,7 +16,7 @@ HaplotypeEncoder_t* init_haplotype_encoder(int numSamples) {
     encoder -> numSamples = numSamples;
     encoder -> locus = (Locus*) calloc(numSamples, sizeof(Locus));
     encoder -> genotypes = (Genotype_t*) calloc(numSamples, sizeof(Genotype_t));
-    encoder -> chrom = init_kstring(NULL);
+    encoder -> chrom = calloc(1, sizeof(kstring_t));
     encoder -> labelMap = kh_init(haplotype);
     // The tree has one node, which corresponds to the empty string.
     encoder -> numLeaves = 1;

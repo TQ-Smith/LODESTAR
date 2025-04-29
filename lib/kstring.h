@@ -122,19 +122,6 @@ static inline int kputl(long c, kstring_t *s)
 	return 0;
 }
 
-
-// Added on 14 May 2024.
-// Create a kstring_t*.
-static inline kstring_t* init_kstring(const char* s) {
-	kstring_t* k = (kstring_t*) calloc(1, sizeof(kstring_t));
-	k -> s = NULL;
-	k -> l = 0; k -> m = 0;
-	if (s == NULL)
-		return k;
-	kputs(s, k);
-	return k;
-}
-
 // Free memory associated with a kstring_t*
 static inline void destroy_kstring(kstring_t* k) {
 	if (k == NULL)
@@ -148,7 +135,7 @@ static inline void destroy_kstring(kstring_t* k) {
 // Overwrites contents of s with l characters from p.
 static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
 	destroy_kstring(s);
-	s = init_kstring(NULL);
+	s = calloc(1, sizeof(kstring_t));
 	return kputsn(p, l, s);
 }
 
@@ -156,7 +143,8 @@ static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
 // Overwrites contents of s with p.
 static inline void ks_overwrite(const char* p, kstring_t *s) {
 	destroy_kstring(s);
-	s = init_kstring(p);
+	s = calloc(1, sizeof(kstring_t));
+	kputs(p, s);
 }
 
 #endif

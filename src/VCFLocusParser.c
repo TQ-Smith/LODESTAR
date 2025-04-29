@@ -23,7 +23,7 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, bool takeComplement, dou
     kstream_t* stream = ks_init(file);
     
     // Initialize the buffer to read in from the stream.
-    kstring_t* buffer = init_kstring(NULL);
+    kstring_t* buffer = calloc(1, sizeof(kstring_t));
     
     // Parse all the meta data in the VCF file.
     int dret;
@@ -45,7 +45,7 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, bool takeComplement, dou
     for (int i = 0; i <= ks_len(buffer); i++) {
         if (i == ks_len(buffer) || ks_str(buffer)[i] == '\t') {
             if (numTabs > 8) {
-                sampleNames[numTabs - 9] = init_kstring(NULL);
+                sampleNames[numTabs - 9] = calloc(1, sizeof(kstring_t));
                 kputsn(ks_str(buffer) + prevIndex + 1, i - prevIndex - 1, sampleNames[numTabs - 9]);
             }
             prevIndex = i;
@@ -55,14 +55,15 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, bool takeComplement, dou
     
     // Allocate our structure and the memory for its fields.
     VCFLocusParser_t* parser = (VCFLocusParser_t*) calloc(1, sizeof(VCFLocusParser_t));
-    parser -> fileName = init_kstring(fileName);
+    parser -> fileName = calloc(1, sizeof(kstring_t));
+    kputs(fileName, parser -> fileName);
     parser -> file = file;
     parser -> stream = stream;
     parser -> numSamples = numSamples;
     parser -> sampleNames = sampleNames;
     parser -> buffer = buffer;
     parser -> isEOF = false;
-    parser -> nextChrom = init_kstring(NULL);
+    parser -> nextChrom = calloc(1, sizeof(kstring_t));
     parser -> nextLocus = (Locus*) calloc(numSamples, sizeof(Locus));
 
     // Set fields from arguments.

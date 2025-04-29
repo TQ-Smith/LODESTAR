@@ -66,7 +66,8 @@ int main (int argc, char *argv[]) {
     // Create output files.
     FILE* windowSummaries = NULL;
     FILE* windowPoints = NULL;
-    kstring_t* outputBasename = init_kstring(lodestar_config -> outputBasename);
+    kstring_t* outputBasename = calloc(1, sizeof(kstring_t));
+    kputs(lodestar_config -> outputBasename, outputBasename);
     printf("\nLogging progress in %s.log\n\n", ks_str(outputBasename));
     kputs(".log", outputBasename);
     INIT_LOG(ks_str(outputBasename));
