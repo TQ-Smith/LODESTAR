@@ -134,17 +134,15 @@ static inline void destroy_kstring(kstring_t* k) {
 // Added on 3 May 2024.
 // Overwrites contents of s with l characters from p.
 static inline int ks_overwriten(const char* p, int l, kstring_t *s) {
-	destroy_kstring(s);
-	s = calloc(1, sizeof(kstring_t));
+	s -> l = 0;
 	return kputsn(p, l, s);
 }
 
 // Added on 3 May 2024.
 // Overwrites contents of s with p.
-static inline void ks_overwrite(const char* p, kstring_t *s) {
-	destroy_kstring(s);
-	s = calloc(1, sizeof(kstring_t));
-	kputs(p, s);
+static inline int ks_overwrite(const char* p, kstring_t *s) {
+	s -> l = 0;
+	return kputs(p, s);
 }
 
 #endif
