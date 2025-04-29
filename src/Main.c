@@ -128,7 +128,7 @@ int main (int argc, char *argv[]) {
         printf("Beginning Procrustes Analysis ...\n\n");
 
         // Just global against the target.
-        if (lodestar_config -> global) {
+        if (!lodestar_config -> global) {
             // double** shuffleX = create_matrix(double, parser -> numSamples, lodestar_config -> k);
             // global -> t = procrustes_statistic(global -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, false, lodestar_config -> similarity);
             // global -> pval = permutation_test(global -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, global -> t, lodestar_config -> NUM_PERMS);

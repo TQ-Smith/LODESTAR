@@ -12,6 +12,10 @@
 #include "Matrix.h"
 MATRIX_INIT(double, double)
 
+void print_kstring(FILE* out, kstring_t* str) {
+    fwrite(ks_str(str), sizeof(char), str -> l - 1, out);
+}
+
 double** open_target_file(char* targetFileName, int N, int K) {
     double inVal;
     int numVals = 0;
@@ -58,7 +62,8 @@ void print_configuration(FILE* output, LodestarConfiguration_t* lodestar_config)
 void print_window_summary(FILE* output, Window_t* window) {
     fprintf(output, "%d\t", window -> winNum);
     fprintf(output, "%d\t", window -> winNumOnChrom);
-    fprintf(output, "%s\t", ks_str(window -> chromosome));
+    print_kstring(output, window -> chromosome);
+    fprintf(output, "\t");
     fprintf(output, "%d\t", window -> startCoord);
     fprintf(output, "%d\t", window -> endCoord);
     fprintf(output, "%d\t", window -> numLoci);
@@ -83,7 +88,9 @@ void print_window(FILE* output, kstring_t** sampleNames, Window_t* window, int N
     fprintf(output, "\t\t{\n");
     fprintf(output, "\t\t\t\"Window Number\": %d,\n", window -> winNum);
     fprintf(output, "\t\t\t\"Window Number on Chromosome\": %d,\n", window -> winNumOnChrom);
-    fprintf(output, "\t\t\t\"Chromosome\": \"%s\",\n", ks_str(window -> chromosome));
+    fprintf(output, "\t\t\t\"Chromosome\": \"");
+    print_kstring(output, window -> chromosome);
+    fprintf(output, "\",\n");
     fprintf(output, "\t\t\t\"Start Coordinate\": %d,\n", window -> startCoord);
     fprintf(output, "\t\t\t\"End Coordinate\": %d,\n", window -> endCoord);
     fprintf(output, "\t\t\t\"Number of Loci\": %d,\n", window -> numLoci);
