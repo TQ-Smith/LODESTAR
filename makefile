@@ -56,4 +56,4 @@ lib/lapack:
 
 .PHONY: clean
 clean:
-	rm src/*.o bin/* lib/lapack/*.o
+	rm src/*.o lib/lapack/*.o
