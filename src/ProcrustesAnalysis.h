@@ -12,6 +12,7 @@
 #include "RealSymEigen.h"
 #include "Window.h"
 #include <stdbool.h>
+#include "gsl/gsl_rng.h"
 
 // Compute Procrustes statistic between two sets of points.
 // Accepts:
@@ -33,6 +34,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
 
 // Perfrom permutation test to evaluate the significance of the Procrustes statistic t0.
 // Accepts:
+//  gsl_rng* r -> The random number generator.
 //  double** Xc -> The n-by-k mean-centered query point set.
 //  double** Yc -> The n-by-k mean centered target point set.
 //  double** shuffleX -> A copy of Xc used to hold permuted rows of Xc.
@@ -45,8 +47,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
 //  double t0 -> The Procrustes statistic used in the permutation test.
 //  int NUM_PERMS -> The number of permutations to execute.
 // Returns: double, The p-value obtained from the permutation test.
-double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEigen_t* eigen, int N, int K, bool similarity, double t0, int NUM_PERMS);
-
+double permutation_test(gsl_rng* r, double** Xc, double** Yc, double** shuffleX, RealSymEigen_t* eigen, int N, int K, bool similarity, double t0, int NUM_PERMS);
 
 // Perform Procrustes Analysis between all windows and the target. Executes permutation test and transforms.
 // Accepts:

@@ -64,11 +64,8 @@ void print_window_summary(FILE* output, Window_t* window) {
     fprintf(output, "%d\t", window -> numLoci);
     fprintf(output, "%d\t", window -> numHaps);
     fprintf(output, "%lf\t", window -> sigma);
-    //if (window -> t == -1)
-    //    fprintf(output, "%lf\t", -1.0);
-    //else
-    //    fprintf(output, "%lf\t", window -> pval);
-    fprintf(output, "%lf\n", window -> t);
+    fprintf(output, "%lf\t", window -> t);
+    fprintf(output, "%lf\n", window -> pval);
 }
 
 void print_row(FILE* output, double* row, int K) {
@@ -90,6 +87,7 @@ void print_window(FILE* output, kstring_t** sampleNames, Window_t* window, int N
     fprintf(output, "\t\t\t\"Number of Haplotypes\": %d,\n", window -> numHaps);
     fprintf(output, "\t\t\t\"sigma\": %lf,\n", window -> sigma);
     fprintf(output, "\t\t\t\"t-statistic\": %lf,\n", window -> t);
+    fprintf(output, "\t\t\t\"p-value\": %lf,\n", window -> pval);
     // Print points.
     fprintf(output, "\t\t\t\"X\": ");
     if (window -> X == NULL) {
@@ -164,10 +162,10 @@ int check_configuration(LodestarConfiguration_t* lodestar_config) {
         return -1;
     }
     // Check number of permutation.
-    //if (lodestar_config -> NUM_PERMS <= 0) { 
-    //    fprintf(stderr, "--perms %d must be INT > 0.\n", lodestar_config -> NUM_PERMS); 
-    //    return -1;
-    //}
+    if (lodestar_config -> NUM_PERMS <= 0) { 
+        fprintf(stderr, "--perms %d must be INT > 0.\n", lodestar_config -> NUM_PERMS); 
+        return -1;
+    }
     // Check target file if exists.
     if (lodestar_config -> targetFileName != NULL && access(lodestar_config -> targetFileName, F_OK) != 0) {
         fprintf(stderr, "--target %s does not exist.\n", lodestar_config -> targetFileName); 
@@ -210,8 +208,8 @@ void print_help() {
     fprintf(stderr, "   --target file.tsv       A n-by-k tsv file containing user defined coordinates.\n");
     fprintf(stderr, "                               All local relatedness plots will be compared to this set of points in\n");
     fprintf(stderr, "                               Procrustes analysis.\n");
-    //fprintf(stderr, "   --perms INT             The number of permutations to execute.\n");
-    //fprintf(stderr, "                               Default 10000.\n");
+    fprintf(stderr, "   --perms INT             The number of permutations to execute.\n");
+    fprintf(stderr, "                               Default 10000.\n");
     fprintf(stderr, "   --maf DOUBLE            Drops biallelic VCF records with a MAF less than threshold.\n");
     fprintf(stderr, "                               Default 0.05\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of genotypes missing greater than threshold.\n");
@@ -229,7 +227,7 @@ static ko_longopt_t long_options[] = {
     {"noTransform",     ko_no_argument,         317},
     {"global",          ko_no_argument,         303},
     {"threads",         ko_required_argument,   304},
-    //{"perms",           ko_required_argument,   306},
+    {"perms",           ko_required_argument,   306},
     {"maf",             ko_required_argument,   309},
     {"afMissing",       ko_required_argument,   310},
     {"target",          ko_required_argument,   315},
@@ -299,7 +297,7 @@ LodestarConfiguration_t* init_lodestar_config(int argc, char *argv[]) {
             case 302: lodestar_config -> similarity = false; break;
             case 303: lodestar_config -> global = true; break;
             case 304: lodestar_config -> threads = (int) strtol(options.arg, (char**) NULL, 10); break;
-            //case 306: lodestar_config -> NUM_PERMS = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 306: lodestar_config -> NUM_PERMS = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 309: lodestar_config -> maf = strtod(options.arg, (char**) NULL); break;
             case 310: lodestar_config -> afMissing = strtod(options.arg, (char**) NULL); break;
             case 315: lodestar_config -> targetFileName = options.arg; break;

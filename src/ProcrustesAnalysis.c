@@ -14,6 +14,8 @@
 #include "Logger.h"
 #include "Matrix.h"
 MATRIX_INIT(double, double)
+#include "gsl/gsl_randist.h"
+#include "gsl/gsl_rng.h"
 
 // Define machine percision for floating point comparison.
 #define EPS 1e-08
@@ -66,14 +68,15 @@ int dgesvd(
 // Fischer-Yates shuffle algorithm to shuffle the rows of a matrix.
 //  NOTE: Random number generator needs to be seeded before calling function.
 // Accepts:
+//  gsl_rng* r -> The random number generator.
 //  double** matrix -> The matrix to be shuffled.
 //  int m -> The number of rows in the matrix.
 // Returns: void.
-void shuffle_real_matrix(double** matrix, int m) {
+void shuffle_real_matrix(gsl_rng* r, double** matrix, int m) {
     double* temp = NULL;
-    int j;
-    for (int i = 0; i < m - 1; i++) {
-        j = i + rand() / (RAND_MAX / (m - i) + 1);
+    int j = 0;
+    for (int i = m - 1; i > 0; i--) {
+        j = gsl_rng_uniform_int(r, i + 1);
         temp = matrix[j];
         matrix[j] = matrix[i];
         matrix[i] = temp;
@@ -335,7 +338,7 @@ double correlation(double** Xc, double** Yc, RealSymEigen_t* eigen, int n, int k
     return similarity ? trLambda : (1 - trLambda);
 }
 
-double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEigen_t* eigen, int n, int k, bool similarity, double t0, int NUM_PERMS) {
+double permutation_test(gsl_rng* r, double** Xc, double** Yc, double** shuffleX, RealSymEigen_t* eigen, int n, int k, bool similarity, double t0, int NUM_PERMS) {
 
     // If either set of points were not given, 
     //  return 0. p-values should never be 0.
@@ -353,13 +356,13 @@ double permutation_test(double** Xc, double** Yc, double** shuffleX, RealSymEige
     // Perform NUM_PERMS permutations.
     for (int i = 0; i < NUM_PERMS; i++) {
         // Shuffle the rows of X.
-        shuffle_real_matrix(shuffleX, n);
+        shuffle_real_matrix(r, shuffleX, n);
         
         // Calculate correlation
         t = correlation(shuffleX, Yc, eigen, n, k, similarity);
 
         // If our statistic exceeds our threshold, increment counter.
-        if (t > t0 - EPS) {
+        if (t > t0) {
             numSig++;
         }
     }
@@ -392,28 +395,34 @@ typedef struct {
 void* procrustes_permutation_multi_thread(void* arg) {
     ProcrustesRecord_t* record = (ProcrustesRecord_t*) arg;
 
+    // Create our random number generator.
+    const gsl_rng_type* T = gsl_rng_default;
+    gsl_rng* r = gsl_rng_alloc(T);
+    gsl_rng_set(r, time(NULL));
+
     // Current window thread is performing Procrustes Analysis on.
     Window_t* window = NULL;
     RealSymEigen_t* eigen = init_real_sym_eigen(record -> K);
-    // double** shuffleX = create_matrix(double, record -> N, record -> K);
+    double** shuffleX = create_matrix(double, record -> N, record -> K);
     double t;
 
     // Iterate through thread's partition.
     for (int i = record -> startWindow; i <= record -> endWindow; i++) {
         // Get current window.
         window = record -> windows[i];
-        // LOG_INFO("Performing Procrustes for window %d ...\n", window -> winNum);
+        LOG_INFO("Performing Procrustes for window %d ...\n", window -> winNum);
         // Calculate Procrustes statistic for window.
-        // t = procrustes_statistic(window -> X, NULL, record -> target, NULL, eigen, record -> N, record -> K, false, record -> similarity);
-        // window -> t = t;
-        // window -> pval = permutation_test(window -> X, record -> target, shuffleX, eigen, record -> N, record -> K, record -> similarity, t, record -> NUM_PERMS);
+        t = procrustes_statistic(window -> X, NULL, record -> target, NULL, eigen, record -> N, record -> K, false, record -> similarity);
+        window -> t = t;
+        window -> pval = permutation_test(r, window -> X, record -> target, shuffleX, eigen, record -> N, record -> K, record -> similarity, t, record -> NUM_PERMS);
         // Transform.
         window -> t = procrustes_statistic(window -> X, NULL, record -> target, record -> target0, eigen, record -> N, record -> K, record -> transform, record -> similarity);
     }
     
     destroy_real_sym_eigen(eigen);
-    // destroy_matrix(double, shuffleX, record -> N);
+    destroy_matrix(double, shuffleX, record -> N);
     free(record);
+    gsl_rng_free(r);
     return NULL;
 }
 
@@ -427,21 +436,26 @@ void procrustes_sliding_window(Window_t** windows, int numWindows, double** targ
 
     // If a single thread or we are not executing a permutation test.
     if (NUM_THREADS == 1) {
+        // Create our random number generator.
+        const gsl_rng_type* T = gsl_rng_default;
+        gsl_rng* r = gsl_rng_alloc(T);
+        gsl_rng_set(r, time(NULL));
         RealSymEigen_t* eigen = init_real_sym_eigen(K);
         double t;
         // For each window, perform Procrustes analysis.
-        // double** shuffleX = create_matrix(double, N, K);
+        double** shuffleX = create_matrix(double, N, K);
         for (int i = startWindow; i < numWindows; i++) {
             LOG_INFO("Performing Procrustes for window %d ...\n", windows[i] -> winNum);
-            // t = procrustes_statistic(windows[i] -> X, NULL, target, NULL, eigen, N, K, false, similarity);
-            // windows[i] -> t = t;
+            t = procrustes_statistic(windows[i] -> X, NULL, target, NULL, eigen, N, K, false, similarity);
+            windows[i] -> t = t;
             // Execute permutation test.
-            // windows[i] -> pval = permutation_test(windows[i] -> X, target, shuffleX, eigen, N, K, similarity, t, NUM_PERMS);
+            windows[i] -> pval = permutation_test(r, windows[i] -> X, target, shuffleX, eigen, N, K, similarity, t, NUM_PERMS);
             // Transform.
             windows[i] -> t = procrustes_statistic(windows[i] -> X, NULL, target, target0, eigen, N, K, transform, similarity);
         }
-        // destroy_matrix(double, shuffleX, N);
+        destroy_matrix(double, shuffleX, N);
         destroy_real_sym_eigen(eigen);
+        free(r);
         return;
     }
 

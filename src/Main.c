@@ -13,11 +13,12 @@
 #include "Matrix.h"
 MATRIX_INIT(double, double)
 #include <time.h>
+#include <gsl/gsl_rng.h>
 
 int main (int argc, char *argv[]) {
 
-    // Seed random number generator.
-    srand(time(NULL));
+    // Configure RNG.
+    gsl_rng_env_setup();
 
     // Get configuration.
     LodestarConfiguration_t* lodestar_config = init_lodestar_config(argc, argv);
@@ -130,12 +131,17 @@ int main (int argc, char *argv[]) {
 
         // Just global against the target.
         if (lodestar_config -> global && targetPoints != windows[0] -> X) {
-            // double** shuffleX = create_matrix(double, parser -> numSamples, lodestar_config -> k);
-            // global -> t = procrustes_statistic(global -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, false, lodestar_config -> similarity);
-            // global -> pval = permutation_test(global -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, global -> t, lodestar_config -> NUM_PERMS);
+            // Create our random number generator.
+            const gsl_rng_type* T = gsl_rng_default;
+            gsl_rng* r = gsl_rng_alloc(T);
+            gsl_rng_set(r, time(NULL));
+            double** shuffleX = create_matrix(double, parser -> numSamples, lodestar_config -> k);
+            windows[0] -> t = procrustes_statistic(windows[0] -> X, NULL, targetPoints, NULL, eigen, eigen -> N, lodestar_config -> k, false, lodestar_config -> similarity);
+            windows[0] -> pval = permutation_test(r, windows[0] -> X, targetPoints, shuffleX, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> similarity, windows[0] -> t, lodestar_config -> NUM_PERMS);
             // Transform global set of points.
             windows[0] -> t = procrustes_statistic(windows[0] -> X, NULL, targetPoints, targetPointsColMeans, eigen, eigen -> N, lodestar_config -> k, lodestar_config -> transform, lodestar_config -> similarity);
-            // destroy_matrix(double, shuffleX, encoder -> numSamples);
+            destroy_matrix(double, shuffleX, encoder -> numSamples);
+            free(r);
         // Sliding window against the target.
         } else {
             procrustes_sliding_window(windows, numWindows, targetPoints, targetPointsColMeans, parser -> numSamples, lodestar_config -> k, lodestar_config-> transform, lodestar_config -> similarity, lodestar_config -> NUM_PERMS, lodestar_config -> threads);
@@ -185,7 +191,7 @@ int main (int argc, char *argv[]) {
         for (int i = 0; i < argc; i++) 
             fprintf(windowSummaries, "%s ", argv[i]);
         // fprintf(windowSummaries, "\nWin\tWinChr\tChr\tStart\tEnd\tnLoci\tnHaps\tp-val\tt-stat\n");
-        fprintf(windowSummaries, "\nWin\tWinChr\tChr\tStart\tEnd\tnLoci\tnHaps\tsigma\tt-stat\n");
+        fprintf(windowSummaries, "\nWin\tWinChr\tChr\tStart\tEnd\tnLoci\tnHaps\tsigma\tt-stat\tp-val\n");
         for (int i = 1; i < numWindows; i++) {
             print_window_summary(windowSummaries, windows[i]);
             fprintf(windowPoints, "\n");
