@@ -12,9 +12,9 @@ set -eux
 # 10 samples from IBS, GBR, FIN, and TSI in that order.
 
 # ALL_chr6.vcf.gz contains all samples from the 1000 Genomes Project Chromosome 6.
-# Get portion of p-arm and remove monomorphic sites.
+# Get portion of p-arm, remove monomorphic sites, and combine multiallelic sites to one record.
 tabix ALL_chr6.vcf.gz
-bcftools view -r "chr6:1-40000000" -S EUR_40.txt ALL_chr6.vcf.gz | bcftools view -c 1 -c 1:nonmajor | gzip > EUR_40_chr6.vcf.gz
+bcftools view -r "chr6:1-40000000" -S EUR_40.txt ALL_chr6.vcf.gz | bcftools view -c 1 -c 1:nonmajor | bcftools norm -m +any | gzip > EUR_40_chr6.vcf.gz
 
 # Create target file.
 wget https://raw.githubusercontent.com/gavinr/world-countries-centroids/refs/heads/master/dist/countries.csv
