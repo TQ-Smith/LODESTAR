@@ -8,6 +8,7 @@
 
 #include "Interface.h"
 #include "ketopt.h"
+#include <stdio.h>
 #include <unistd.h> // Check if file exits.
 
 // Make sure user defined arguments are valid.
@@ -30,8 +31,8 @@ int check_configuration(LodestarConfig_t* lodestarConfig) {
         return -1;
     }
     // Check target file if exists.
-    if (lodestar_config -> targetFileName != NULL && access(lodestar_config -> targetFileName, F_OK) != 0) {
-        fprintf(stderr, "-y %s does not exist.\n", lodestar_config -> targetFileName); 
+    if (lodestarConfig -> targetFileName != NULL && access(lodestarConfig -> targetFileName, F_OK) != 0) {
+        fprintf(stderr, "-y %s does not exist.\n", lodestarConfig -> targetFileName); 
         return -1;
     }
     // Check haplotype and block size are valid.
@@ -148,7 +149,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     // If the input file was not give, exit.
     if (argc - options.ind != 1) {
         fprintf(stderr, "No input file given. Exiting!\n");
-        destroy_lodestar_config(config);
+        destroy_lodestar_config(lodestarConfig);
         return NULL;
     }
 
@@ -160,9 +161,9 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
         return NULL;
 
     // If output base name was not specific, then use the input file basename.
-    if (config -> outBaseName == NULL) {
-        int endPos = (int) ((long) strstr(config -> inputFileName, ".vcf") - (long) config -> inputFileName) + 1;
-        config -> outBaseName = strndup(config -> inputFileName, endPos - 1);
+    if (lodestarConfig -> outputBasename == NULL) {
+        int endPos = (int) ((long) strstr(lodestarConfig -> inputFileName, ".vcf") - (long) lodestarConfig -> inputFileName) + 1;
+        lodestarConfig -> outputBasename = strndup(lodestarConfig -> inputFileName, endPos - 1);
     }
 
     // Copy command to echo in output files.
@@ -178,7 +179,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
 
 void destroy_lodestar_config(LodestarConfig_t* lodestarConfig) {
     if (lodestarConfig == NULL)
-        return NULL;
+        return;
     if (lodestarConfig -> targetFileName != NULL)
         free(lodestarConfig -> targetFileName);
     free(lodestarConfig -> inputFileName);
