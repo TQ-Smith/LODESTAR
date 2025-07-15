@@ -1,4 +1,3 @@
-
 // File: VCFLocusParser.c
 // Date: 6 May 2024
 // Author: T. Quinn Smith
@@ -62,20 +61,21 @@ bool seek(VCFLocusParser_t* parser) {
         // Set the number of alleles at the locus.
         parser -> nextNumAlleles = numAlleles;
         
-        // Calculate the number of missing genotypes present.
-        afMissing = parser -> alleleCounts[numAlleles] / (2.0 * parser -> numSamples);
-        parser -> alleleCounts[numAlleles] = 0;
         // Iterate through the allele counts to get the MAF and the most frequent allele.
         maf = 1;
         afMax = 0;
         for (int i = 0; i < numAlleles; i++) {
-            af = parser -> alleleCounts[i] / (2.0 * parser -> numSamples - parser -> alleleCounts[numAlleles]);
+            af = parser -> alleleCounts[i] / (2.0 * parser -> numSamples);
             if (af < maf)
                 maf = af;
             if (af > afMax)
                 afMax = af;
             parser -> alleleCounts[i] = 0;
         }
+
+        // Calculate the number of missing genotypes present.
+        afMissing = parser -> alleleCounts[numAlleles] / (2.0 * parser -> numSamples);
+        parser -> alleleCounts[numAlleles] = 0;
 
         // Test that all thresholds are met.
         if (numAlleles > MAX_NUM_ALLELES)
@@ -129,14 +129,14 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, double maf, double afMis
     // Allocate the array to hold the sample names.
     char** sampleNames = (char**) calloc(numSamples, sizeof(char*));
     // Read in the sample names.
-    int numTabs = 0, prevIndex;
-    for (int i = 0; i <= buffer -> l; i++) {
-        if (i == buffer -> l || buffer -> s[i] == '\t') {
-            if (numTabs > 8)
-                sampleNames[numTabs - 9] = strndup(buffer -> s + prevIndex + 1, i - prevIndex - 1);
-            prevIndex = i;
-            numTabs++;
-        }
+    char* header = strdup(buffer -> s);
+    char* tok = NULL;
+    tok = strtok(header, "\t");
+    for (int i = 0; i < 9; i++)
+        tok = strtok(NULL, "\t");
+    for (int i = 0; i < numSamples; i++) {
+        sampleNames[i] = strdup(tok);
+        tok = strtok(NULL, "\t");
     }
     
     // Allocate our structure and the memory for its fields.

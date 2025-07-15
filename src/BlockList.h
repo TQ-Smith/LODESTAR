@@ -7,9 +7,19 @@
 #ifndef _BLOCK_LIST_H_
 #define _BLOCK_LIST_H_
 
+// Our structure that tracks the counts of loci
+//  with 0, 1, and 2 alleles IBS between samples.
+typedef struct {
+    unsigned int ibs0;
+    unsigned int ibs1;
+    unsigned int ibs2;
+} IBS_t;
+
 // A node in the BlockList.
 typedef struct Block {
-    // Used for allele counting.
+    // Allele counts and lower dimensional representation for the block.
+    IBS_t* alleleCounts;
+    double** X;
 
     // Block attributes.
     int blockNum;
@@ -18,6 +28,7 @@ typedef struct Block {
     int startCoordinate;
     int endCoordinate;
     int numHaps;
+    int numSamples;
     // The next block in the list.
     struct Block* next;
 } Block_t;
@@ -25,10 +36,13 @@ typedef struct Block {
 // A list of blocks.
 typedef struct BlockList {
     // Global counts.
+    IBS_t* alleleCounts;
+    double** X;
 
     // Global attributes.
     int numSamples;
     int numBlocks;
+    int numHaps;
     Block_t* head;
     Block_t* tail;
 } BlockList_t;
@@ -43,7 +57,9 @@ BlockList_t* init_block_list(int numSamples);
 // Acccepts:
 //  char* chrom -> The chromosome the block is on.
 //  int startCoordinate -> The coordinate of the first record in the block.
-Block_t* init_block(char* chrom, int startCoordinate);
+//  int numSamples -> The number of samples.
+// Returns: Block_t*, the new block.
+Block_t* init_block(char* chrom, int startCoordinate, int numSamples);
 
 // Adds a block to the block list.
 // Accepts:

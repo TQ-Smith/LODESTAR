@@ -40,8 +40,8 @@ void center_matrix(double** X, double* x0, int n, int k);
 //  double** X -> The matrix to normalize.
 //  int n -> The number of rows in X.
 //  int k -> The number of columns in X.
-// Returns: void.
-void normalize_matrix(double** X, int n, int k);
+// Returns: int, 0 for success, -1 if X contains only one point (trX = 0).
+int normalize_matrix(double** X, int n, int k);
 
 // A structure to hold all the memory used by dsyevr.
 typedef struct {
@@ -87,5 +87,21 @@ void destroy_real_sym_eigen(RealSymEigen_t* eigen);
 //              or packedDistanceMatrix contains nan.
 double compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix, int k, double** X);
 
+// Compute Procrustes statistic between two sets of points.
+// Accepts:
+//  double** Xc -> The n-by-k mean-centered query point set.
+//  double* x0 -> The k-dimensional vector holding the mean of each dimension.
+//                  If NULL, x0 is assumed to be the 0 vector.
+//  double** Yc -> The n-by-k mean centered target point set.
+//  double* y0 -> The k-dimensional vector holding the mean of each dimension.
+//                  If NULL, x0 is assumed to be the 0 vector.
+//  RealSymEigen_t* eigen -> Used to find eigen-pairs of k-by-k matrix. Allocated
+//                  memory is used to store covariance matrix even if Xc is not to be
+//                  transformed.
+//  int N -> The number of points.
+//  int K -> The dimension of each point.
+//  bool transform -> If set, x0 will be transformed by Procrustes analysis.
+// Returns: double, The Procrustes statistic.
+double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, RealSymEigen_t* eigen, int N, int K, bool transform);
 
 #endif

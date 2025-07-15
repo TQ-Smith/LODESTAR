@@ -19,11 +19,8 @@ src/Main.o: src/LODESTAR.o src/Interface.o
 src/Interface.o: lib/kstring.o
 	$(CC) $(CFLAGS) src/Interface.c -o src/Interface.o
 
-src/LODESTAR.o: src/Procrustes.o src/HaplotypeEncoder.o src/BlockList.o src/MatrixOperations.o
+src/LODESTAR.o: src/HaplotypeEncoder.o src/BlockList.o src/MatrixOperations.o
 	$(CC) $(CFLAGS) src/LODESTAR.c -o src/LODESTAR.o
-
-src/Procrustes.o:
-	$(CC) $(CFLAGS) src/Procrustes.c -o src/Procrustes.o
 
 src/BlockList.o:
 	$(CC) $(CFLAGS) src/BlockList.c -o src/BlockList.o

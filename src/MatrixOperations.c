@@ -26,7 +26,7 @@ void center_matrix(double** X, double* x0, int n, int k) {
             X[i][j] -= x0[j];
 }
 
-void normalize_matrix(double** X, int n, int k) {
+int normalize_matrix(double** X, int n, int k) {
     // trx is equivalent to trX^TX.
     double trX = 0;
     for (int i = 0; i < n; i++) {
@@ -34,14 +34,14 @@ void normalize_matrix(double** X, int n, int k) {
             trX += X[i][j] * X[i][j];
         }
     }
-    if (fabs(trX) <= EPS) {
-        return 0;
-    }
+    if (fabs(trX) <= EPS)
+        return -1;
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < k; j++) {
             X[i][j] = X[i][j] / sqrt(trX);
         }
     }
+    return 1;
 }
 
 // A few things to note:
@@ -207,6 +207,7 @@ double compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix
         return -1;
     
     // Project points down into dimension k.
+    double eigenSum = 0;
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < k; j++) {
             // If the eigenvalue is negative, we cannot take square-root. Return error.
@@ -215,10 +216,18 @@ double compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix
             if (eigen -> W[k - j - 1] < 0 || fabs(eigen -> W[k - j - 1]) <= EPS)
                 return -1;
             X[i][j] = eigen -> Z[(k - j - 1) * N + i] * sqrt(eigen -> W[k - j - 1]);
+            eigenSum += sqrt(eigen -> W[k - j - 1]);
         }
     }
 
-    return 0;
+    // Calculate the effective rank.
+    double effectiveRank = 0;
+    for (int i = 0; i < k; i++) {
+        double p = sqrt(eigen -> W[k - i - 1]) / eigenSum;
+        effectiveRank += p * log(p);
+    }
+
+    return exp(-effectiveRank);
 }
 
 // A few things to note:
@@ -259,4 +268,165 @@ int dgesvd(
             WORK, &LWORK, &INFO);
     
     return INFO;
+}
+
+double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, RealSymEigen_t* eigen, int N, int K, bool transform) {
+    
+    // If either set of points were not given, 
+    //  return -1. t-statistic can never be negative.
+    if (Xc == NULL || Yc == NULL)
+        return -1;
+
+    // Trace of (Xc^T)Xc, trace of (Yc^T)Yc.
+    double trX = 0, trY = 0;
+
+    // For convience we rename eigen -> Z to C.
+    double* C = eigen -> Z;
+
+    // Calculate C = (Yc^T)Xc. Simultaneously calculate the sum(X^2) and the sum(Y^2).
+    for (int i = 0; i < K; i++) {
+        for (int j = 0; j < K; j++) {
+            C[COL_MAJOR(i, j, K)] = 0;
+            for (int k = 0; k < N; k++) {
+                C[COL_MAJOR(i, j, K)] += Yc[k][i] * Xc[k][j];
+                if (j == 0) {
+                    trX += Xc[k][i] * Xc[k][i];
+                    trY += Yc[k][i] * Yc[k][i]; 
+                }
+            }
+        }
+    }
+
+    // If either set of points is one point, then we cannot perform Procrustes analysis.
+    if (fabs(trX) <= EPS || fabs(trY) <= EPS)
+        return -1;
+
+    // Trace of the lambda matrix.
+    double rho, trLambda = 0;
+
+    // In the case we do not transform the X coordinates, we just need the trace of the lambda matrix.
+    //  When K = 1, 2, 3, we can calculate the eigenvalues of covC directly as the roots of its characteric equation.
+    //  We used Numerical Recipes in C, Third Edition to solve the quadratic and cubic equations.
+    if (!transform) {
+        // We rename eigen -> A to covC to get the singular values.
+        double* covC = eigen -> A;
+
+         // Variables to calculate singular values when K = 1, 2, or 3.
+        double a0, a1, a2, b, c, det, q, r, theta, root1, root2, root3;
+
+        // Calculate covC = (C^T)C.
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < K; j++) {
+                covC[COL_MAJOR(i, j, K)] = 0;
+                for (int k = 0; k < K; k++)
+                    covC[COL_MAJOR(i, j, K)] += C[COL_MAJOR(k, i, K)] * C[COL_MAJOR(k, j, K)];
+            }
+        }
+
+        // Calculate roots of the characteristic equation.
+        switch (K) {
+            case 1:
+                trLambda += sqrt(covC[COL_MAJOR(0, 0, K)]);
+                break;
+            case 2:
+                b = -(covC[COL_MAJOR(0, 0, K)] + covC[COL_MAJOR(1, 1, K)]);
+                c = (covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(1, 1, K)]) - (covC[COL_MAJOR(0, 1, K)] * covC[COL_MAJOR(1, 0, K)]);
+                det = sqrt(b * b - 4 * c);
+                q = b < 0 ? -0.5 * (b - det) : -0.5 * (b + det);
+                trLambda += sqrt(q) + sqrt(c / q);
+                break;
+            case 3:
+                // Cubic is in the form x^3 + a0x^2 + a1x^1 + a0 = 0.
+                a2 = -(covC[COL_MAJOR(0, 0, K)] + covC[COL_MAJOR(1, 1, K)] + covC[COL_MAJOR(2, 2, K)]);
+                a1 = ((covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(1, 2, K)] * covC[COL_MAJOR(2, 1, K)]))
+                    + ((covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(0, 2, K)] * covC[COL_MAJOR(2, 0, K)]))
+                    + ((covC[COL_MAJOR(0, 0, K)] * covC[COL_MAJOR(1, 1, K)]) - (covC[COL_MAJOR(0, 1, K)] * covC[COL_MAJOR(1, 0, K)]));
+                a0 = -(covC[COL_MAJOR(0, 0, K)] * ((covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(2, 1, K)] * covC[COL_MAJOR(1, 2, K)])) 
+                    - covC[COL_MAJOR(0, 1, K)] * ((covC[COL_MAJOR(1, 0, K)] * covC[COL_MAJOR(2, 2, K)]) - (covC[COL_MAJOR(1, 2, K)] * covC[COL_MAJOR(2, 0, K)])) 
+                    + covC[COL_MAJOR(0, 2, K)] * ((covC[COL_MAJOR(1, 0, K)] * covC[COL_MAJOR(2, 1, K)]) - (covC[COL_MAJOR(1, 1, K)] * covC[COL_MAJOR(2, 0, K)])));
+                q = a1 / 3 - (a2 * a2) / 9;
+                r = (a1 * a2 - 3 * a0) / 6 - (a2 * a2 * a2) / 27;
+                theta = (q == 0) ? 0 : acos(r / sqrt(-q * -q * -q));
+                root1 = 2 * sqrt(-q) * cos(theta / 3) - (a2 / 3);
+                root2 = 2 * sqrt(-q) * cos((theta / 3) - (2 * M_PI / 3)) - (a2 / 3);
+                root3 = 2 * sqrt(-q) * cos((theta / 3) + (2 * M_PI / 3)) - (a2 / 3);
+                trLambda += sqrt(root1) + sqrt(root2) + sqrt(root3);
+                break;
+            default:
+                // When K > 3, we use LAPACK to calculate the eigenvalues.
+                compute_k_eigenvalues(eigen, K);
+                for (int i = 0; i < K; i++)
+                    trLambda += sqrt(eigen -> W[i]);
+                break;
+        }
+        
+        rho = trLambda / trX;
+
+    // Otherwise, we transform.
+    } else {
+
+        // Calculate SVD on C.
+        //  eigen -> W will contain the singular values.
+        //  eigen -> A will contain U.
+        //  eigen -> auxilary will contain V^T.
+        int INFO = dgesvd('A', 'A', K, K, C, K, eigen -> W, eigen -> A, K, eigen -> auxilary, K, eigen -> WORK, 26 * K);
+
+        // If SVD did not converge, return -1. Procrustes statistic can never have this value.
+        if (INFO != 0)
+            return -1;
+
+        // Compute A^T which is stored in Z.
+        double dot;
+        for (int i = 0; i < K; i++) {
+            // Set b vector to 0 by default.
+            eigen -> WORK[i] = 0;
+            for (int j = 0; j < K; j++) {
+                dot = 0;
+                for (int k = 0; k < K; k++) {
+                    dot += eigen -> A[COL_MAJOR(i, k, K)] * eigen -> auxilary[COL_MAJOR(k, j, K)];
+                }
+                eigen -> Z[COL_MAJOR(i, j, K)] = dot;
+            }
+            trLambda += eigen -> W[i];
+        }
+
+        // Calculate rho.
+        rho = trLambda / trX;
+
+        // Calculate b and store in WORK.
+        //  K is usually small so we can seperate
+        //  this calculation from the previous loop.
+        if (x0 != NULL || y0 != NULL) {
+            for (int i = 0; i < K; i++) {
+                if (x0 == NULL) {
+                    eigen -> WORK[i] = y0[i];
+                } else {
+                    dot = 0;
+                    for (int j = 0; j < K; j++) {
+                        dot += eigen -> Z[COL_MAJOR(i, j, K)] * x0[j];
+                    }
+                    eigen -> WORK[i] = y0[i] - rho * dot;
+                }
+            }
+        }
+
+        // Transform points.
+        //  rho * A^T * x + b.
+        //  Use eigen -> W as extra space.
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < K; j++) {
+                eigen -> W[j] = 0;
+                for (int k = 0; k < K; k++) {
+                    eigen -> W[j] += eigen -> Z[COL_MAJOR(j, k, K)] * Xc[i][k];
+                }
+            }
+            for (int j = 0; j < K; j++)
+                Xc[i][j] = rho * eigen -> W[j] + eigen -> WORK[j];
+        }
+
+    }
+
+    double ss = trY + rho * rho * trX - 2 * rho * trLambda;
+    return sqrt(1 - ss);
+
 }

@@ -33,6 +33,8 @@ typedef struct {
     double maf;
     // Missing allele frequency threshold.
     double afMissing;
+    // Drop block if there are less than threshold number of haps.
+    int dropThreshold;
     // The full command.
     char* cmd;
 } LodestarConfig_t;

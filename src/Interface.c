@@ -49,6 +49,11 @@ int check_configuration(LodestarConfig_t* lodestarConfig) {
         fprintf(stderr, "--threads %d must be INT > 0.\n", lodestarConfig -> threads); 
         return -1;
     }
+    // Check drop threshhold.
+    if (lodestarConfig -> dropThreshold < 1) {
+        fprintf(stderr, "--drop %d must be INT > 0.\n", lodestarConfig -> dropThreshold); 
+        return -1;
+    }
     // All parameters are valid, return success.
     return 0;
 }
@@ -77,6 +82,8 @@ void print_help() {
     fprintf(stderr, "                               The set of points to use in Procrustes analysis\n");
     fprintf(stderr, "   -t INT                  Number of threads to use in computation.\n");
     fprintf(stderr, "                               Default 1.\n");
+    fprintf(stderr, "   -d INT                  Block is dropped if less than INT number of haplotypes are within block.\n");
+    fprintf(stderr, "                               Default 1.\n");
     fprintf(stderr, "   --maf DOUBLE            Drops biallelic VCF records with a MAF less than threshold.\n");
     fprintf(stderr, "                               Default 0.05.\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of genotypes missing greater than threshold.\n");
@@ -93,6 +100,7 @@ static ko_longopt_t long_options[] = {
     {"dimension",       ko_required_argument,   'k'},
     {"haplotypeSize",   ko_required_argument,   'h'},
     {"blockSize",       ko_required_argument,   'b'},
+    {"drop",            ko_required_argument,   'd'},
     {0, 0, 0}
 };
 
@@ -105,7 +113,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     } 
 
     // Parse user options.
-    const char *opt_str = "h:b:k:t:y:";
+    const char *opt_str = "h:b:k:t:y:d:";
     ketopt_t options = KETOPT_INIT;
     int c;
 
@@ -128,6 +136,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     lodestarConfig -> k = 2;
     lodestarConfig -> threads = 1;
     lodestarConfig -> targetFileName = NULL;
+    lodestarConfig -> dropThreshold = 1;
     lodestarConfig -> maf = 0.05;
     lodestarConfig -> afMissing = 0.1;
 
@@ -141,6 +150,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
             case 'k': lodestarConfig -> k = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 't': lodestarConfig -> threads = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 'y': lodestarConfig -> targetFileName = strdup(options.arg); break;
+            case 'd': lodestarConfig -> dropThreshold = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 309: lodestarConfig -> maf = strtod(options.arg, (char**) NULL); break;
             case 310: lodestarConfig -> afMissing = strtod(options.arg, (char**) NULL); break;
         }
@@ -169,9 +179,9 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     // Copy command to echo in output files.
     kstring_t* cmd = calloc(1, sizeof(kstring_t));
     for (int i = 0; i < argc; i++)
-        kvsprintf(cmd, "%s", argv[i]);
-    lodestarConfig -> cmd = strdup(cmd -> s);
-    free(cmd -> s); free(cmd);
+        ksprintf(cmd, "%s ", argv[i]);
+    lodestarConfig -> cmd = cmd -> s;
+    free(cmd);
 
     return lodestarConfig;
 

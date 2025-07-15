@@ -7,7 +7,7 @@
 // Purpose: Run LODESTAR analysis.
 
 #include "Interface.h"
-#include "VCFLocusParser.h"
+#include "LODESTAR.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -51,10 +51,11 @@ int main (int argc, char *argv[]) {
     LodestarConfig_t* lodestarConfig = init_lodestar_config(argc, argv);
     if (lodestarConfig == NULL)
         return -1;
-
-    // We create the VCF parser.
+   
+    // We create the VCF parser and haplotype encoder.
     VCFLocusParser_t* parser = init_vcf_locus_parser(lodestarConfig -> inputFileName, lodestarConfig -> maf, lodestarConfig -> afMissing, true);
-
+    HaplotypeEncoder_t* encoder = init_haplotype_encoder(parser -> numSamples);
+    
     // Check to make sure k is valid.
     if (lodestarConfig -> k >= parser -> numSamples) {
         fprintf(stderr, "k = %d >= numSamples %d. Exiting!\n", lodestarConfig -> k, parser -> numSamples);
@@ -76,5 +77,12 @@ int main (int argc, char *argv[]) {
             return -1;
         }
     }
+    
+    BlockList_t* globalList = block_allele_sharing(parser, encoder, encoder -> numSamples, lodestarConfig -> BLOCK_SIZE, lodestarConfig -> HAP_SIZE, lodestarConfig -> threads);
 
+    for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next)
+        fprintf(stderr, "%d\t%s\t%d\t%d\t%d\n", temp -> blockNum, temp -> chrom, temp -> startCoordinate, temp -> endCoordinate, temp -> numHaps);
+    
+    destroy_block_list(globalList);
+    return 0;
 }
