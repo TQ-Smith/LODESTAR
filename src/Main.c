@@ -79,9 +79,8 @@ int main (int argc, char *argv[]) {
     }
     
     BlockList_t* globalList = block_allele_sharing(parser, encoder, encoder -> numSamples, lodestarConfig -> BLOCK_SIZE, lodestarConfig -> HAP_SIZE, lodestarConfig -> threads);
-
     for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next)
-        fprintf(stderr, "%d\t%s\t%d\t%d\t%d\n", temp -> blockNum, temp -> chrom, temp -> startCoordinate, temp -> endCoordinate, temp -> numHaps);
+        fprintf(stderr, "%d\t%d\t%s\t%d\t%d\t%d\n", temp -> blockNum, temp -> blockNumOnChrom, temp -> chrom, temp -> startCoordinate, temp -> endCoordinate, temp -> numHaps);
     
     destroy_block_list(globalList);
     return 0;

@@ -158,7 +158,7 @@ bool get_next_haplotype(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, i
         isSameChrom = strcmp(encoder -> chrom, parser -> nextChrom) == 0;
         encoder -> numLoci++;
     }
-
+    
     return !isEOF && isSameChrom;
 
 }

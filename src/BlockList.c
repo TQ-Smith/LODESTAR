@@ -35,10 +35,11 @@ void append_block(BlockList_t* blockList, Block_t* block) {
     if (blockList -> numBlocks == 0) {
         blockList -> head = block;
         blockList -> tail = block;
-        return;
+    } else {
+        blockList -> tail -> next = block;
+        blockList -> tail = block;
     }
-    blockList -> tail -> next = block;
-    blockList -> tail = block;
+    blockList -> numBlocks++;
 }
 
 void destroy_block(Block_t* block) {
