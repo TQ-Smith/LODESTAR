@@ -7,6 +7,8 @@
 #ifndef _BLOCK_LIST_H_
 #define _BLOCK_LIST_H_
 
+#include <stdbool.h>
+
 // Our structure that tracks the counts of loci
 //  with 0, 1, and 2 alleles IBS between samples.
 typedef struct {
@@ -21,6 +23,10 @@ typedef struct Block {
     IBS_t* alleleCounts;
     double** X;
 
+    // Procrustes t-statistic and t-statistic if block is excluded.
+    double procrustesT;
+    double excludedT;
+
     // Block attributes.
     int blockNum;
     int blockNumOnChrom;
@@ -28,6 +34,7 @@ typedef struct Block {
     int startCoordinate;
     int endCoordinate;
     int numHaps;
+    bool isDropped;
     int numSamples;
     // The next block in the list.
     struct Block* next;
@@ -38,6 +45,10 @@ typedef struct BlockList {
     // Global counts.
     IBS_t* alleleCounts;
     double** X;
+
+    // If jackknife is computed
+    double stdDev;
+    double pvalue;
 
     // Global attributes.
     int numSamples;

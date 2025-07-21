@@ -66,6 +66,8 @@ int main (int argc, char *argv[]) {
 
     // User defined points to perform Procrustes against.
     double** userPoints = NULL;
+    double** y = NULL;
+    double* y0 = NULL;
 
     // If target file supplied, make sure it is valid, at least numSamples-by-k
     if (lodestarConfig -> targetFileName != NULL) {
@@ -76,12 +78,36 @@ int main (int argc, char *argv[]) {
             destroy_vcf_locus_parser(parser);
             return -1;
         }
+        // Center and normalize.
+        y = calloc(parser -> numSamples, sizeof(double*));
+        y0 = calloc(lodestarConfig -> k, sizeof(double));
+        for (int i = 0; i < parser -> numSamples; i++)
+            y[i] = calloc(lodestarConfig -> k, sizeof(double));
     }
     
+    // Partition genome into blocks and calculate IBS within the blocks.
+    fprintf(stderr, "Beginning blocking algorithm ...\n");
     BlockList_t* globalList = block_allele_sharing(parser, encoder, encoder -> numSamples, lodestarConfig -> BLOCK_SIZE, lodestarConfig -> HAP_SIZE, lodestarConfig -> threads);
-    for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next)
-        fprintf(stderr, "%d\t%d\t%s\t%d\t%d\t%d\n", temp -> blockNum, temp -> blockNumOnChrom, temp -> chrom, temp -> startCoordinate, temp -> endCoordinate, temp -> numHaps);
     
+    // Convert IBS to ASD and calculate jackknifed procrustes statistic.
+    fprintf(stderr, "\nFinished blocking. Starting Procrustes ...\n");
+    procrustes(globalList, y, y0, lodestarConfig -> dropThreshold, lodestarConfig -> threads);
+
+    fprintf(stderr, "Finished Procrustes. Writing results to output files...\n");
+
+
+    // Free used memory.
+    if (y0 != NULL)
+        free(y0);
+    if (y != NULL) {
+        for (int i = 0; i < parser -> numSamples; i++)
+            free(y[i]);
+        free(y);
+    }
     destroy_block_list(globalList);
+    destroy_vcf_locus_parser(parser);
+    destroy_haplotype_encoder(encoder);
+    destroy_lodestar_config(lodestarConfig);
+    fprintf(stderr, "Done!\n");
     return 0;
 }

@@ -10,6 +10,7 @@
 
 Block_t* init_block(char* chrom, int startCoordinate, int numSamples) {
     Block_t* block = calloc(1, sizeof(Block_t));
+    block -> isDropped = false;
     block -> chrom = strdup(chrom);
     block -> startCoordinate = startCoordinate;
     block -> numHaps = 0;

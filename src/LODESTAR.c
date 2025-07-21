@@ -12,7 +12,10 @@
 //  and overlapping genotypes for the current window.
 pthread_mutex_t genomeLock = PTHREAD_MUTEX_INITIALIZER;
 
-// Used to mutually exclude access to the genome-wide IBS counts.
+// Used to mutually exclude access to the global list.
+pthread_mutex_t listLock = PTHREAD_MUTEX_INITIALIZER;
+
+// Used to mutually exclude access to the global counts.
 pthread_mutex_t globalLock = PTHREAD_MUTEX_INITIALIZER;
 
 // The number of elements in the upper triangle of a symmetric matrix.
@@ -94,6 +97,9 @@ void* partition(void* arg) {
     // Points to the new block we add to the global list.
     Block_t* block;
 
+    // Holds global counts.
+    IBS_t* globalCounts = calloc(PACKED_SIZE(blockCounts -> numSamples), sizeof(IBS_t));
+
     while (true) {
 
         pthread_mutex_lock(&genomeLock);
@@ -129,19 +135,46 @@ void* partition(void* arg) {
         *(blockCounts -> blockNum) = *(blockCounts -> blockNum) + 1;
         pthread_mutex_unlock(&genomeLock);
 
+        // Calculate IBS for all haplotypes within the block and accumulate global.
+        block -> alleleCounts = calloc(PACKED_SIZE(blockCounts -> numSamples), sizeof(IBS_t));
+        BlockGenotypes_t* locus = blockCounts -> head;
+        for (int l = 0; l < blockCounts -> numHaps; l++) {
+            for (int i = 0; i < blockCounts -> numSamples; i++) {
+                for (int j = i + 1; j < blockCounts -> numSamples; j++) {
+                    if (locus -> genotypes[i].left != MISSING && locus -> genotypes[j].right != MISSING) {
+                        int numSharedAlleles = num_shared_alleles(locus -> genotypes[i], locus -> genotypes[j]);
+                        increment_ibs_value(&(block -> alleleCounts[PACKED_INDEX(i, j)]), numSharedAlleles);
+                        increment_ibs_value(&(globalCounts[PACKED_INDEX(i, j)]), numSharedAlleles);
+                    }
+                }
+            }
+            locus = locus -> next;
+        }
 
-        pthread_mutex_lock(&globalLock);
+        // Append the block to the global list.
+        pthread_mutex_lock(&listLock);
+        fprintf(stderr, "Finished block number %d on %s from %d to %d.\n", block -> blockNum, block -> chrom, block -> startCoordinate, block -> endCoordinate);
         append_block(blockCounts -> globalList, block);
-        pthread_mutex_unlock(&globalLock);
+        pthread_mutex_unlock(&listLock);
     }
+
+    // Accumulate global counts.
+    pthread_mutex_lock(&listLock);
+    for (int i = 0; i < blockCounts -> numSamples; i++)
+        for (int j = i + 1; j < blockCounts -> numSamples; j++)
+            add_ibs(&(blockCounts -> globalList -> alleleCounts[PACKED_INDEX(i, j)]), &(globalCounts[PACKED_INDEX(i, j)]));
+    pthread_mutex_unlock(&listLock);
+
     destroy_block_counts(blockCounts);
+    free(globalCounts);
+
     return NULL;
 }
 
 BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t* encoder, int numSamples, int blockSize, int haplotypeSize, int NUM_THREADS) {
     
     BlockList_t* globalList = init_block_list(numSamples);
-    BlockList_t* sortedGlobalList = calloc(1, sizeof(BlockList_t));
+    globalList -> alleleCounts = calloc(PACKED_SIZE(numSamples), sizeof(IBS_t));
     int* blockNum = calloc(1, sizeof(int));
     *blockNum = 1;
     
@@ -181,37 +214,59 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
             pthread_join(threads[i], NULL);
         free(threads);
 
-        sortedGlobalList -> numSamples = globalList -> numSamples;
-        sortedGlobalList -> numHaps = globalList -> numHaps;
-        sortedGlobalList -> alleleCounts = globalList -> alleleCounts;
-        sortedGlobalList -> X = globalList -> X;
-        Block_t* temp1, temp2;
-        // Selection sort linked list of blocks.
-        for (int i = 1; i <= globalList -> numBlocks - 1; i++) {
-            for (Block_t* j = globalList; j -> next -> blockNum != i; j = j -> next) {
-                temp1 = j;
-                temp2 = j -> next;
+        // Selection sort on block number.
+        //  Didn't want to think about this.
+        //  https://www.geeksforgeeks.org/dsa/iterative-selection-sort-for-linked-list/
+        Block_t* sortedHead = NULL;
+        Block_t* sortedTail = NULL;
+        while (globalList -> head != NULL) {
+            Block_t* min = globalList -> head;
+            Block_t* prevMin = NULL;
+            Block_t* current = globalList -> head;
+            Block_t* prev = NULL;
+            while (current != NULL) {
+                if (current -> blockNum < min -> blockNum) {
+                    min = current;
+                    prevMin = prev;
+                }
+                prev = current;
+                current = current -> next;
             }
-            temp1 -> next = temp1 -> next -> next;
-            if (i == 1) {
-                sortedGlobalList -> head = temp2;
-                sortedGlobalList -> tail = temp2;
-            } else if (i == globalList -> numBlocks - 1) {
-                sortedGlobalList -> tail = globalList -> head;
+            if (min == globalList -> head) {
+                globalList -> head = globalList -> head -> next;
             } else {
-                sortedGlobalList -> tail -> next = temp2;
-                sortedGlobalList -> tail = temp2;
+                prevMin -> next = min -> next;
+            }
+            if (sortedHead == NULL) {
+                sortedHead = min;
+                sortedTail = min;
+            } else {
+                sortedTail -> next = min;
+                sortedTail = min;
             }
         }
+        globalList -> head = sortedHead;
     }
-    free(globalList);
     free(blockNum);
 
+    // Assign blockNumOnChrom.
     int blockNumOnChrom = 1;
-    sortedGlobalList -> head -> numBlockOnChrom = 1;
-    for (temp1 = sortedGlobalList -> head -> next; temp1 != NULL; temp1 = temp1 -> next) {
-        
+    for (Block_t* temp = globalList -> head; temp -> next != NULL; temp = temp -> next) {
+        temp -> blockNumOnChrom = blockNumOnChrom;
+        if (strcmp(temp -> chrom, temp -> next -> chrom) != 0)
+            blockNumOnChrom = 1;
+        else 
+            blockNumOnChrom++;
     }
+    globalList -> tail -> blockNumOnChrom = blockNumOnChrom;
 
-    return sortedGlobalList;
+    return globalList;
+}
+
+typedef struct BlockProcrustes {
+
+} BlockProcrustes_t;
+
+void procrustes(BlockList_t* globalList, double** y, double* y0, int dropThreshold, int NUM_THREADS) {
+
 }

@@ -13,6 +13,45 @@
 #include "MatrixOperations.h"
 #include <math.h>
 
+// Better than using an if statement. ibs0, ibs1, and ibs2 correspond the 1st, 2nd, and 3rd field
+//  in the structure. We offset the address of the passed IBS structure and increment the 
+//  corresponding pointer. Pointer arithemtic can cause issues on different architecture.
+// #define increment_ibs_value(ibs, numShared) ((*(((unsigned int *) &(ibs)) + numShared))++)
+static inline void increment_ibs_value(IBS_t* ibs, int numShared) {
+    switch (numShared) {
+        case 0: ibs -> ibs0++; break;
+        case 1: ibs -> ibs1++; break;
+        case 2: ibs -> ibs2++; break;
+    }
+}
+
+// Calculate the number of shared alleles between two genotypes.
+// Accepts:
+//  Genotype_t s1 -> The genotype of the first sample.
+//  Genotype_t s2 -> The genotype of the second sample.
+// Returns: int, The number of shared alleles.
+static inline int num_shared_alleles(Genotype_t s1, Genotype_t s2) {
+    if (s1.left == s2.left) {
+        if (s1.right == s2.right)
+            return 2;
+        else
+            return 1;
+    } else if (s1.left == s2.right) {
+        if (s1.right == s2.left) 
+            return 2;
+        else 
+            return 1;
+    } else {
+        if (s1.right == s2.right)
+            return 1;
+        else if (s1.right == s2.left)
+            return 1;
+        else
+            return 0;
+    }
+}
+
+
 // Converts IBS counts to asd.
 // Accepts:
 //  IBS_t ibs -> The IBS counts.
@@ -33,6 +72,25 @@ static inline void add_ibs(IBS_t* left, IBS_t* right) {
     left -> ibs2 += right -> ibs2;
 }
 
+// Calculate IBS in blocks along the genome.
+// Accepts:
+//  VCFLocusParser_t* vcfFile -> The VCF file we are reading in.
+//  HaplotypeEncoder_t* encoder -> The encoder for haplotypes.
+//  int numSamples -> The number of samples.
+//  int blockSize -> The size of the genome block in base-pairs.
+//  int haplotypeSize -> The size of the haplotypes in number of loci.
+//  int NUM_THREADS -> The number of threads to use in the computation.
+// Returns: BlockList_t*, the list of resulting blocks.
 BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t* encoder, int numSamples, int blockSize, int haplotypeSize, int NUM_THREADS);
+
+// Convert IBS blocks to ASD and perform Procrustes analysis
+// Accepts:
+//  BlockList_t* globalList -> Blocks along the genome with precomputed pairwise IBS.
+//  double** y -> Centered/normalized target matrix to perform Procrustes against. If NULL, use genome-wide matrix and do not caluclate jackknife.
+//  double* y0 -> Centroid of user defined points.
+//  int dropThreshold -> If numHaps within block is less than this value, we drop it.
+//  int NUM_THREADS -> The number of threads to use in the computation.
+// Returns: void.
+void procrustes(BlockList_t* globalList, double** y, double* y0, int dropThreshold, int NUM_THREADS);
 
 #endif
