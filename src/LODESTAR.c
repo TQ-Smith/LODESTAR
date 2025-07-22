@@ -18,13 +18,6 @@ pthread_mutex_t listLock = PTHREAD_MUTEX_INITIALIZER;
 // Used to mutually exclude access to the global counts.
 pthread_mutex_t globalLock = PTHREAD_MUTEX_INITIALIZER;
 
-// The number of elements in the upper triangle of a symmetric matrix.
-#define PACKED_SIZE(N) ((N * (N + 1)) / 2)
-
-// We store the upper triangle of a symmetric matrix in a one-dimensional array,
-//  This is known as packed storage. Element Aij -> a_{i + j * (j + 1) / 2}
-#define PACKED_INDEX(i, j) (i + j * (j + 1) / 2)
-
 // Saves a few lines to swap values.
 #define SWAP(a, b, TEMP) TEMP = a; a = b; b = TEMP
 
@@ -210,6 +203,7 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
         blockCounts -> globalList = globalList;
         blockCounts -> blockNum = blockNum;
         partition((void*) blockCounts);
+        // Wait for all threads to finish.
         for (int i = 0; i < NUM_THREADS - 1; i++)
             pthread_join(threads[i], NULL);
         free(threads);
@@ -264,9 +258,62 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
 }
 
 typedef struct BlockProcrustes {
-
+    BlockList_t* globalList;
+    double** y;
+    double* y0;
+    int k;
+    int dropThreshold;
+    // Points to the current block in globalList for the next thread to operate on.
+    Block_t* current;
 } BlockProcrustes_t;
 
-void procrustes(BlockList_t* globalList, double** y, double* y0, int dropThreshold, int NUM_THREADS) {
+void* mds_procrustes(void* arg) {
+    BlockProcrustes_t* blockProcrustes = (BlockProcrustes_t*) arg;
+
+    return NULL;
+}
+
+void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int dropThreshold, int NUM_THREADS) {
+
+    // Compute Procrustes statistic for each block.
+    if (NUM_THREADS == 1) {
+        BlockProcrustes_t* blockProcrustes = calloc(1, sizeof(BlockProcrustes_t));
+        blockProcrustes -> globalList = globalList;
+        blockProcrustes -> y = y;
+        blockProcrustes -> y0 = y0;
+        blockProcrustes -> k = k;
+        blockProcrustes -> dropThreshold = dropThreshold;
+        blockProcrustes -> current = globalList -> head;
+        mds_procrustes((void*) blockProcrustes);
+    } else {
+        pthread_t* threads = (pthread_t*) calloc(NUM_THREADS - 1, sizeof(pthread_t));
+        for (int i = 0; i < NUM_THREADS - 1; i++) {
+            BlockProcrustes_t* blockProcrustes = calloc(1, sizeof(BlockProcrustes_t));
+            blockProcrustes -> globalList = globalList;
+            blockProcrustes -> y = y;
+            blockProcrustes -> y0 = y0;
+            blockProcrustes -> k = k;
+            blockProcrustes -> dropThreshold = dropThreshold;
+            blockProcrustes -> current = globalList -> head;
+            pthread_create(&threads[i], NULL, mds_procrustes, (void*) blockProcrustes);
+        }
+        BlockProcrustes_t* blockProcrustes = calloc(1, sizeof(BlockProcrustes_t));
+        blockProcrustes -> globalList = globalList;
+        blockProcrustes -> y = y;
+        blockProcrustes -> y0 = y0;
+        blockProcrustes -> k = k;
+        blockProcrustes -> dropThreshold = dropThreshold;
+        blockProcrustes -> current = globalList -> head;
+        mds_procrustes((void*) blockProcrustes);
+        // Wait for all threads to finish.
+        for (int i = 0; i < NUM_THREADS - 1; i++)
+            pthread_join(threads[i], NULL);
+        free(threads);
+    }
+
+    // If applicable, then calculate weighted jackknife.
+    if (y != NULL) {
+
+    }
 
 }

@@ -13,6 +13,13 @@
 #include "MatrixOperations.h"
 #include <math.h>
 
+// The number of elements in the upper triangle of a symmetric matrix.
+#define PACKED_SIZE(N) ((N * (N + 1)) / 2)
+
+// We store the upper triangle of a symmetric matrix in a one-dimensional array,
+//  This is known as packed storage. Element Aij -> a_{i + j * (j + 1) / 2}
+#define PACKED_INDEX(i, j) (i + j * (j + 1) / 2)
+
 // Better than using an if statement. ibs0, ibs1, and ibs2 correspond the 1st, 2nd, and 3rd field
 //  in the structure. We offset the address of the passed IBS structure and increment the 
 //  corresponding pointer. Pointer arithemtic can cause issues on different architecture.
@@ -88,9 +95,10 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
 //  BlockList_t* globalList -> Blocks along the genome with precomputed pairwise IBS.
 //  double** y -> Centered/normalized target matrix to perform Procrustes against. If NULL, use genome-wide matrix and do not caluclate jackknife.
 //  double* y0 -> Centroid of user defined points.
+//  int k -> The dimension to reduce to.
 //  int dropThreshold -> If numHaps within block is less than this value, we drop it.
 //  int NUM_THREADS -> The number of threads to use in the computation.
 // Returns: void.
-void procrustes(BlockList_t* globalList, double** y, double* y0, int dropThreshold, int NUM_THREADS);
+void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int dropThreshold, int NUM_THREADS);
 
 #endif

@@ -26,6 +26,12 @@
 // Used for comparing a floating point to 0.
 #define EPS 1.0e-8
 
+// Create an n-by-k matrix.
+double** init_matrix(int n, int k);
+
+// Destroy an n-by-k matrix.
+void destroy_matrix(double** X, int n);
+
 // Center a matrix for use in MDS.
 // Accepts:
 //  double** X -> The matrix to center.

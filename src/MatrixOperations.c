@@ -13,6 +13,22 @@
 #include "MatrixOperations.h"
 #include <math.h>
 
+double** init_matrix(int n, int k) {
+    double** X = calloc(n, sizeof(double));
+    for (int i = 0; i < n; i++)
+        X[i] = calloc(k, sizeof(double));
+    return X;
+}
+
+void destroy_matrix(double** X, int n) {
+    if (X == NULL)
+        return;
+    for (int i = 0; i < n; i++)
+        if (X[i] != NULL)
+            free(X[i]);
+    free(X);
+}
+
 void center_matrix(double** X, double* x0, int n, int k) {
     // Calculate the center.
     for (int i = 0; i < k; i++) {

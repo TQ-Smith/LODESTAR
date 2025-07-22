@@ -23,9 +23,10 @@ typedef struct Block {
     IBS_t* alleleCounts;
     double** X;
 
-    // Procrustes t-statistic and t-statistic if block is excluded.
+    // Procrustes t-statistic, t-statistic if block is excluded, and effective rank of points.
     double procrustesT;
     double excludedT;
+    double effectRank;
 
     // Block attributes.
     int blockNum;
@@ -45,6 +46,7 @@ typedef struct BlockList {
     // Global counts.
     IBS_t* alleleCounts;
     double** X;
+    double effectRank;
 
     // If jackknife is computed
     double stdDev;

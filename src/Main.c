@@ -13,9 +13,7 @@
 
 double** open_target_file(char* targetFileName, int N, int K) {
     // Create target matrix.
-    double** targetPoints = (double**) calloc(N, sizeof(double*));
-    for (int i = 0; i < N; i++)
-        targetPoints[i] = (double*) calloc(K, sizeof(double));
+    double** targetPoints = init_matrix(N, K);
 
     // Read in values from target.
     int numLines = 0;
@@ -32,9 +30,7 @@ double** open_target_file(char* targetFileName, int N, int K) {
         if (tok != NULL || numLines == N) {
             fclose(targetFile);
             free(line);
-            for (int i = 0; i < N; i++)
-                free(targetPoints[i]);
-            free(targetPoints);
+            destroy_matrix(targetPoints, N);
             return NULL;
         }
         numLines++;
@@ -79,31 +75,37 @@ int main (int argc, char *argv[]) {
             return -1;
         }
         // Center and normalize.
-        y = calloc(parser -> numSamples, sizeof(double*));
+        y = init_matrix(parser -> numSamples, lodestarConfig -> k);
         y0 = calloc(lodestarConfig -> k, sizeof(double));
-        for (int i = 0; i < parser -> numSamples; i++)
-            y[i] = calloc(lodestarConfig -> k, sizeof(double));
     }
     
     // Partition genome into blocks and calculate IBS within the blocks.
     fprintf(stderr, "Beginning blocking algorithm ...\n");
     BlockList_t* globalList = block_allele_sharing(parser, encoder, encoder -> numSamples, lodestarConfig -> BLOCK_SIZE, lodestarConfig -> HAP_SIZE, lodestarConfig -> threads);
-    
-    // Convert IBS to ASD and calculate jackknifed procrustes statistic.
-    fprintf(stderr, "\nFinished blocking. Starting Procrustes ...\n");
-    procrustes(globalList, y, y0, lodestarConfig -> dropThreshold, lodestarConfig -> threads);
 
-    fprintf(stderr, "Finished Procrustes. Writing results to output files...\n");
+    // Convert IBS to ASD and compute MDS on global.
+    fprintf(stderr, "\nFinished blocking algorithm. Starting genome-wide MDS calculations ...\n");
+    double* asd = calloc(PACKED_SIZE(encoder -> numSamples), sizeof(double));
+    RealSymEigen_t* eigen = init_real_sym_eigen(encoder -> numSamples);
+    for (int i = 0; i < encoder -> numSamples; i++)
+        for (int j = i + 1; j < encoder -> numSamples; j++)
+            asd[PACKED_INDEX(i, j)] = ibs_to_asd(globalList -> alleleCounts[PACKED_INDEX(i, j)]);
+    globalList -> X = init_matrix(encoder -> numSamples, lodestarConfig -> k);
+    globalList -> effectRank = compute_classical_mds(eigen, asd, lodestarConfig -> k, globalList -> X);
+    destroy_real_sym_eigen(eigen);
+    free(asd);
+
+    // Convert IBS to ASD and calculate jackknifed procrustes statistic.
+    fprintf(stderr, "Finished genome-wide MDS calulations. Starting Procrustes ...\n");
+    procrustes(globalList, y, y0, lodestarConfig -> k, lodestarConfig -> dropThreshold, lodestarConfig -> threads);
+
+    fprintf(stderr, "\nFinished Procrustes. Writing results to output files...\n");
 
 
     // Free used memory.
     if (y0 != NULL)
         free(y0);
-    if (y != NULL) {
-        for (int i = 0; i < parser -> numSamples; i++)
-            free(y[i]);
-        free(y);
-    }
+    destroy_matrix(y, encoder -> numSamples);
     destroy_block_list(globalList);
     destroy_vcf_locus_parser(parser);
     destroy_haplotype_encoder(encoder);
