@@ -43,6 +43,7 @@ typedef struct BlockCounts {
     int numSamples;
     int blockSize;
     int haplotypeSize;
+    int dropThreshold;
 
     // Protected by mutex for adding values to global.
     BlockList_t* globalList;
@@ -126,27 +127,34 @@ void* partition(void* arg) {
         block -> endCoordinate = blockCounts -> encoder -> endCoord;
         block -> blockNum = *(blockCounts -> blockNum);
         *(blockCounts -> blockNum) = *(blockCounts -> blockNum) + 1;
+        if (block -> numHaps < blockCounts -> dropThreshold)
+            block -> isDropped = true;
         pthread_mutex_unlock(&genomeLock);
 
-        // Calculate IBS for all haplotypes within the block and accumulate global.
-        block -> alleleCounts = calloc(PACKED_SIZE(blockCounts -> numSamples), sizeof(IBS_t));
-        BlockGenotypes_t* locus = blockCounts -> head;
-        for (int l = 0; l < blockCounts -> numHaps; l++) {
-            for (int i = 0; i < blockCounts -> numSamples; i++) {
-                for (int j = i + 1; j < blockCounts -> numSamples; j++) {
-                    if (locus -> genotypes[i].left != MISSING && locus -> genotypes[j].right != MISSING) {
-                        int numSharedAlleles = num_shared_alleles(locus -> genotypes[i], locus -> genotypes[j]);
-                        increment_ibs_value(&(block -> alleleCounts[PACKED_INDEX(i, j)]), numSharedAlleles);
-                        increment_ibs_value(&(globalCounts[PACKED_INDEX(i, j)]), numSharedAlleles);
+        // Calculate IBS for all haplotypes within the block and accumulate global if block is not dropped.
+        if (!block -> isDropped) {
+            block -> alleleCounts = calloc(PACKED_SIZE(blockCounts -> numSamples), sizeof(IBS_t));
+            BlockGenotypes_t* locus = blockCounts -> head;
+            for (int l = 0; l < blockCounts -> numHaps; l++) {
+                for (int i = 0; i < blockCounts -> numSamples; i++) {
+                    for (int j = i + 1; j < blockCounts -> numSamples; j++) {
+                        if (locus -> genotypes[i].left != MISSING && locus -> genotypes[j].right != MISSING) {
+                            int numSharedAlleles = num_shared_alleles(locus -> genotypes[i], locus -> genotypes[j]);
+                            increment_ibs_value(&(block -> alleleCounts[PACKED_INDEX(i, j)]), numSharedAlleles);
+                            increment_ibs_value(&(globalCounts[PACKED_INDEX(i, j)]), numSharedAlleles);
+                        }
                     }
                 }
+                locus = locus -> next;
             }
-            locus = locus -> next;
         }
 
         // Append the block to the global list.
         pthread_mutex_lock(&listLock);
-        fprintf(stderr, "Finished block number %d on %s from %d to %d.\n", block -> blockNum, block -> chrom, block -> startCoordinate, block -> endCoordinate);
+        if (block -> isDropped)
+            fprintf(stderr, "Block on %s from %d to %d contains %d haplotypes. Dropped block.\n", block -> chrom, block -> startCoordinate, block -> endCoordinate, block -> numHaps);
+        else
+            fprintf(stderr, "Finished block number %d on %s from %d to %d.\n", block -> blockNum, block -> chrom, block -> startCoordinate, block -> endCoordinate);
         append_block(blockCounts -> globalList, block);
         pthread_mutex_unlock(&listLock);
     }
@@ -164,7 +172,7 @@ void* partition(void* arg) {
     return NULL;
 }
 
-BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t* encoder, int numSamples, int blockSize, int haplotypeSize, int NUM_THREADS) {
+BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t* encoder, int numSamples, int blockSize, int haplotypeSize, int dropThreshold, int NUM_THREADS) {
     
     BlockList_t* globalList = init_block_list(numSamples);
     globalList -> alleleCounts = calloc(PACKED_SIZE(numSamples), sizeof(IBS_t));
@@ -178,6 +186,7 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
         blockCounts -> blockSize = blockSize;
         blockCounts -> numSamples = numSamples;
         blockCounts -> haplotypeSize = haplotypeSize;
+        blockCounts -> dropThreshold = dropThreshold;
         blockCounts -> globalList = globalList;
         blockCounts -> blockNum = blockNum;
         partition((void*) blockCounts);
@@ -190,6 +199,7 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
             blockCounts -> blockSize = blockSize;
             blockCounts -> numSamples = numSamples;
             blockCounts -> haplotypeSize = haplotypeSize;
+            blockCounts -> dropThreshold = dropThreshold;
             blockCounts -> globalList = globalList;
             blockCounts -> blockNum = blockNum;
             pthread_create(&threads[i], NULL, partition, (void*) blockCounts);
@@ -200,6 +210,7 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
         blockCounts -> blockSize = blockSize;
         blockCounts -> numSamples = numSamples;
         blockCounts -> haplotypeSize = haplotypeSize;
+        blockCounts -> dropThreshold = dropThreshold;
         blockCounts -> globalList = globalList;
         blockCounts -> blockNum = blockNum;
         partition((void*) blockCounts);
@@ -262,7 +273,6 @@ typedef struct BlockProcrustes {
     double** y;
     double* y0;
     int k;
-    int dropThreshold;
     // Points to the current block in globalList for the next thread to operate on.
     Block_t* current;
 } BlockProcrustes_t;
@@ -270,10 +280,79 @@ typedef struct BlockProcrustes {
 void* mds_procrustes(void* arg) {
     BlockProcrustes_t* blockProcrustes = (BlockProcrustes_t*) arg;
 
+    // Allocate all required memory.
+    double* asdBlock = calloc(PACKED_SIZE(blockProcrustes -> globalList -> numSamples), sizeof(double));
+    double* asdExclude = calloc(PACKED_SIZE(blockProcrustes -> globalList -> numSamples), sizeof(double));
+    IBS_t* ibsExclude = calloc(PACKED_SIZE(blockProcrustes -> globalList -> numSamples), sizeof(IBS_t));
+    double** xExclude = init_matrix(blockProcrustes -> globalList -> numSamples, blockProcrustes -> k);
+    RealSymEigen_t* eigen = init_real_sym_eigen(blockProcrustes -> globalList -> numSamples);
+
+    // The current block to operate on.
+    Block_t* current = NULL;
+
+    while (true) {
+
+        // Reuse list lock to get the next block.
+        pthread_mutex_lock(&listLock);
+        if (blockProcrustes -> current == NULL) {
+            pthread_mutex_lock(&listLock);
+            break;
+        }
+        current = blockProcrustes -> current;
+        blockProcrustes -> current = blockProcrustes -> current -> next;
+        if (current -> isDropped)
+            fprintf(stderr, "Block on %s from %d to %d was dropped. Skipping.\n", current -> chrom, current -> startCoordinate, current -> endCoordinate);
+        else
+            fprintf(stderr, "Performing MDS and Procrustes for block on %s from %d to %d.\n", current -> chrom, current -> startCoordinate, current -> endCoordinate);
+        pthread_mutex_lock(&listLock);
+
+        if (!current -> isDropped) {
+
+            // Convert to ASD first.
+            for (int i = 0; i < blockProcrustes -> globalList -> numSamples; i++) {
+                for (int j = i + 1; j < blockProcrustes -> globalList -> numSamples; j++) {
+                    asdBlock[PACKED_INDEX(i, j)] = ibs_to_asd(current -> alleleCounts[PACKED_INDEX(i, j)]);
+                    // Exclude block for jackknife.
+                    if (blockProcrustes -> y != NULL) {
+                        ibsExclude[PACKED_INDEX(i, j)] = blockProcrustes -> globalList -> alleleCounts[PACKED_INDEX(i, j)];
+                        sub_ibs(&ibsExclude[PACKED_INDEX(i, j)], &(current -> alleleCounts[PACKED_INDEX(i, j)]));
+                        asdExclude[PACKED_INDEX(i, j)] = ibs_to_asd(ibsExclude[PACKED_INDEX(i, j)]);
+                    }
+                }
+            }
+
+            // Perform MDS and Procrustes.
+            double** X = init_matrix(eigen -> N, blockProcrustes -> k);
+            current -> effectRank = compute_classical_mds(eigen, asdBlock, blockProcrustes -> k, X);
+            // In case MDS did not converge, we drop the block.
+            if (current -> effectRank == -1) {
+                current -> isDropped = true;
+                destroy_matrix(X, eigen -> N);
+            // If we are not performing the jackknfie.
+            } else if (blockProcrustes -> y == NULL) {
+                current -> procrustesT = procrustes_statistic(current -> X, NULL, blockProcrustes -> globalList -> X, NULL, eigen, eigen -> N, blockProcrustes -> k, true);
+            // If we are performing the jackknife.
+            } else {
+                compute_classical_mds(eigen, asdExclude, blockProcrustes -> k, xExclude);
+                current -> procrustesT = procrustes_statistic(current -> X, NULL, blockProcrustes -> y, blockProcrustes -> y0, eigen, eigen -> N, blockProcrustes -> k, true);
+                current -> excludedT = procrustes_statistic(xExclude, NULL, blockProcrustes -> y, blockProcrustes -> y0, eigen, eigen -> N, blockProcrustes -> k, false);
+            }
+            
+        }
+
+    }
+
+    destroy_real_sym_eigen(eigen);
+    destroy_matrix(xExclude, blockProcrustes -> globalList -> numSamples);
+    free(asdBlock);
+    free(asdExclude);
+    free(ibsExclude);
+    free(blockProcrustes);
+
     return NULL;
 }
 
-void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int dropThreshold, int NUM_THREADS) {
+void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_THREADS) {
 
     // Compute Procrustes statistic for each block.
     if (NUM_THREADS == 1) {
@@ -282,7 +361,6 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int drop
         blockProcrustes -> y = y;
         blockProcrustes -> y0 = y0;
         blockProcrustes -> k = k;
-        blockProcrustes -> dropThreshold = dropThreshold;
         blockProcrustes -> current = globalList -> head;
         mds_procrustes((void*) blockProcrustes);
     } else {
@@ -293,7 +371,6 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int drop
             blockProcrustes -> y = y;
             blockProcrustes -> y0 = y0;
             blockProcrustes -> k = k;
-            blockProcrustes -> dropThreshold = dropThreshold;
             blockProcrustes -> current = globalList -> head;
             pthread_create(&threads[i], NULL, mds_procrustes, (void*) blockProcrustes);
         }
@@ -302,7 +379,6 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int drop
         blockProcrustes -> y = y;
         blockProcrustes -> y0 = y0;
         blockProcrustes -> k = k;
-        blockProcrustes -> dropThreshold = dropThreshold;
         blockProcrustes -> current = globalList -> head;
         mds_procrustes((void*) blockProcrustes);
         // Wait for all threads to finish.
@@ -311,9 +387,9 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int drop
         free(threads);
     }
 
-    // If applicable, then calculate weighted jackknife.
+    // If given, then calculate weighted jackknife.
     if (y != NULL) {
-
+        
     }
 
 }

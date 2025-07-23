@@ -49,6 +49,7 @@ typedef struct BlockList {
     double effectRank;
 
     // If jackknife is computed
+    double procrustesT;
     double stdDev;
     double pvalue;
 

@@ -81,7 +81,7 @@ int main (int argc, char *argv[]) {
     
     // Partition genome into blocks and calculate IBS within the blocks.
     fprintf(stderr, "Beginning blocking algorithm ...\n");
-    BlockList_t* globalList = block_allele_sharing(parser, encoder, encoder -> numSamples, lodestarConfig -> BLOCK_SIZE, lodestarConfig -> HAP_SIZE, lodestarConfig -> threads);
+    BlockList_t* globalList = block_allele_sharing(parser, encoder, encoder -> numSamples, lodestarConfig -> BLOCK_SIZE, lodestarConfig -> HAP_SIZE, lodestarConfig -> dropThreshold, lodestarConfig -> threads);
 
     // Convert IBS to ASD and compute MDS on global.
     fprintf(stderr, "\nFinished blocking algorithm. Starting genome-wide MDS calculations ...\n");
@@ -92,12 +92,13 @@ int main (int argc, char *argv[]) {
             asd[PACKED_INDEX(i, j)] = ibs_to_asd(globalList -> alleleCounts[PACKED_INDEX(i, j)]);
     globalList -> X = init_matrix(encoder -> numSamples, lodestarConfig -> k);
     globalList -> effectRank = compute_classical_mds(eigen, asd, lodestarConfig -> k, globalList -> X);
+    globalList -> procrustesT = procrustes_statistic(globalList -> X, NULL, y, y0, eigen, eigen -> N, lodestarConfig -> k, true);
     destroy_real_sym_eigen(eigen);
     free(asd);
 
     // Convert IBS to ASD and calculate jackknifed procrustes statistic.
     fprintf(stderr, "Finished genome-wide MDS calulations. Starting Procrustes ...\n");
-    procrustes(globalList, y, y0, lodestarConfig -> k, lodestarConfig -> dropThreshold, lodestarConfig -> threads);
+    procrustes(globalList, y, y0, lodestarConfig -> k, lodestarConfig -> threads);
 
     fprintf(stderr, "\nFinished Procrustes. Writing results to output files...\n");
 

@@ -79,6 +79,18 @@ static inline void add_ibs(IBS_t* left, IBS_t* right) {
     left -> ibs2 += right -> ibs2;
 }
 
+// Subtracts counts from right to left.
+// Accepts:
+//  IBS_t* left -> The accumulating counts.
+//  IBS_t* right -> The decrementing counts.
+// Returns: void.
+static inline void sub_ibs(IBS_t* left, IBS_t* right) {
+    left -> ibs0 -= right -> ibs0;
+    left -> ibs1 -= right -> ibs1;
+    left -> ibs2 -= right -> ibs2;
+}
+
+
 // Calculate IBS in blocks along the genome.
 // Accepts:
 //  VCFLocusParser_t* vcfFile -> The VCF file we are reading in.
@@ -86,9 +98,10 @@ static inline void add_ibs(IBS_t* left, IBS_t* right) {
 //  int numSamples -> The number of samples.
 //  int blockSize -> The size of the genome block in base-pairs.
 //  int haplotypeSize -> The size of the haplotypes in number of loci.
+//  int dropThreshold -> If numHaps within block is less than this value, we drop it.
 //  int NUM_THREADS -> The number of threads to use in the computation.
 // Returns: BlockList_t*, the list of resulting blocks.
-BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t* encoder, int numSamples, int blockSize, int haplotypeSize, int NUM_THREADS);
+BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t* encoder, int numSamples, int blockSize, int haplotypeSize, int dropThreshold, int NUM_THREADS);
 
 // Convert IBS blocks to ASD and perform Procrustes analysis
 // Accepts:
@@ -96,9 +109,8 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
 //  double** y -> Centered/normalized target matrix to perform Procrustes against. If NULL, use genome-wide matrix and do not caluclate jackknife.
 //  double* y0 -> Centroid of user defined points.
 //  int k -> The dimension to reduce to.
-//  int dropThreshold -> If numHaps within block is less than this value, we drop it.
 //  int NUM_THREADS -> The number of threads to use in the computation.
 // Returns: void.
-void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int dropThreshold, int NUM_THREADS);
+void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_THREADS);
 
 #endif
