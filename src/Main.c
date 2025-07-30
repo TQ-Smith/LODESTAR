@@ -11,6 +11,128 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void print_json_matrix(FILE* out, double** X, int N, int K) {
+    fprintf(out, "[\n");
+    for (int i = 0; i < N; i++) {
+        fprintf(out, "[ ");
+        for (int j = 0; j < K - 1; j++) {
+            fprintf(out, "%lf, ", X[i][j]);
+        }
+        fprintf(out, "%lf ]\n", X[i][K - 1]);
+        if (i != N - 1)
+            fprintf(out, ",\n");
+        else
+            fprintf(out, "\n");
+    }
+    fprintf(out, "]");
+}
+
+void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, double** y, double* y0) {
+    kstring_t* outName = calloc(1, sizeof(kstring_t));
+    ksprintf(outName, "%s.json", lodestarConfig -> outputBasename);
+    FILE* out = fopen(outName -> s, "w");
+    free(outName -> s); free(outName);
+
+    fprintf(out, "{\n");
+
+    // Print out all the global information.
+    fprintf(out, "\"Command:\" %s,\n", lodestarConfig -> cmd);
+    fprintf(out, "\"GlobalNumberOfLoci\": %d,\n", globalList -> numLoci);
+    fprintf(out, "\"GlobalNumberOfHaplotypes\": %d,\n", globalList -> numHaps);
+    fprintf(out, "\"GlobalEffectiveRank\": %lf,\n", globalList -> effectRank);
+    if (lodestarConfig -> targetFileName == NULL) {
+        fprintf(out, "\"GlobalProcrustesStatistic:\" NULL,\n");
+        fprintf(out, "\"GlobalProcrustesStatisticStandardDeviation:\" NULL,\n");
+        fprintf(out, "\"GlobalProcrustesStatisticPvalue:\" NULL,\n");
+    } else {
+        fprintf(out, "\"GlobalProcrustesStatistic:\" %lf,\n", globalList -> procrustesT);
+        fprintf(out, "\"GlobalProcrustesStatisticStandardDeviation:\" %lf,\n", globalList -> stdDev);
+        fprintf(out, "\"GlobalProcrustesStatisticPvalue:\" %lf,\n", globalList -> pvalue);
+    }
+    fprintf(out, "\"GlobalX:\"");
+    print_json_matrix(out, globalList -> X, globalList -> numSamples, lodestarConfig -> k);
+    fprintf(out, ",\n");
+    if (lodestarConfig -> targetFileName == NULL) {
+        fprintf(out, "\"Y:\" NULL,\n");
+        fprintf(out, "\"y0:\" NULL,\n");
+    } else {
+        fprintf(out, "\"Y:\"");
+        print_json_matrix(out, y, globalList -> numSamples, lodestarConfig -> k);
+        fprintf(out, ",\n");
+        fprintf(out, "\"y0:\" [ ");
+        for (int i = 0; i < lodestarConfig -> k - 1; i++)
+            fprintf(out, "%lf, ", y0[i]);
+        fprintf(out, "%lf ],\n", y0[lodestarConfig -> k - 1]);
+    }
+
+    // Print out all the blocks.
+    fprintf(out, "\t\"blocks\": [");
+    for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
+        if (temp -> isDropped)
+            continue;
+        fprintf(out, "\t{\n");
+        fprintf(out, "\t\"BlockNumber\": %d,\n", temp -> blockNum);
+        fprintf(out, "\t\"BlockNumberOnChromosome\": %d,\n", temp -> blockNumOnChrom);
+        fprintf(out, "\t\"Chromosome\": \"%s\",\n", temp -> chrom);
+        fprintf(out, "\t\"StartCoordinate\": %d,\n", temp -> startCoordinate);
+        fprintf(out, "\t\"EndCoordinate\": %d,\n", temp -> endCoordinate);
+        fprintf(out, "\t\"NumberOfLoci\": %d,\n", temp -> numLoci);
+        fprintf(out, "\t\"NumberOfHaplotypes\": %d,\n", temp -> numHaps);
+        if (temp -> isDropped) {
+            fprintf(out, "\t\"EffectiveRank\": %s,\n", "DROPPED");
+            fprintf(out, "\t\"ProcrustesStatistic\": %s,\n", "DROPPED");
+        } else {
+            fprintf(out, "\t\"EffectiveRank\": %lf,\n", temp -> effectRank);
+            fprintf(out, "\t\"ProcrustesStatistic\": %lf,\n", temp -> procrustesT);
+        }
+        fprintf(out, "\t\"X\": ");
+        if (temp -> effectRank != -1)
+            print_json_matrix(out, temp -> X, globalList -> numSamples, lodestarConfig -> k);
+        else 
+            fprintf(out, "NULL\n");
+        fprintf(out, "\t}");
+        if (temp -> next != NULL)
+            fprintf(out, ",\n");
+        else
+            fprintf(out, "\n");
+    }
+    fprintf(out, "\t]\n");
+    fprintf(out, "}\n");
+
+    fclose(out);
+}
+
+void print_summary(LodestarConfig_t* lodestarConfig, BlockList_t* globalList) {
+    kstring_t* outName = calloc(1, sizeof(kstring_t));
+    ksprintf(outName, "%s.tsv", lodestarConfig -> outputBasename);
+    FILE* out = fopen(outName -> s, "w");
+    free(outName -> s); free(outName);
+
+    // Echo command.
+    fprintf(out, "#%s\n", lodestarConfig -> cmd);
+
+    // Print header.
+    if (lodestarConfig -> targetFileName != NULL) {
+        fprintf(out, "#pvalue=%lf,stdDev=%lf\n", globalList -> pvalue, globalList -> stdDev);
+    }
+    fprintf(out, "BlockNum\tBlockNumOnChr\tChr\tStart\tEnd\tNumLoci\tNumHaps\tEffectiveRank\tProcrustesStatistic\n");
+
+    // Print out each block.
+    for(Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
+        if (temp -> isDropped)
+            continue;
+        fprintf(out, "%d\t%d\t%s\t%d\t%d\t%d\t%d", temp -> blockNum, temp -> blockNumOnChrom, temp -> chrom, temp -> startCoordinate, temp -> endCoordinate, temp -> numLoci, temp -> numHaps);
+        fprintf(out, "%lf\t%lf\n", temp -> effectRank, temp -> procrustesT);
+    }
+    fprintf(out, "0\t0\tGLOBAL\t0\t0%d\t%d\t%lf", globalList -> numLoci, globalList -> numHaps, globalList -> effectRank);
+    if (globalList -> procrustesT != 0)
+        fprintf(out, "%lf\n", globalList -> procrustesT);
+    else 
+        fprintf(out, "-1\n");
+
+    fclose(out);
+}
+
 double** open_target_file(char* targetFileName, int N, int K) {
     // Create target matrix.
     double** targetPoints = init_matrix(N, K);
@@ -92,16 +214,19 @@ int main (int argc, char *argv[]) {
             asd[PACKED_INDEX(i, j)] = ibs_to_asd(globalList -> alleleCounts[PACKED_INDEX(i, j)]);
     globalList -> X = init_matrix(encoder -> numSamples, lodestarConfig -> k);
     globalList -> effectRank = compute_classical_mds(eigen, asd, lodestarConfig -> k, globalList -> X);
-    globalList -> procrustesT = procrustes_statistic(globalList -> X, NULL, y, y0, eigen, eigen -> N, lodestarConfig -> k, true);
+    if (y != NULL)
+        globalList -> procrustesT = procrustes_statistic(globalList -> X, NULL, y, y0, eigen, eigen -> N, lodestarConfig -> k, true);
     destroy_real_sym_eigen(eigen);
     free(asd);
 
     // Convert IBS to ASD and calculate jackknifed procrustes statistic.
-    fprintf(stderr, "Finished genome-wide MDS calulations. Starting Procrustes ...\n");
+    fprintf(stderr, "Finished genome-wide MDS calulations. Starting Procrustes ...\n\n");
     procrustes(globalList, y, y0, lodestarConfig -> k, lodestarConfig -> threads);
-
     fprintf(stderr, "\nFinished Procrustes. Writing results to output files...\n");
 
+    // Print summary and JSON file.
+    print_summary(lodestarConfig, globalList);
+    print_json(lodestarConfig, globalList, y, y0);
 
     // Free used memory.
     if (y0 != NULL)

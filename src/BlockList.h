@@ -35,6 +35,7 @@ typedef struct Block {
     int startCoordinate;
     int endCoordinate;
     int numHaps;
+    int numLoci;
     bool isDropped;
     int numSamples;
     // The next block in the list.
@@ -57,6 +58,7 @@ typedef struct BlockList {
     int numSamples;
     int numBlocks;
     int numHaps;
+    int numLoci;
     Block_t* head;
     Block_t* tail;
 } BlockList_t;

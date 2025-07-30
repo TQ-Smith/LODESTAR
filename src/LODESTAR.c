@@ -122,6 +122,7 @@ void* partition(void* arg) {
             blockTemp = blockTemp -> next;
             blockCounts -> numHaps++;
             block -> numHaps++;
+            block -> numLoci += blockCounts -> encoder -> numLoci;
         }
         // Finish the block.
         block -> endCoordinate = blockCounts -> encoder -> endCoord;
@@ -138,7 +139,7 @@ void* partition(void* arg) {
             for (int l = 0; l < blockCounts -> numHaps; l++) {
                 for (int i = 0; i < blockCounts -> numSamples; i++) {
                     for (int j = i + 1; j < blockCounts -> numSamples; j++) {
-                        if (locus -> genotypes[i].left != MISSING && locus -> genotypes[j].right != MISSING) {
+                        if (locus -> genotypes[i].left != MISSING || locus -> genotypes[j].right != MISSING) {
                             int numSharedAlleles = num_shared_alleles(locus -> genotypes[i], locus -> genotypes[j]);
                             increment_ibs_value(&(block -> alleleCounts[PACKED_INDEX(i, j)]), numSharedAlleles);
                             increment_ibs_value(&(globalCounts[PACKED_INDEX(i, j)]), numSharedAlleles);
@@ -160,11 +161,11 @@ void* partition(void* arg) {
     }
 
     // Accumulate global counts.
-    pthread_mutex_lock(&listLock);
+    pthread_mutex_lock(&globalLock);
     for (int i = 0; i < blockCounts -> numSamples; i++)
         for (int j = i + 1; j < blockCounts -> numSamples; j++)
             add_ibs(&(blockCounts -> globalList -> alleleCounts[PACKED_INDEX(i, j)]), &(globalCounts[PACKED_INDEX(i, j)]));
-    pthread_mutex_unlock(&listLock);
+    pthread_mutex_unlock(&globalLock);
 
     destroy_block_counts(blockCounts);
     free(globalCounts);
@@ -254,14 +255,19 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
     }
     free(blockNum);
 
-    // Assign blockNumOnChrom.
+    // Assign blockNumOnChrom and count global number of haps.
     int blockNumOnChrom = 1;
+    globalList -> numHaps = 0;
     for (Block_t* temp = globalList -> head; temp -> next != NULL; temp = temp -> next) {
         temp -> blockNumOnChrom = blockNumOnChrom;
         if (strcmp(temp -> chrom, temp -> next -> chrom) != 0)
             blockNumOnChrom = 1;
         else 
             blockNumOnChrom++;
+        if (!temp -> isDropped) {
+            globalList -> numHaps += temp -> numHaps;
+            globalList -> numLoci += temp -> numLoci;
+        }
     }
     globalList -> tail -> blockNumOnChrom = blockNumOnChrom;
 
@@ -295,7 +301,7 @@ void* mds_procrustes(void* arg) {
         // Reuse list lock to get the next block.
         pthread_mutex_lock(&listLock);
         if (blockProcrustes -> current == NULL) {
-            pthread_mutex_lock(&listLock);
+            pthread_mutex_unlock(&listLock);
             break;
         }
         current = blockProcrustes -> current;
@@ -303,8 +309,8 @@ void* mds_procrustes(void* arg) {
         if (current -> isDropped)
             fprintf(stderr, "Block on %s from %d to %d was dropped. Skipping.\n", current -> chrom, current -> startCoordinate, current -> endCoordinate);
         else
-            fprintf(stderr, "Performing MDS and Procrustes for block on %s from %d to %d.\n", current -> chrom, current -> startCoordinate, current -> endCoordinate);
-        pthread_mutex_lock(&listLock);
+            fprintf(stderr, "Performing MDS and Procrustes for block number %d on %s from %d to %d.\n", current -> blockNum, current -> chrom, current -> startCoordinate, current -> endCoordinate);
+        pthread_mutex_unlock(&listLock);
 
         if (!current -> isDropped) {
 
@@ -326,16 +332,29 @@ void* mds_procrustes(void* arg) {
             current -> effectRank = compute_classical_mds(eigen, asdBlock, blockProcrustes -> k, X);
             // In case MDS did not converge, we drop the block.
             if (current -> effectRank == -1) {
-                current -> isDropped = true;
+                current -> X = NULL;
+                // If the MDS did not converge, then the matrix was singular. We treat this as a matrix
+                //  with only one point. Dropping the block has no effect. So, if we are computing the jackknife we have
+                current -> procrustesT = 0;
+                current -> excludedT = 1;
                 destroy_matrix(X, eigen -> N);
             // If we are not performing the jackknfie.
             } else if (blockProcrustes -> y == NULL) {
                 current -> procrustesT = procrustes_statistic(current -> X, NULL, blockProcrustes -> globalList -> X, NULL, eigen, eigen -> N, blockProcrustes -> k, true);
+                if (current -> procrustesT == -1) {
+                    current -> procrustesT = 0;
+                    current -> excludedT = 1;
+                }
             // If we are performing the jackknife.
             } else {
-                compute_classical_mds(eigen, asdExclude, blockProcrustes -> k, xExclude);
                 current -> procrustesT = procrustes_statistic(current -> X, NULL, blockProcrustes -> y, blockProcrustes -> y0, eigen, eigen -> N, blockProcrustes -> k, true);
-                current -> excludedT = procrustes_statistic(xExclude, NULL, blockProcrustes -> y, blockProcrustes -> y0, eigen, eigen -> N, blockProcrustes -> k, false);
+                if (current -> procrustesT == -1) {
+                    current -> procrustesT = 0;
+                    current -> excludedT = 1;
+                } else {
+                    compute_classical_mds(eigen, asdExclude, blockProcrustes -> k, xExclude);
+                    current -> excludedT = procrustes_statistic(xExclude, NULL, blockProcrustes -> y, blockProcrustes -> y0, eigen, eigen -> N, blockProcrustes -> k, false);
+                }
             }
             
         }
@@ -350,6 +369,13 @@ void* mds_procrustes(void* arg) {
     free(blockProcrustes);
 
     return NULL;
+}
+
+// P-values from jackknife with mean 0 and given std. dev. 
+double get_p_val(double d, double std) {
+    double Z = fabs(d / std);
+    double pnorm = 0.5 * (1 + erf(Z / sqrt(2)));
+    return 2 * (1 - pnorm);
 }
 
 void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_THREADS) {
@@ -389,7 +415,30 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
 
     // If given, then calculate weighted jackknife.
     if (y != NULL) {
-        
+        // Calculate the jackknife estimator.
+        double sum = 0;
+        int n = globalList -> numHaps;
+        for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
+            double dropped = temp -> excludedT;
+            sum += (n - temp -> numHaps) * dropped / (double) n;
+        }
+        double est = globalList -> procrustesT;
+
+        // Our jackknife estimator.
+        double jack = globalList -> numBlocks * est - sum;
+
+        // Calculate the standard error.
+        sum = 0;
+        for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
+            double h = n / (double) temp -> numHaps;
+            double dropped = temp -> excludedT;
+            double pseudo = h * est - (h - 1) * dropped;
+            sum += (pseudo - jack) * (pseudo - jack) / (h - 1);
+        }
+        globalList -> stdDev = sqrt(sum / (double) globalList -> numBlocks);
+
+        // Calculate our pvalues genome-wide.
+        globalList -> pvalue = get_p_val(est, globalList -> stdDev);
     }
 
 }
