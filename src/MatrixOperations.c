@@ -180,7 +180,7 @@ void destroy_real_sym_eigen(RealSymEigen_t* eigen) {
     free(eigen -> auxilary);
     free(eigen);
 }
-
+#include <stdio.h>
 double compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix, int k, double** X) {
 
     int N = eigen -> N;
@@ -242,8 +242,8 @@ double compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix
         double p = sqrt(eigen -> W[k - i - 1]) / eigenSum;
         effectiveRank += p * log(p);
     }
-
-    return exp(-effectiveRank);
+    
+    return exp(-1 * effectiveRank);
 }
 
 // A few things to note:

@@ -7,6 +7,8 @@
 #include "LODESTAR.h"
 #include <pthread.h>
 #include <stdio.h>
+#include "gsl/gsl_rng.h"
+#include "gsl/gsl_randist.h"
 
 // Used to mutually exclude threads' access to the VCF file
 //  and overlapping genotypes for the current window.
@@ -281,16 +283,32 @@ typedef struct BlockProcrustes {
     int k;
     // Points to the current block in globalList for the next thread to operate on.
     Block_t* current;
+    // For the bootstrap.
+    int numReps;
+    int sampleSize;
+    int* currentReplicate;
 } BlockProcrustes_t;
 
-void* mds_procrustes(void* arg) {
+// Randomly sample a non-dropped block.
+Block_t* get_random_block(gsl_rng* r, BlockList_t* globalList) {
+    Block_t* temp = globalList -> head;
+    while (true) {
+        int blockNum = globalList -> numBlocks * (double) gsl_rng_uniform(r);
+        for (int i = 0; i < blockNum; i++)
+            temp = temp -> next;
+        if (!temp -> isDropped)
+            break;
+    }
+    return temp;
+}
+
+void* procrustes_bootstrap(void* arg) {
     BlockProcrustes_t* blockProcrustes = (BlockProcrustes_t*) arg;
 
     // Allocate all required memory.
     double* asdBlock = calloc(PACKED_SIZE(blockProcrustes -> globalList -> numSamples), sizeof(double));
-    double* asdExclude = calloc(PACKED_SIZE(blockProcrustes -> globalList -> numSamples), sizeof(double));
-    IBS_t* ibsExclude = calloc(PACKED_SIZE(blockProcrustes -> globalList -> numSamples), sizeof(IBS_t));
-    double** xExclude = init_matrix(blockProcrustes -> globalList -> numSamples, blockProcrustes -> k);
+    IBS_t* ibsBlock = calloc(PACKED_SIZE(blockProcrustes -> globalList -> numSamples), sizeof(IBS_t));
+    double** bootX = init_matrix(blockProcrustes -> globalList -> numSamples, blockProcrustes -> k);
     RealSymEigen_t* eigen = init_real_sym_eigen(blockProcrustes -> globalList -> numSamples);
 
     // The current block to operate on.
@@ -310,77 +328,106 @@ void* mds_procrustes(void* arg) {
             fprintf(stderr, "Block on %s from %d to %d was dropped. Skipping.\n", current -> chrom, current -> startCoordinate, current -> endCoordinate);
         else
             fprintf(stderr, "Performing MDS and Procrustes for block number %d on %s from %d to %d.\n", current -> blockNum, current -> chrom, current -> startCoordinate, current -> endCoordinate);
+        // If we reached the end of the list.
+        if (blockProcrustes -> current == NULL)
+            fprintf(stderr, "\nProcrustes finished. Starting bootstrap.\n\n");
         pthread_mutex_unlock(&listLock);
 
         if (!current -> isDropped) {
 
             // Convert to ASD first.
-            for (int i = 0; i < blockProcrustes -> globalList -> numSamples; i++) {
-                for (int j = i + 1; j < blockProcrustes -> globalList -> numSamples; j++) {
+            for (int i = 0; i < blockProcrustes -> globalList -> numSamples; i++)
+                for (int j = i + 1; j < blockProcrustes -> globalList -> numSamples; j++)
                     asdBlock[PACKED_INDEX(i, j)] = ibs_to_asd(current -> alleleCounts[PACKED_INDEX(i, j)]);
-                    // Exclude block for jackknife.
-                    if (blockProcrustes -> y != NULL) {
-                        ibsExclude[PACKED_INDEX(i, j)] = blockProcrustes -> globalList -> alleleCounts[PACKED_INDEX(i, j)];
-                        sub_ibs(&ibsExclude[PACKED_INDEX(i, j)], &(current -> alleleCounts[PACKED_INDEX(i, j)]));
-                        asdExclude[PACKED_INDEX(i, j)] = ibs_to_asd(ibsExclude[PACKED_INDEX(i, j)]);
-                    }
-                }
-            }
 
             // Perform MDS and Procrustes.
             double** X = init_matrix(eigen -> N, blockProcrustes -> k);
             current -> effectRank = compute_classical_mds(eigen, asdBlock, blockProcrustes -> k, X);
-            // In case MDS did not converge, we drop the block.
+
+            // In case MDS did not converge, treat the block as having no effect.
             if (current -> effectRank == -1) {
                 current -> X = NULL;
-                // If the MDS did not converge, then the matrix was singular. We treat this as a matrix
-                //  with only one point. Dropping the block has no effect. So, if we are computing the jackknife we have
-                current -> procrustesT = 0;
-                current -> excludedT = 1;
+                current -> procrustesT = 1;
                 destroy_matrix(X, eigen -> N);
-            // If we are not performing the jackknfie.
+            // If we are comparing against the global.
             } else if (blockProcrustes -> y == NULL) {
+                current -> X = X;
                 current -> procrustesT = procrustes_statistic(current -> X, NULL, blockProcrustes -> globalList -> X, NULL, eigen, eigen -> N, blockProcrustes -> k, true);
-                if (current -> procrustesT == -1) {
-                    current -> procrustesT = 0;
-                    current -> excludedT = 1;
-                }
-            // If we are performing the jackknife.
+            // If we are comparing against user defined coordinates.
             } else {
+                current -> X = X;
                 current -> procrustesT = procrustes_statistic(current -> X, NULL, blockProcrustes -> y, blockProcrustes -> y0, eigen, eigen -> N, blockProcrustes -> k, true);
-                if (current -> procrustesT == -1) {
-                    current -> procrustesT = 0;
-                    current -> excludedT = 1;
-                } else {
-                    compute_classical_mds(eigen, asdExclude, blockProcrustes -> k, xExclude);
-                    current -> excludedT = procrustes_statistic(xExclude, NULL, blockProcrustes -> y, blockProcrustes -> y0, eigen, eigen -> N, blockProcrustes -> k, false);
+            }
+        }
+    }
+
+    // Create RNG.
+    gsl_rng_env_setup();
+    const gsl_rng_type* T = gsl_rng_default;
+    gsl_rng* r = gsl_rng_alloc(T);
+    gsl_rng_set(r, time(NULL));
+
+    // Start the bootstrap.
+    while (true) {
+        double bootStrappedT;
+
+        // Create our random replicate.
+        for (int s = 0; s < blockProcrustes -> sampleSize; s++) {
+            Block_t* temp = get_random_block(r, blockProcrustes -> globalList);
+            for (int i = 0; i < blockProcrustes -> globalList -> numSamples; i++) {
+                for (int j = i + 1; j < blockProcrustes -> globalList -> numSamples; j++) {
+                    if (s == 0)
+                        ibsBlock[PACKED_INDEX(i, j)] = temp -> alleleCounts[PACKED_INDEX(i, j)];
+                    else
+                        add_ibs(&(ibsBlock[PACKED_INDEX(i, j)]), &(temp -> alleleCounts[PACKED_INDEX(i, j)]));
+                    if (s == blockProcrustes -> sampleSize - 1)
+                        asdBlock[PACKED_INDEX(i, j)] = ibs_to_asd(temp -> alleleCounts[PACKED_INDEX(i, j)]);
                 }
             }
-            
         }
 
+        // Perfrom MDS.
+        double effectiveRank = compute_classical_mds(eigen, asdBlock, blockProcrustes -> k, bootX);
+
+        // If MDS does not converge, then we do not count the sample.
+        if (effectiveRank == -1)
+            continue;
+
+        // Calculate our Procrustes statistic.
+        if (blockProcrustes -> y == NULL) 
+            bootStrappedT = procrustes_statistic(bootX, NULL, blockProcrustes -> globalList -> X, NULL, eigen, eigen -> N, blockProcrustes -> k, false);
+        else 
+            bootStrappedT = procrustes_statistic(bootX, NULL, blockProcrustes -> y, blockProcrustes -> y0, eigen, eigen -> N, blockProcrustes -> k, false);
+        
+
+        pthread_mutex_lock(&listLock);
+        if (*(blockProcrustes -> currentReplicate) + 1 == blockProcrustes -> numReps) {
+            pthread_mutex_unlock(&listLock);
+            break;
+        }
+        blockProcrustes -> globalList -> samplingDistribution[*(blockProcrustes -> currentReplicate)] = bootStrappedT;
+        *(blockProcrustes -> currentReplicate) += 1;
+        fprintf(stderr, "Completed Replicate %d of the bootstrap.\n", *(blockProcrustes -> currentReplicate));
+        pthread_mutex_unlock(&listLock);
     }
 
     destroy_real_sym_eigen(eigen);
-    destroy_matrix(xExclude, blockProcrustes -> globalList -> numSamples);
+    destroy_matrix(bootX, eigen -> N);
     free(asdBlock);
-    free(asdExclude);
-    free(ibsExclude);
+    free(ibsBlock);
     free(blockProcrustes);
+    gsl_rng_free(r);
 
     return NULL;
 }
 
-// P-values from jackknife with mean 0 and given std. dev. 
-double get_p_val(double d, double std) {
-    double Z = fabs(d / std);
-    double pnorm = 0.5 * (1 + erf(Z / sqrt(2)));
-    return 2 * (1 - pnorm);
-}
+void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_THREADS, int numReps, int sampleSize) {
+    
+    int* currentReplicate = calloc(1, sizeof(int));
+    *currentReplicate = 0;
+    globalList -> samplingDistribution = calloc(numReps, sizeof(double));
 
-void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_THREADS) {
-
-    // Compute Procrustes statistic for each block.
+    // Compute Procrustes statistic for each block and bootstrap.
     if (NUM_THREADS == 1) {
         BlockProcrustes_t* blockProcrustes = calloc(1, sizeof(BlockProcrustes_t));
         blockProcrustes -> globalList = globalList;
@@ -388,7 +435,10 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
         blockProcrustes -> y0 = y0;
         blockProcrustes -> k = k;
         blockProcrustes -> current = globalList -> head;
-        mds_procrustes((void*) blockProcrustes);
+        blockProcrustes -> numReps = numReps;
+        blockProcrustes -> sampleSize = sampleSize;
+        blockProcrustes -> currentReplicate = currentReplicate;
+        procrustes_bootstrap((void*) blockProcrustes);
     } else {
         pthread_t* threads = (pthread_t*) calloc(NUM_THREADS - 1, sizeof(pthread_t));
         for (int i = 0; i < NUM_THREADS - 1; i++) {
@@ -398,7 +448,10 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
             blockProcrustes -> y0 = y0;
             blockProcrustes -> k = k;
             blockProcrustes -> current = globalList -> head;
-            pthread_create(&threads[i], NULL, mds_procrustes, (void*) blockProcrustes);
+            blockProcrustes -> numReps = numReps;
+            blockProcrustes -> sampleSize = sampleSize;
+            blockProcrustes -> currentReplicate = currentReplicate;
+            pthread_create(&threads[i], NULL, procrustes_bootstrap, (void*) blockProcrustes);
         }
         BlockProcrustes_t* blockProcrustes = calloc(1, sizeof(BlockProcrustes_t));
         blockProcrustes -> globalList = globalList;
@@ -406,39 +459,33 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
         blockProcrustes -> y0 = y0;
         blockProcrustes -> k = k;
         blockProcrustes -> current = globalList -> head;
-        mds_procrustes((void*) blockProcrustes);
+        blockProcrustes -> numReps = numReps;
+        blockProcrustes -> sampleSize = sampleSize;
+        blockProcrustes -> currentReplicate = currentReplicate;
+        procrustes_bootstrap((void*) blockProcrustes);
         // Wait for all threads to finish.
         for (int i = 0; i < NUM_THREADS - 1; i++)
             pthread_join(threads[i], NULL);
         free(threads);
     }
+    free(currentReplicate);
 
-    // If given, then calculate weighted jackknife.
-    if (y != NULL) {
-        // Calculate the jackknife estimator.
-        double sum = 0;
-        int n = globalList -> numHaps;
-        for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
-            double dropped = temp -> excludedT;
-            sum += (n - temp -> numHaps) * dropped / (double) n;
+    // Compute p-values. We are doing this the lazy way.
+    for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
+        int numGreater = 0;
+        for (int j = 0; j < numReps; j++) {
+            if (temp -> procrustesT > globalList -> samplingDistribution[j])
+                numGreater++;
         }
-        double est = globalList -> procrustesT;
-
-        // Our jackknife estimator.
-        double jack = globalList -> numBlocks * est - sum;
-
-        // Calculate the standard error.
-        sum = 0;
-        for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
-            double h = n / (double) temp -> numHaps;
-            double dropped = temp -> excludedT;
-            double pseudo = h * est - (h - 1) * dropped;
-            sum += (pseudo - jack) * (pseudo - jack) / (h - 1);
-        }
-        globalList -> stdDev = sqrt(sum / (double) globalList -> numBlocks);
-
-        // Calculate our pvalues genome-wide.
-        globalList -> pvalue = get_p_val(est, globalList -> stdDev);
+        temp -> pvalue = numGreater / (double) numReps;
     }
-
+    // Global p-value.
+    if (y != NULL) {
+        int numGreater = 0;
+        for (int j = 0; j < numReps; j++) {
+            if (globalList -> procrustesT > globalList -> samplingDistribution[j])
+                numGreater++;
+        }
+        globalList -> pvalue = numGreater / (double) numReps;
+    }
 }

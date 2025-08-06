@@ -35,6 +35,9 @@ typedef struct {
     double afMissing;
     // Drop block if there are less than threshold number of haps.
     int dropThreshold;
+    // For bootstrap.
+    int numReps;
+    int sampleSize;
     // The full command.
     char* cmd;
 } LodestarConfig_t;

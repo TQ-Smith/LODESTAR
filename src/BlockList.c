@@ -60,6 +60,8 @@ void destroy_block(Block_t* block) {
 }
 
 void destroy_block_list(BlockList_t* blockList) {
+    if (blockList -> samplingDistribution != NULL)
+        free(blockList -> samplingDistribution);
     if (blockList -> X != NULL) {
         for (int i = 0; i < blockList -> numSamples; i++) {
             free(blockList -> X[i]);

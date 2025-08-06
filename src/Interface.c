@@ -16,6 +16,15 @@
 //  LodestarConfig_t* lodestarConfig -> The configured parameters.
 // Returns: int, 0 if all parameters are valid. -1 if user supplied an invalid value.
 int check_configuration(LodestarConfig_t* lodestarConfig) {
+    // Check num reps and sample size for bootstrap.
+    if (lodestarConfig -> numReps < 0) {
+        fprintf(stderr, "-r %d must be an integer greater than 0.\n", lodestarConfig -> numReps); 
+        return -1;
+    }
+    if (lodestarConfig -> sampleSize <= 0) {
+        fprintf(stderr, "-s %d must be an integer greater than 0.\n", lodestarConfig -> sampleSize); 
+        return -1;
+    }
     // Check maf.
     if (lodestarConfig -> maf < 0 || lodestarConfig -> maf > 1) { 
         fprintf(stderr, "--maf %lf must be in [0, 1].\n", lodestarConfig -> maf); 
@@ -88,6 +97,8 @@ void print_help() {
     fprintf(stderr, "                               Default 0.05.\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of genotypes missing greater than threshold.\n");
     fprintf(stderr, "                               Default 0.1\n");
+    fprintf(stderr, "   -r INT                  Number of replicates for bootstrap. 0 for no bootstrap. Default 10000.\n");
+    fprintf(stderr, "   -s INT                  Number of blocks per replicate for bootstrap. Default 10.\n");
     fprintf(stderr, "\n");
 }
 
@@ -101,6 +112,8 @@ static ko_longopt_t long_options[] = {
     {"haplotypeSize",   ko_required_argument,   'h'},
     {"blockSize",       ko_required_argument,   'b'},
     {"drop",            ko_required_argument,   'd'},
+    {"replicates",      ko_required_argument,   'r'},
+    {"samples",         ko_required_argument,   's'},
     {0, 0, 0}
 };
 
@@ -113,7 +126,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     } 
 
     // Parse user options.
-    const char *opt_str = "h:b:k:t:y:d:";
+    const char *opt_str = "h:b:k:t:y:d:o:b:s:";
     ketopt_t options = KETOPT_INIT;
     int c;
 
@@ -139,6 +152,8 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     lodestarConfig -> dropThreshold = 1;
     lodestarConfig -> maf = 0.05;
     lodestarConfig -> afMissing = 0.1;
+    lodestarConfig -> numReps = 1000;
+    lodestarConfig -> sampleSize = 10;
 
     // Parse command line arguments.
     options = KETOPT_INIT;
@@ -151,6 +166,8 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
             case 't': lodestarConfig -> threads = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 'y': lodestarConfig -> targetFileName = strdup(options.arg); break;
             case 'd': lodestarConfig -> dropThreshold = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 'r': lodestarConfig -> numReps = (int) strtol(options.arg, (char**) NULL, 10); break;
+            case 's': lodestarConfig -> sampleSize = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 309: lodestarConfig -> maf = strtod(options.arg, (char**) NULL); break;
             case 310: lodestarConfig -> afMissing = strtod(options.arg, (char**) NULL); break;
         }
