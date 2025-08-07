@@ -329,12 +329,13 @@ void* procrustes_bootstrap(void* arg) {
         else
             fprintf(stderr, "Performing MDS and Procrustes for block number %d on %s from %d to %d.\n", current -> blockNum, current -> chrom, current -> startCoordinate, current -> endCoordinate);
         // If we reached the end of the list.
-        if (blockProcrustes -> current == NULL)
+        if (blockProcrustes -> current == NULL && blockProcrustes -> numReps == 0)
+            fprintf(stderr, "\nProcrustes finished.\n\n");
+        else if (blockProcrustes -> current == NULL)
             fprintf(stderr, "\nProcrustes finished. Starting bootstrap.\n\n");
         pthread_mutex_unlock(&listLock);
 
         if (!current -> isDropped) {
-
             // Convert to ASD first.
             for (int i = 0; i < blockProcrustes -> globalList -> numSamples; i++)
                 for (int j = i + 1; j < blockProcrustes -> globalList -> numSamples; j++)
@@ -347,7 +348,7 @@ void* procrustes_bootstrap(void* arg) {
             // In case MDS did not converge, treat the block as having no effect.
             if (current -> effectRank == -1) {
                 current -> X = NULL;
-                current -> procrustesT = 1;
+                current -> procrustesT = 0;
                 destroy_matrix(X, eigen -> N);
             // If we are comparing against the global.
             } else if (blockProcrustes -> y == NULL) {
@@ -368,7 +369,8 @@ void* procrustes_bootstrap(void* arg) {
     gsl_rng_set(r, time(NULL));
 
     // Start the bootstrap.
-    while (true) {
+    // Only execute 
+    while (blockProcrustes -> numReps != 0) {
         double bootStrappedT;
 
         // Create our random replicate.

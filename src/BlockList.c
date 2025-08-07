@@ -16,6 +16,8 @@ Block_t* init_block(char* chrom, int startCoordinate, int numSamples) {
     block -> numHaps = 0;
     block -> numLoci = 0;
     block -> numSamples = numSamples;
+    block -> procrustesT = -1;
+    block -> pvalue = -1;
     block -> alleleCounts = NULL;
     block -> X = NULL;
     block -> next = NULL;
@@ -29,7 +31,8 @@ BlockList_t* init_block_list(int numSamples) {
     blockList -> tail = NULL;
     blockList -> numHaps = 0;
     blockList -> numLoci = 0;
-    blockList -> procrustesT = 0;
+    blockList -> procrustesT = -1;
+    blockList -> pvalue = -1;
     blockList -> alleleCounts = NULL;
     blockList -> X = NULL;
     return blockList;

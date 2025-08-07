@@ -120,7 +120,7 @@ void print_summary(LodestarConfig_t* lodestarConfig, BlockList_t* globalList) {
         fprintf(out, "%lf\t%lf\t%lf\n", temp -> effectRank, temp -> procrustesT, temp -> pvalue);
     }
     fprintf(out, "0\t0\tGLOBAL\t0\t0%d\t%d\t%lf\t", globalList -> numLoci, globalList -> numHaps, globalList -> effectRank);
-    if (globalList -> procrustesT != 0)
+    if (globalList -> procrustesT != -1)
         fprintf(out, "%lf\t%lf\n", globalList -> procrustesT, globalList -> pvalue);
     else 
         fprintf(out, "-1\t-1\n");
@@ -216,8 +216,13 @@ int main (int argc, char *argv[]) {
 
     // Convert IBS to ASD and calculate jackknifed procrustes statistic.
     fprintf(stderr, "Finished genome-wide MDS calulations. Starting Procrustes ...\n\n");
+    if (lodestarConfig -> sampleSize == 0)
+        lodestarConfig -> sampleSize = globalList -> numBlocks;
     procrustes(globalList, y, y0, lodestarConfig -> k, lodestarConfig -> threads, lodestarConfig -> numReps, lodestarConfig -> sampleSize);
-    fprintf(stderr, "\nFinished Bootstrap. Writing results to output files...\n");
+    if (lodestarConfig -> numReps == 0)
+        fprintf(stderr, "Writing results to output files...\n");
+    else
+        fprintf(stderr, "\nFinished Bootstrap. Writing results to output files...\n");
 
     // Print summary and JSON file.
     print_summary(lodestarConfig, globalList);

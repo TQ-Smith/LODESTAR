@@ -21,7 +21,7 @@ int check_configuration(LodestarConfig_t* lodestarConfig) {
         fprintf(stderr, "-r %d must be an integer greater than 0.\n", lodestarConfig -> numReps); 
         return -1;
     }
-    if (lodestarConfig -> sampleSize <= 0) {
+    if (lodestarConfig -> sampleSize < 0) {
         fprintf(stderr, "-s %d must be an integer greater than 0.\n", lodestarConfig -> sampleSize); 
         return -1;
     }
@@ -97,8 +97,10 @@ void print_help() {
     fprintf(stderr, "                               Default 0.05.\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of genotypes missing greater than threshold.\n");
     fprintf(stderr, "                               Default 0.1\n");
-    fprintf(stderr, "   -r INT                  Number of replicates for bootstrap. 0 for no bootstrap. Default 10000.\n");
-    fprintf(stderr, "   -s INT                  Number of blocks per replicate for bootstrap. Default 10.\n");
+    fprintf(stderr, "   -r INT                  Number of replicates for bootstrap. 0 for no bootstrap.\n");
+    fprintf(stderr, "                               Default 1000.\n");
+    fprintf(stderr, "   -s INT                  Number of blocks per replicate for bootstrap.\n");
+    fprintf(stderr, "                               Default number of blocks in input.\n");
     fprintf(stderr, "\n");
 }
 
@@ -153,7 +155,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     lodestarConfig -> maf = 0.05;
     lodestarConfig -> afMissing = 0.1;
     lodestarConfig -> numReps = 1000;
-    lodestarConfig -> sampleSize = 10;
+    lodestarConfig -> sampleSize = 0;
 
     // Parse command line arguments.
     options = KETOPT_INIT;
