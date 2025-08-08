@@ -26,7 +26,7 @@ typedef struct Block {
     // Procrustes t-statistic, t-statistic if bootstrap is executed, and effective rank of points.
     double procrustesT;
     double sampleT;
-    double effectRank;
+    double varCapt;
     double pvalue;
 
     // Block attributes.
@@ -48,7 +48,7 @@ typedef struct BlockList {
     // Global counts.
     IBS_t* alleleCounts;
     double** X;
-    double effectRank;
+    double varCapt;
 
     // If bootstrap is computed.
     double procrustesT;

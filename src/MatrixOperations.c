@@ -180,7 +180,7 @@ void destroy_real_sym_eigen(RealSymEigen_t* eigen) {
     free(eigen -> auxilary);
     free(eigen);
 }
-#include <stdio.h>
+
 double compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix, int k, double** X) {
 
     int N = eigen -> N;
@@ -211,10 +211,14 @@ double compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix
     }
 
     // Double center matrix and store column major in A (not necessary but it's good to keep it consistent).
-    for(int i = 0; i < N; i++)
-        for(int j = 0; j < N; j++)
+    double totalVar = 0;
+    for(int i = 0; i < N; i++) {
+        for(int j = 0; j < N; j++) { 
             eigen -> A[j * N + i] = -0.5 * (packedDistanceMatrix[INDEX(i, j, N)] - (eigen -> WORK[i] / N) - (eigen -> WORK[j] / N) + (grand_mean / (N * N)));
-    
+        }
+        totalVar += eigen -> A[i * N + i];
+    }
+
     // Compute eigen pairs.
     int INFO = compute_k_eigenpairs(eigen, k);
 
@@ -223,7 +227,6 @@ double compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix
         return -1;
     
     // Project points down into dimension k.
-    double eigenSum = 0;
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < k; j++) {
             // If the eigenvalue is negative, we cannot take square-root. Return error.
@@ -232,18 +235,13 @@ double compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix
             if (eigen -> W[k - j - 1] < 0 || fabs(eigen -> W[k - j - 1]) <= EPS)
                 return -1;
             X[i][j] = eigen -> Z[(k - j - 1) * N + i] * sqrt(eigen -> W[k - j - 1]);
-            eigenSum += sqrt(eigen -> W[k - j - 1]);
         }
     }
+    double varCapt = 0;
+    for (int i = 0; i < k; i++)
+        varCapt += eigen -> W[k - i - 1];
 
-    // Calculate the effective rank.
-    double effectiveRank = 0;
-    for (int i = 0; i < k; i++) {
-        double p = sqrt(eigen -> W[k - i - 1]) / eigenSum;
-        effectiveRank += p * log(p);
-    }
-    
-    return exp(-1 * effectiveRank);
+    return varCapt / totalVar;
 }
 
 // A few things to note:

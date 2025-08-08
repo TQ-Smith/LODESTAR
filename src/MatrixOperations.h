@@ -89,7 +89,7 @@ void destroy_real_sym_eigen(RealSymEigen_t* eigen);
 //                                  Not perserved.
 //  int k -> The dimension to project down into.
 //  double** X -> An allocated N-by-k matrix to store the resulting points.
-// Returns: double, the effective rank of the matrix. Otherwise, -1, LAPACK failure, k eigenvalues are not all positive,
+// Returns: double, proportion of variance captured. Otherwise, -1, LAPACK failure, k eigenvalues are not all positive,
 //              or packedDistanceMatrix contains nan.
 double compute_classical_mds(RealSymEigen_t* eigen, double* packedDistanceMatrix, int k, double** X);
 

@@ -39,7 +39,7 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
     fprintf(out, "\"Command:\" \"%s\",\n", lodestarConfig -> cmd);
     fprintf(out, "\"GlobalNumberOfLoci\": %d,\n", globalList -> numLoci);
     fprintf(out, "\"GlobalNumberOfHaplotypes\": %d,\n", globalList -> numHaps);
-    fprintf(out, "\"GlobalEffectiveRank\": %lf,\n", globalList -> effectRank);
+    fprintf(out, "\"GlobalVarainceCaptured\": %lf,\n", globalList -> varCapt);
     if (lodestarConfig -> targetFileName == NULL) {
         fprintf(out, "\"GlobalProcrustesStatistic\": NULL,\n");
         fprintf(out, "\"GlobalProcrustesStatisticPvalue:\" NULL,\n");
@@ -77,11 +77,13 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
         fprintf(out, "\t\"NumberOfLoci\": %d,\n", temp -> numLoci);
         fprintf(out, "\t\"NumberOfHaplotypes\": %d,\n", temp -> numHaps);
         if (temp -> isDropped) {
-            fprintf(out, "\t\"EffectiveRank\": %s,\n", "DROPPED");
+            fprintf(out, "\t\"VarianceCaptured\": %s,\n", "DROPPED");
             fprintf(out, "\t\"ProcrustesStatistic\": %s,\n", "DROPPED");
+            fprintf(out, "\t\"ProcrustesPValue\": %s,\n", "DROPPED");
         } else {
-            fprintf(out, "\t\"EffectiveRank\": %lf,\n", temp -> effectRank);
+            fprintf(out, "\t\"VarianceCaptured\": %lf,\n", temp -> varCapt);
             fprintf(out, "\t\"ProcrustesStatistic\": %lf,\n", temp -> procrustesT);
+            fprintf(out, "\t\"ProcrustesPValue\": %lf,\n", temp -> pvalue);
         }
         fprintf(out, "\t\"X\": ");
         if (temp -> X != NULL)
@@ -110,16 +112,16 @@ void print_summary(LodestarConfig_t* lodestarConfig, BlockList_t* globalList) {
     fprintf(out, "#%s\n", lodestarConfig -> cmd);
 
     // Print header.
-    fprintf(out, "BlockNum\tBlockNumOnChr\tChr\tStart\tEnd\tNumLoci\tNumHaps\tEffectiveRank\tProcrustesStatistic\tP-Value\n");
+    fprintf(out, "BlockNum\tBlockNumOnChr\tChr\tStart\tEnd\tNumLoci\tNumHaps\tVarianceCaptured\tProcrustesStatistic\tP-Value\n");
 
     // Print out each block.
     for(Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
         if (temp -> isDropped)
             continue;
         fprintf(out, "%d\t%d\t%s\t%d\t%d\t%d\t%d\t", temp -> blockNum, temp -> blockNumOnChrom, temp -> chrom, temp -> startCoordinate, temp -> endCoordinate, temp -> numLoci, temp -> numHaps);
-        fprintf(out, "%lf\t%lf\t%lf\n", temp -> effectRank, temp -> procrustesT, temp -> pvalue);
+        fprintf(out, "%lf\t%lf\t%lf\n", temp -> varCapt, temp -> procrustesT, temp -> pvalue);
     }
-    fprintf(out, "0\t0\tGLOBAL\t0\t0%d\t%d\t%lf\t", globalList -> numLoci, globalList -> numHaps, globalList -> effectRank);
+    fprintf(out, "0\t0\tGLOBAL\t0\t0%d\t%d\t%lf\t", globalList -> numLoci, globalList -> numHaps, globalList -> varCapt);
     if (globalList -> procrustesT != -1)
         fprintf(out, "%lf\t%lf\n", globalList -> procrustesT, globalList -> pvalue);
     else 
@@ -208,7 +210,7 @@ int main (int argc, char *argv[]) {
         for (int j = i + 1; j < encoder -> numSamples; j++)
             asd[PACKED_INDEX(i, j)] = ibs_to_asd(globalList -> alleleCounts[PACKED_INDEX(i, j)]);
     globalList -> X = init_matrix(encoder -> numSamples, lodestarConfig -> k);
-    globalList -> effectRank = compute_classical_mds(eigen, asd, lodestarConfig -> k, globalList -> X);
+    globalList -> varCapt = compute_classical_mds(eigen, asd, lodestarConfig -> k, globalList -> X);
     if (y != NULL)
         globalList -> procrustesT = procrustes_statistic(globalList -> X, NULL, y, y0, eigen, eigen -> N, lodestarConfig -> k, true);
     destroy_real_sym_eigen(eigen);

@@ -157,7 +157,7 @@ void* partition(void* arg) {
         if (block -> isDropped)
             fprintf(stderr, "Block on %s from %d to %d contains %d haplotypes. Dropped block.\n", block -> chrom, block -> startCoordinate, block -> endCoordinate, block -> numHaps);
         else
-            fprintf(stderr, "Finished block number %d on %s from %d to %d.\n", block -> blockNum, block -> chrom, block -> startCoordinate, block -> endCoordinate);
+            fprintf(stderr, "Finished IBS for block number %d on %s from %d to %d.\n", block -> blockNum, block -> chrom, block -> startCoordinate, block -> endCoordinate);
         append_block(blockCounts -> globalList, block);
         pthread_mutex_unlock(&listLock);
     }
@@ -282,7 +282,7 @@ typedef struct BlockProcrustes {
     double* y0;
     int k;
     // Points to the current block in globalList for the next thread to operate on.
-    Block_t* current;
+    Block_t** current;
     // For the bootstrap.
     int numReps;
     int sampleSize;
@@ -318,21 +318,21 @@ void* procrustes_bootstrap(void* arg) {
 
         // Reuse list lock to get the next block.
         pthread_mutex_lock(&listLock);
-        if (blockProcrustes -> current == NULL) {
+        if (*(blockProcrustes -> current) == NULL) {
             pthread_mutex_unlock(&listLock);
             break;
         }
-        current = blockProcrustes -> current;
-        blockProcrustes -> current = blockProcrustes -> current -> next;
+        current = *(blockProcrustes -> current);
+        *(blockProcrustes -> current) = (*(blockProcrustes -> current)) -> next;
         if (current -> isDropped)
             fprintf(stderr, "Block on %s from %d to %d was dropped. Skipping.\n", current -> chrom, current -> startCoordinate, current -> endCoordinate);
         else
             fprintf(stderr, "Performing MDS and Procrustes for block number %d on %s from %d to %d.\n", current -> blockNum, current -> chrom, current -> startCoordinate, current -> endCoordinate);
         // If we reached the end of the list.
-        if (blockProcrustes -> current == NULL && blockProcrustes -> numReps == 0)
-            fprintf(stderr, "\nProcrustes finished.\n\n");
-        else if (blockProcrustes -> current == NULL)
-            fprintf(stderr, "\nProcrustes finished. Starting bootstrap.\n\n");
+        if (current -> next == NULL && blockProcrustes -> numReps == 0)
+            fprintf(stderr, "\nProcrustes finished ...\n\n");
+        else if (current -> next == NULL)
+            fprintf(stderr, "\nProcrustes finished. Starting bootstrap ...\n\n");
         pthread_mutex_unlock(&listLock);
 
         if (!current -> isDropped) {
@@ -343,10 +343,10 @@ void* procrustes_bootstrap(void* arg) {
 
             // Perform MDS and Procrustes.
             double** X = init_matrix(eigen -> N, blockProcrustes -> k);
-            current -> effectRank = compute_classical_mds(eigen, asdBlock, blockProcrustes -> k, X);
+            current -> varCapt = compute_classical_mds(eigen, asdBlock, blockProcrustes -> k, X);
 
             // In case MDS did not converge, treat the block as having no effect.
-            if (current -> effectRank == -1) {
+            if (current -> varCapt == -1) {
                 current -> X = NULL;
                 current -> procrustesT = 0;
                 destroy_matrix(X, eigen -> N);
@@ -402,15 +402,15 @@ void* procrustes_bootstrap(void* arg) {
             bootStrappedT = procrustes_statistic(bootX, NULL, blockProcrustes -> y, blockProcrustes -> y0, eigen, eigen -> N, blockProcrustes -> k, false);
         
 
-        pthread_mutex_lock(&listLock);
+        pthread_mutex_lock(&genomeLock);
         if (*(blockProcrustes -> currentReplicate) + 1 == blockProcrustes -> numReps) {
-            pthread_mutex_unlock(&listLock);
+            pthread_mutex_unlock(&genomeLock);
             break;
         }
         blockProcrustes -> globalList -> samplingDistribution[*(blockProcrustes -> currentReplicate)] = bootStrappedT;
         *(blockProcrustes -> currentReplicate) += 1;
         fprintf(stderr, "Completed Replicate %d of the bootstrap.\n", *(blockProcrustes -> currentReplicate));
-        pthread_mutex_unlock(&listLock);
+        pthread_mutex_unlock(&genomeLock);
     }
 
     destroy_real_sym_eigen(eigen);
@@ -428,6 +428,8 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
     int* currentReplicate = calloc(1, sizeof(int));
     *currentReplicate = 0;
     globalList -> samplingDistribution = calloc(numReps, sizeof(double));
+    Block_t* current = calloc(1, sizeof(Block_t*));
+    current = globalList -> head;
 
     // Compute Procrustes statistic for each block and bootstrap.
     if (NUM_THREADS == 1) {
@@ -436,7 +438,7 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
         blockProcrustes -> y = y;
         blockProcrustes -> y0 = y0;
         blockProcrustes -> k = k;
-        blockProcrustes -> current = globalList -> head;
+        blockProcrustes -> current = &current;
         blockProcrustes -> numReps = numReps;
         blockProcrustes -> sampleSize = sampleSize;
         blockProcrustes -> currentReplicate = currentReplicate;
@@ -449,7 +451,7 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
             blockProcrustes -> y = y;
             blockProcrustes -> y0 = y0;
             blockProcrustes -> k = k;
-            blockProcrustes -> current = globalList -> head;
+            blockProcrustes -> current = &current;
             blockProcrustes -> numReps = numReps;
             blockProcrustes -> sampleSize = sampleSize;
             blockProcrustes -> currentReplicate = currentReplicate;
@@ -460,7 +462,7 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
         blockProcrustes -> y = y;
         blockProcrustes -> y0 = y0;
         blockProcrustes -> k = k;
-        blockProcrustes -> current = globalList -> head;
+        blockProcrustes -> current = &current;
         blockProcrustes -> numReps = numReps;
         blockProcrustes -> sampleSize = sampleSize;
         blockProcrustes -> currentReplicate = currentReplicate;
@@ -471,6 +473,7 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
         free(threads);
     }
     free(currentReplicate);
+    free(current);
 
     // Compute p-values. We are doing this the lazy way.
     for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
