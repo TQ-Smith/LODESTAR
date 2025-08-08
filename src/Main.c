@@ -121,7 +121,7 @@ void print_summary(LodestarConfig_t* lodestarConfig, BlockList_t* globalList) {
         fprintf(out, "%d\t%d\t%s\t%d\t%d\t%d\t%d\t", temp -> blockNum, temp -> blockNumOnChrom, temp -> chrom, temp -> startCoordinate, temp -> endCoordinate, temp -> numLoci, temp -> numHaps);
         fprintf(out, "%lf\t%lf\t%lf\n", temp -> varCapt, temp -> procrustesT, temp -> pvalue);
     }
-    fprintf(out, "0\t0\tGLOBAL\t0\t0%d\t%d\t%lf\t", globalList -> numLoci, globalList -> numHaps, globalList -> varCapt);
+    fprintf(out, "0\t0\tGLOBAL\t0\t0\t%d\t%d\t%lf\t", globalList -> numLoci, globalList -> numHaps, globalList -> varCapt);
     if (globalList -> procrustesT != -1)
         fprintf(out, "%lf\t%lf\n", globalList -> procrustesT, globalList -> pvalue);
     else 
