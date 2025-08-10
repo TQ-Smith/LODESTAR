@@ -128,7 +128,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     } 
 
     // Parse user options.
-    const char *opt_str = "h:b:k:t:y:d:o:b:s:";
+    const char *opt_str = "h:b:k:t:y:d:o:b:s:r:";
     ketopt_t options = KETOPT_INIT;
     int c;
 
