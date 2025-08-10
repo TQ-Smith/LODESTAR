@@ -366,7 +366,8 @@ void* procrustes_bootstrap(void* arg) {
     gsl_rng_env_setup();
     const gsl_rng_type* T = gsl_rng_default;
     gsl_rng* r = gsl_rng_alloc(T);
-    gsl_rng_set(r, time(NULL));
+    // Seed each thread differently.
+    gsl_rng_set(r, time(NULL) + (long) arg);
 
     // Start the bootstrap.
     // Only execute 
