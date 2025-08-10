@@ -77,9 +77,9 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
         fprintf(out, "\t\"NumberOfLoci\": %d,\n", temp -> numLoci);
         fprintf(out, "\t\"NumberOfHaplotypes\": %d,\n", temp -> numHaps);
         if (temp -> isDropped) {
-            fprintf(out, "\t\"VarianceCaptured\": %d,\n", "-1");
-            fprintf(out, "\t\"ProcrustesStatistic\": %d,\n", "-1");
-            fprintf(out, "\t\"ProcrustesPValue\": %d,\n", "-1");
+            fprintf(out, "\t\"VarianceCaptured\": %d,\n", -1);
+            fprintf(out, "\t\"ProcrustesStatistic\": %d,\n", -1);
+            fprintf(out, "\t\"ProcrustesPValue\": %d,\n", -1);
         } else {
             fprintf(out, "\t\"VarianceCaptured\": %lf,\n", temp -> varCapt);
             fprintf(out, "\t\"ProcrustesStatistic\": %lf,\n", temp -> procrustesT);
