@@ -14,6 +14,7 @@
 #define _MATRIX_OPERATIONS_H_
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 // Index a packed stored matrix. If i > j, then treat the upper triangle as the lower triangle.
 #define INDEX(i, j, N) (i <= j ? i + j * (j + 1) / 2 : j + i * (i + 1) / 2)
