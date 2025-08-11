@@ -54,7 +54,7 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
         fprintf(out, "\"Y\": NULL,\n");
         fprintf(out, "\"y0\": NULL,\n");
     } else {
-        fprintf(out, "\"Y:\"");
+        fprintf(out, "\"Y\":");
         print_json_matrix(out, y, globalList -> numSamples, lodestarConfig -> k);
         fprintf(out, ",\n");
         fprintf(out, "\"y0\": [ ");
