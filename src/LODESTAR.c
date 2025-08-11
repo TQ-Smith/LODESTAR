@@ -404,7 +404,7 @@ void* procrustes_bootstrap(void* arg) {
         
 
         pthread_mutex_lock(&genomeLock);
-        if (*(blockProcrustes -> currentReplicate) + 1 == blockProcrustes -> numReps) {
+        if (*(blockProcrustes -> currentReplicate) == blockProcrustes -> numReps) {
             pthread_mutex_unlock(&genomeLock);
             break;
         }
