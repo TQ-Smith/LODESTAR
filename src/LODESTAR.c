@@ -480,7 +480,7 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
     for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
         int numGreater = 1;
         for (int j = 0; j < numReps; j++) {
-            if (temp -> procrustesT < globalList -> samplingDistribution[j])
+            if (temp -> procrustesT <= globalList -> samplingDistribution[j])
                 numGreater++;
         }
         temp -> pvalue = numGreater / (double) (numReps + 1);
@@ -489,7 +489,7 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
     if (y != NULL) {
         int numGreater = 1;
         for (int j = 0; j < numReps; j++) {
-            if (globalList -> procrustesT < globalList -> samplingDistribution[j])
+            if (globalList -> procrustesT <= globalList -> samplingDistribution[j])
                 numGreater++;
         }
         globalList -> pvalue = numGreater / (double) (numReps + 1);
