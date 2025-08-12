@@ -64,7 +64,7 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
     }
     
     // Print out all the blocks.
-    fprintf(out, "\t\"Blocks\": [");
+    fprintf(out, "\"Blocks\": [");
     for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
         if (temp -> isDropped)
             continue;
@@ -211,6 +211,8 @@ int main (int argc, char *argv[]) {
             asd[PACKED_INDEX(i, j)] = ibs_to_asd(globalList -> alleleCounts[PACKED_INDEX(i, j)]);
     globalList -> X = init_matrix(encoder -> numSamples, lodestarConfig -> k);
     globalList -> varCapt = compute_classical_mds(eigen, asd, lodestarConfig -> k, globalList -> X);
+    // cMDS results are already centered. Normalize X for symmetric Procrsutes statistic.
+    normalize_matrix(globalList -> X, parser -> numSamples, lodestarConfig -> k);
     if (y != NULL)
         globalList -> procrustesT = procrustes_statistic(globalList -> X, NULL, y, y0, eigen, eigen -> N, lodestarConfig -> k, true);
     destroy_real_sym_eigen(eigen);

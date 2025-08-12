@@ -324,7 +324,7 @@ mds <- function(JSON, popsFile, w, i, j) {
 #   No error checking.
 cmd <- function(cmd, blocksFile, popsFile, args) {
     JSON = fromJSON(blocksFile);
-    JSON$Blocks = JSON$Blocks[JSON$Blocks["ProcrustesStatistic"] != -1,]
+    JSON$Blocks = JSON$Blocks[JSON$Blocks["ProcrustesStatistic"] != -1 & JSON$Blocks["Chromosome"] != "GLOBAL",]
     switch(cmd,
         mds={
             mds(JSON, popsFile, args[1], args[2], args[3]);

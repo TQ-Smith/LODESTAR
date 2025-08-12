@@ -284,6 +284,7 @@ int dgesvd(
     return INFO;
 }
 
+#include <stdio.h>
 double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, RealSymEigen_t* eigen, int N, int K, bool transform) {
     
     // If either set of points were not given, 
@@ -441,6 +442,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
     }
 
     double ss = trY + rho * rho * trX - 2 * rho * trLambda;
+
     return sqrt(1 - ss);
 
 }
