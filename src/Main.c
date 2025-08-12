@@ -41,8 +41,8 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
     fprintf(out, "\"GlobalNumberOfHaplotypes\": %d,\n", globalList -> numHaps);
     fprintf(out, "\"GlobalVarainceCaptured\": %lf,\n", globalList -> varCapt);
     if (lodestarConfig -> targetFileName == NULL) {
-        fprintf(out, "\"GlobalProcrustesStatistic\": NULL,\n");
-        fprintf(out, "\"GlobalProcrustesStatisticPvalue:\" NULL,\n");
+        fprintf(out, "\"GlobalProcrustesStatistic\": null,\n");
+        fprintf(out, "\"GlobalProcrustesStatisticPvalue:\" null,\n");
     } else {
         fprintf(out, "\"GlobalProcrustesStatistic\": %lf,\n", globalList -> procrustesT);
         fprintf(out, "\"GlobalProcrustesStatisticPvalue\": %lf,\n", globalList -> pvalue);
@@ -51,8 +51,8 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
     print_json_matrix(out, globalList -> X, globalList -> numSamples, lodestarConfig -> k);
     fprintf(out, ",\n");
     if (lodestarConfig -> targetFileName == NULL) {
-        fprintf(out, "\"Y\": NULL,\n");
-        fprintf(out, "\"y0\": NULL,\n");
+        fprintf(out, "\"Y\": null,\n");
+        fprintf(out, "\"y0\": null,\n");
     } else {
         fprintf(out, "\"Y\":");
         print_json_matrix(out, y, globalList -> numSamples, lodestarConfig -> k);
