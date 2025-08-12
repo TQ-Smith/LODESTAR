@@ -42,7 +42,7 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
     fprintf(out, "\"GlobalVarainceCaptured\": %lf,\n", globalList -> varCapt);
     if (lodestarConfig -> targetFileName == NULL) {
         fprintf(out, "\"GlobalProcrustesStatistic\": null,\n");
-        fprintf(out, "\"GlobalProcrustesStatisticPvalue:\" null,\n");
+        fprintf(out, "\"GlobalProcrustesStatisticPvalue\": null,\n");
     } else {
         fprintf(out, "\"GlobalProcrustesStatistic\": %lf,\n", globalList -> procrustesT);
         fprintf(out, "\"GlobalProcrustesStatisticPvalue\": %lf,\n", globalList -> pvalue);
