@@ -284,7 +284,6 @@ int dgesvd(
     return INFO;
 }
 
-#include <stdio.h>
 double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, RealSymEigen_t* eigen, int N, int K, bool transform) {
     
     // If either set of points were not given, 

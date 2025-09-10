@@ -72,7 +72,7 @@ global <- function(JSON, popsFile, i , j) {
 
 # Plot the target points.
 target <- function(JSON, popsFile, i , j) {
-    if (JSON$Y == NULL) {
+    if (is.null(JSON$Y)) {
         print("No user defined coordinates were supplied. Exiting!\n");
         exit();
     }
