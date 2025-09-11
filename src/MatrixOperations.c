@@ -410,7 +410,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         // Calculate b and store in WORK.
         //  K is usually small so we can seperate
         //  this calculation from the previous loop.
-        if (x0 != NULL && y0 != NULL) {
+        if (x0 != NULL || y0 != NULL) {
             if (x0 == NULL) {
                 for (int i = 0; i < K; i++)
                     eigen -> WORK[i] = y0[i];
