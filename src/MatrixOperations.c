@@ -410,16 +410,16 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         // Calculate b and store in WORK.
         //  K is usually small so we can seperate
         //  this calculation from the previous loop.
-        if (x0 != NULL || y0 != NULL) {
-            for (int i = 0; i < K; i++) {
-                if (x0 == NULL) {
+        if (x0 != NULL && y0 != NULL) {
+            if (x0 == NULL) {
+                for (int i = 0; i < K; i++)
                     eigen -> WORK[i] = y0[i];
-                } else {
+            } else {
+                for (int i = 0; i < K; i++) {
                     dot = 0;
-                    for (int j = 0; j < K; j++) {
-                        dot += eigen -> Z[COL_MAJOR(i, j, K)] * x0[j];
-                    }
-                    eigen -> WORK[i] = y0[i] - rho * dot;
+                    for (int j = 0; j < K; j++) 
+                        dot += eigen -> Z[COL_MAJOR(j, i, K)] * y0[j];
+                    eigen -> WORK[i] = x0[i] - rho * dot;
                 }
             }
         }
