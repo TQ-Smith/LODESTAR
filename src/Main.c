@@ -195,7 +195,7 @@ int main (int argc, char *argv[]) {
         // Center and normalize.
         y0 = calloc(lodestarConfig -> k, sizeof(double));
         center_matrix(y, y0, parser -> numSamples, lodestarConfig -> k);
-        normalize_matrix(y, parser -> numSamples, lodestarConfig -> k);
+        // normalize_matrix(y, parser -> numSamples, lodestarConfig -> k);
     }
     
     // Partition genome into blocks and calculate IBS within the blocks.
@@ -212,7 +212,7 @@ int main (int argc, char *argv[]) {
     globalList -> X = init_matrix(encoder -> numSamples, lodestarConfig -> k);
     globalList -> varCapt = compute_classical_mds(eigen, asd, lodestarConfig -> k, globalList -> X);
     // cMDS results are already centered. Normalize X for symmetric Procrsutes statistic.
-    normalize_matrix(globalList -> X, parser -> numSamples, lodestarConfig -> k);
+    // normalize_matrix(globalList -> X, parser -> numSamples, lodestarConfig -> k);
     if (y != NULL)
         globalList -> procrustesT = procrustes_statistic(globalList -> X, NULL, y, y0, eigen, eigen -> N, lodestarConfig -> k, true);
     destroy_real_sym_eigen(eigen);
