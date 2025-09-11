@@ -345,7 +345,7 @@ void* procrustes_bootstrap(void* arg) {
             double** X = init_matrix(eigen -> N, blockProcrustes -> k);
             current -> varCapt = compute_classical_mds(eigen, asdBlock, blockProcrustes -> k, X);
             // I am doing this to be safe. Results of cMDS are already centered.
-            // normalize_matrix(X, blockProcrustes -> globalList -> numSamples, blockProcrustes -> k);
+            normalize_matrix(X, blockProcrustes -> globalList -> numSamples, blockProcrustes -> k);
 
             // In case MDS did not converge, treat the block as having no effect.
             if (current -> varCapt == -1) {
@@ -397,6 +397,8 @@ void* procrustes_bootstrap(void* arg) {
         // If MDS does not converge, then we do not count the sample.
         if (effectiveRank == -1)
             continue;
+
+        normalize_matrix(bootX, blockProcrustes -> globalList -> numSamples, blockProcrustes -> k);
 
         // Calculate our Procrustes statistic.
         if (blockProcrustes -> y == NULL) 

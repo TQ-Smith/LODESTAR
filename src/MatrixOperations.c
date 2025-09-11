@@ -416,11 +416,8 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
                 }
             }
             for (int j = 0; j < K; j++) {
-                // x0 is always NULL for LODESTAR.
-                if (y0 != NULL)
-                    Xc[i][j] = rho * eigen -> W[j] + y0[j];
-                else 
-                    Xc[i][j] = rho * eigen -> W[j];
+                // We do not shift in LODESTAR.
+                Xc[i][j] = rho * eigen -> W[j];
             }
         }
 
