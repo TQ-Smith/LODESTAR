@@ -406,7 +406,7 @@ double procrustes_statistic(double** Xc, double* x0, double** Yc, double* y0, Re
         rho = trLambda / trX;
 
         // Transform points.
-        //  rho * A^T * x + b.
+        //  rho * A^T * x
         //  Use eigen -> W as extra space.
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < K; j++) {
