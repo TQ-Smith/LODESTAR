@@ -84,11 +84,14 @@ void print_help() {
     fprintf(stderr, "   -h INT                  Number of loci in a haplotype.\n");
     fprintf(stderr, "                               Default 1.\n");
     fprintf(stderr, "   -b INT                  The block size in base pairs.\n");
-    fprintf(stderr, "                               Default 2MB.\n");
+    fprintf(stderr, "                               Default 2 Mb.\n");
     fprintf(stderr, "   -k INT                  Dimension to project samples into. Must be less than number of samples.\n");
     fprintf(stderr, "                               Default 2. Must be less than number of samples in VCF.\n");
     fprintf(stderr, "   -y file.tsv             A n-by-k tsv file containing user defined coordinates.\n");
     fprintf(stderr, "                               The set of points to use in Procrustes analysis\n");
+    fprintf(stderr, "   --geo                   If -y was used, then assume coordinates are (long, lat) in degrees and\n");
+    fprintf(stderr, "                               convert to rectangular coordinates, where R = 6371000, using\n");
+    fprintf(stderr, "                               (R * pi * sqrt(2) * long / 360, R * sqrt(2) * sin(lat))\n");
     fprintf(stderr, "   -t INT                  Number of threads to use in computation.\n");
     fprintf(stderr, "                               Default 1.\n");
     fprintf(stderr, "   -d INT                  Block is dropped if less than INT number of haplotypes are within block.\n");
@@ -109,6 +112,7 @@ static ko_longopt_t long_options[] = {
     {"threads",         ko_required_argument,   't'},
     {"maf",             ko_required_argument,   309},
     {"afMissing",       ko_required_argument,   310},
+    {"geo",             ko_no_argument,         311},
     {"target",          ko_required_argument,   'y'},
     {"dimension",       ko_required_argument,   'k'},
     {"haplotypeSize",   ko_required_argument,   'h'},
@@ -156,6 +160,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     lodestarConfig -> afMissing = 0.1;
     lodestarConfig -> numReps = 1000;
     lodestarConfig -> sampleSize = 0;
+    lodestarConfig -> geo = false;
 
     // Parse command line arguments.
     options = KETOPT_INIT;
@@ -172,6 +177,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
             case 's': lodestarConfig -> sampleSize = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 309: lodestarConfig -> maf = strtod(options.arg, (char**) NULL); break;
             case 310: lodestarConfig -> afMissing = strtod(options.arg, (char**) NULL); break;
+            case 311: lodestarConfig -> geo = true; break;
         }
 	}
 

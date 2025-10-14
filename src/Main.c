@@ -10,6 +10,7 @@
 #include "LODESTAR.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 void print_json_matrix(FILE* out, double** X, int N, int K) {
     fprintf(out, "[\n");
@@ -159,6 +160,12 @@ double** open_target_file(char* targetFileName, int N, int K) {
     return targetPoints;
 }
 
+void convertToRectangular(double** y, int N) {
+    for (int i = 0; i < N; i++) {
+        y[i][0] = 6371000 * M_PI * sqrt(2) * y[i][0] / 360.0;
+        y[i][1] = 6371000 * sqrt(2) * sin(y[i][1]);
+    }
+}
 
 int main (int argc, char *argv[]) {
 
@@ -192,6 +199,14 @@ int main (int argc, char *argv[]) {
             destroy_vcf_locus_parser(parser);
             return -1;
         }
+        if (lodestarConfig -> geo && lodestarConfig -> k != 2) {
+            fprintf(stderr, "--geo requires two dimensions for the matrix given with -y. Exiting!\n");
+            free(lodestarConfig);
+            destroy_vcf_locus_parser(parser);
+            return -1;
+        }
+        if (lodestarConfig -> geo)
+            convertToRectangular(y, parser -> numSamples);
         // Center and normalize.
         y0 = calloc(lodestarConfig -> k, sizeof(double));
         center_matrix(y, y0, parser -> numSamples, lodestarConfig -> k);

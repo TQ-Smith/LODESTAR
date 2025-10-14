@@ -414,7 +414,7 @@ void* procrustes_bootstrap(void* arg) {
         }
         blockProcrustes -> globalList -> samplingDistribution[*(blockProcrustes -> currentReplicate)] = bootStrappedT;
         *(blockProcrustes -> currentReplicate) += 1;
-        fprintf(stderr, "Completed Replicate %d of the bootstrap.\n", *(blockProcrustes -> currentReplicate));
+        fprintf(stderr, "Completed Replicate %d of the Bootstrap.\n", *(blockProcrustes -> currentReplicate));
         pthread_mutex_unlock(&genomeLock);
     }
 

@@ -10,6 +10,7 @@
 #define _INTERFACE_H_
 
 #include "kstring.h"
+#include <stdbool.h>
 
 // Defines all the command line options supplied
 //  by user and parameters to run the LODESTAR analysis.
@@ -29,6 +30,8 @@ typedef struct {
     // Name of file for user specified points to perform Procrustes
     //  analysis with.
     char* targetFileName;
+    // Convert to rectangular coordinates.
+    bool geo;
     // Minor allele frequency threshhold.
     double maf;
     // Missing allele frequency threshold.
