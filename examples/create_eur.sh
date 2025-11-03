@@ -20,10 +20,8 @@ set -eux
 wget https://raw.githubusercontent.com/gavinr/world-countries-centroids/refs/heads/master/dist/countries.csv
 
 awk -F ',' '{
-	R = 6371000;
-	PI = 3.1415926535;
-	x = R * PI * $1 * sqrt(2) / 360;
-	y = R * sqrt(2) * sin($2 * PI / 180)
+	x = $1;
+	y = $2;
 	if ($3 == "Spain" || $3 == "United Kingdom" || $3 == "Finland" || $3 == "Italy") {
 		print $4"\t"x"\t"y;
 	}

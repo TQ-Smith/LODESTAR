@@ -90,7 +90,7 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
         if (temp -> X != NULL)
             print_json_matrix(out, temp -> X, globalList -> numSamples, lodestarConfig -> k);
         else 
-            fprintf(out, "NULL\n");
+            fprintf(out, "null\n");
         fprintf(out, "}");
         if (temp -> next != NULL)
             fprintf(out, ",\n");

@@ -481,21 +481,26 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
     free(current);
 
     // Compute p-values. We are doing this the lazy way.
-    for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
-        int numGreater = 1;
-        for (int j = 0; j < numReps; j++) {
-            if (temp -> procrustesT <= globalList -> samplingDistribution[j])
-                numGreater++;
+    if (numReps > 0) {
+        for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
+            // Skip if window dropped.
+            if (temp -> isDropped || temp -> X == NULL)
+                continue;
+            int numGreater = 1;
+            for (int j = 0; j < numReps; j++) {
+                if (temp -> procrustesT <= globalList -> samplingDistribution[j])
+                    numGreater++;
+            }
+            temp -> pvalue = numGreater / (double) (numReps + 1);
         }
-        temp -> pvalue = numGreater / (double) (numReps + 1);
-    }
-    // Global p-value.
-    if (y != NULL) {
-        int numGreater = 1;
-        for (int j = 0; j < numReps; j++) {
-            if (globalList -> procrustesT <= globalList -> samplingDistribution[j])
-                numGreater++;
+        // Global p-value.
+        if (y != NULL) {
+            int numGreater = 1;
+            for (int j = 0; j < numReps; j++) {
+                if (globalList -> procrustesT <= globalList -> samplingDistribution[j])
+                    numGreater++;
+            }
+            globalList -> pvalue = numGreater / (double) (numReps + 1);
         }
-        globalList -> pvalue = numGreater / (double) (numReps + 1);
     }
 }
