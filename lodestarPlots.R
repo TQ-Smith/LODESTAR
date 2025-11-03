@@ -365,7 +365,7 @@ if (length(args) < 2) {
     exit();
 }
 
-if (args[1] != "target" && args[1] != "var" && args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis" && args[1] != "pvals" && args[1] != "global") {
+if (args[1] != "bh" && args[1] != "qvals" && args[1] != "target" && args[1] != "var" && args[1] != "print" && args[1] != "mds" && args[1] != "tvals" && args[1] != "axis" && args[1] != "pvals" && args[1] != "global") {
     cat("Unrecognized command! Exiting!\n");
     exit();
 }
