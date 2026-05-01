@@ -172,7 +172,7 @@ int main (int argc, char *argv[]) {
     // Get configuration.
     LodestarConfig_t* lodestarConfig = init_lodestar_config(argc, argv);
     if (lodestarConfig == NULL)
-        return -1;
+        return 0;
    
     // We create the VCF parser and haplotype encoder.
     VCFLocusParser_t* parser = init_vcf_locus_parser(lodestarConfig -> inputFileName, lodestarConfig -> maf, lodestarConfig -> afMissing, true);
