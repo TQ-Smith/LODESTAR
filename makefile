@@ -6,6 +6,7 @@
 # Purpose: Build LODESTAR. 
 
 CC?=gcc
+FC?=gfortran
 CFLAGS?=-c -Wall -g -I lib
 LFLAGS?=-g -o
 
@@ -39,7 +40,7 @@ lib/kstring.o:
 
 .PHONY: lib/lapack
 lib/lapack:
-	$(CC) $(CFLAGS) lib/lapack/*.f
+	$(FC) $(CFLAGS) lib/lapack/*.f
 	mv *.o lib/lapack
 
 .PHONY: lib/gsl
