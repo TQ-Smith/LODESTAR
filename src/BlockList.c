@@ -17,7 +17,6 @@ Block_t* init_block(char* chrom, int startCoordinate, int numSamples) {
     block -> numLoci = 0;
     block -> numSamples = numSamples;
     block -> procrustesT = -1;
-    block -> pvalue = -1;
     block -> alleleCounts = NULL;
     block -> X = NULL;
     block -> next = NULL;
@@ -32,7 +31,6 @@ BlockList_t* init_block_list(int numSamples) {
     blockList -> numHaps = 0;
     blockList -> numLoci = 0;
     blockList -> procrustesT = -1;
-    blockList -> pvalue = -1;
     blockList -> alleleCounts = NULL;
     blockList -> X = NULL;
     return blockList;
@@ -63,8 +61,6 @@ void destroy_block(Block_t* block) {
 }
 
 void destroy_block_list(BlockList_t* blockList) {
-    if (blockList -> samplingDistribution != NULL)
-        free(blockList -> samplingDistribution);
     if (blockList -> X != NULL) {
         for (int i = 0; i < blockList -> numSamples; i++) {
             free(blockList -> X[i]);

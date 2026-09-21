@@ -43,10 +43,8 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
     fprintf(out, "\"GlobalVarainceCaptured\": %lf,\n", globalList -> varCapt);
     if (lodestarConfig -> targetFileName == NULL) {
         fprintf(out, "\"GlobalProcrustesStatistic\": null,\n");
-        fprintf(out, "\"GlobalProcrustesStatisticPvalue\": null,\n");
     } else {
         fprintf(out, "\"GlobalProcrustesStatistic\": %lf,\n", globalList -> procrustesT);
-        fprintf(out, "\"GlobalProcrustesStatisticPvalue\": %lf,\n", globalList -> pvalue);
     }
     fprintf(out, "\"GlobalX\":");
     print_json_matrix(out, globalList -> X, globalList -> numSamples, lodestarConfig -> k);
@@ -67,8 +65,6 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
     // Print out all the blocks.
     fprintf(out, "\"Blocks\": [");
     for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
-        if (temp -> isDropped)
-            continue;
         fprintf(out, "\t{\n");
         fprintf(out, "\t\"BlockNumber\": %d,\n", temp -> blockNum);
         fprintf(out, "\t\"BlockNumberOnChromosome\": %d,\n", temp -> blockNumOnChrom);
@@ -80,11 +76,9 @@ void print_json(LodestarConfig_t* lodestarConfig, BlockList_t* globalList, doubl
         if (temp -> isDropped) {
             fprintf(out, "\t\"VarianceCaptured\": %d,\n", -1);
             fprintf(out, "\t\"ProcrustesStatistic\": %d,\n", -1);
-            fprintf(out, "\t\"ProcrustesPValue\": %d,\n", -1);
         } else {
             fprintf(out, "\t\"VarianceCaptured\": %lf,\n", temp -> varCapt);
             fprintf(out, "\t\"ProcrustesStatistic\": %lf,\n", temp -> procrustesT);
-            fprintf(out, "\t\"ProcrustesPValue\": %lf,\n", temp -> pvalue);
         }
         fprintf(out, "\t\"X\": ");
         if (temp -> X != NULL)
@@ -113,20 +107,18 @@ void print_summary(LodestarConfig_t* lodestarConfig, BlockList_t* globalList) {
     fprintf(out, "#%s\n", lodestarConfig -> cmd);
 
     // Print header.
-    fprintf(out, "BlockNum\tBlockNumOnChr\tChr\tStart\tEnd\tNumLoci\tNumHaps\tVarianceCaptured\tProcrustesStatistic\tP-Value\n");
+    fprintf(out, "BlockNum\tBlockNumOnChr\tChr\tStart\tEnd\tNumLoci\tNumHaps\tVarianceCaptured\tProcrustesStatistic\n");
 
     // Print out each block.
     for(Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
-        if (temp -> isDropped)
-            continue;
         fprintf(out, "%d\t%d\t%s\t%d\t%d\t%d\t%d\t", temp -> blockNum, temp -> blockNumOnChrom, temp -> chrom, temp -> startCoordinate, temp -> endCoordinate, temp -> numLoci, temp -> numHaps);
-        fprintf(out, "%lf\t%lf\t%lf\n", temp -> varCapt, temp -> procrustesT, temp -> pvalue);
+        fprintf(out, "%lf\t%lf\n", temp -> varCapt, temp -> procrustesT);
     }
     fprintf(out, "0\t0\tGLOBAL\t0\t0\t%d\t%d\t%lf\t", globalList -> numLoci, globalList -> numHaps, globalList -> varCapt);
     if (globalList -> procrustesT != -1)
-        fprintf(out, "%lf\t%lf\n", globalList -> procrustesT, globalList -> pvalue);
+        fprintf(out, "%lf\n", globalList -> procrustesT);
     else 
-        fprintf(out, "-1\t-1\n");
+        fprintf(out, "-1\n");
 
     fclose(out);
 }
@@ -163,7 +155,7 @@ double** open_target_file(char* targetFileName, int N, int K) {
 void convertToRectangular(double** y, int N) {
     for (int i = 0; i < N; i++) {
         y[i][0] = 6371000 * M_PI * sqrt(2) * y[i][0] / 360.0;
-        y[i][1] = 6371000 * sqrt(2) * sin(y[i][1]);
+        y[i][1] = 6371000 * sqrt(2) * sin(y[i][1] / 360.0);
     }
 }
 
@@ -223,7 +215,7 @@ int main (int argc, char *argv[]) {
     RealSymEigen_t* eigen = init_real_sym_eigen(encoder -> numSamples);
     for (int i = 0; i < encoder -> numSamples; i++)
         for (int j = i + 1; j < encoder -> numSamples; j++)
-            asd[PACKED_INDEX(i, j)] = ibs_to_asd(globalList -> alleleCounts[PACKED_INDEX(i, j)]);
+            asd[PACKED_INDEX(i, j)] = ibs_to_asd(globalList -> alleleCounts[PACKED_INDEX(i, j)], globalList -> numHaps);
     globalList -> X = init_matrix(encoder -> numSamples, lodestarConfig -> k);
     globalList -> varCapt = compute_classical_mds(eigen, asd, lodestarConfig -> k, globalList -> X);
     // cMDS results are already centered. Normalize X for symmetric Procrsutes statistic.
@@ -235,13 +227,8 @@ int main (int argc, char *argv[]) {
 
     // Convert IBS to ASD and calculate jackknifed procrustes statistic.
     fprintf(stderr, "Finished genome-wide MDS calulations. Starting Procrustes ...\n\n");
-    if (lodestarConfig -> sampleSize == 0)
-        lodestarConfig -> sampleSize = globalList -> numBlocks;
-    procrustes(globalList, y, y0, lodestarConfig -> k, lodestarConfig -> threads, lodestarConfig -> numReps, lodestarConfig -> sampleSize);
-    if (lodestarConfig -> numReps == 0)
-        fprintf(stderr, "Writing results to output files...\n");
-    else
-        fprintf(stderr, "\nFinished Bootstrap. Writing results to output files...\n");
+    procrustes(globalList, y, y0, lodestarConfig -> k, lodestarConfig -> threads);
+    fprintf(stderr, "Writing results to output files...\n");
 
     // Print summary and JSON file.
     print_summary(lodestarConfig, globalList);

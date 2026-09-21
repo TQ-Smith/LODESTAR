@@ -141,7 +141,7 @@ void* partition(void* arg) {
             for (int l = 0; l < blockCounts -> numHaps; l++) {
                 for (int i = 0; i < blockCounts -> numSamples; i++) {
                     for (int j = i + 1; j < blockCounts -> numSamples; j++) {
-                        if (locus -> genotypes[i].left != MISSING || locus -> genotypes[j].right != MISSING) {
+                        if (locus -> genotypes[i].left != MISSING && locus -> genotypes[j].left != MISSING && locus -> genotypes[i].right != MISSING && locus -> genotypes[j].right != MISSING) {
                             int numSharedAlleles = num_shared_alleles(locus -> genotypes[i], locus -> genotypes[j]);
                             increment_ibs_value(&(block -> alleleCounts[PACKED_INDEX(i, j)]), numSharedAlleles);
                             increment_ibs_value(&(globalCounts[PACKED_INDEX(i, j)]), numSharedAlleles);
@@ -254,6 +254,7 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
             }
         }
         globalList -> head = sortedHead;
+        globalList -> tail = sortedTail;
     }
     free(blockNum);
 
@@ -283,32 +284,15 @@ typedef struct BlockProcrustes {
     int k;
     // Points to the current block in globalList for the next thread to operate on.
     Block_t** current;
-    // For the bootstrap.
-    int numReps;
-    int sampleSize;
     int* currentReplicate;
 } BlockProcrustes_t;
 
-// Randomly sample a non-dropped block.
-Block_t* get_random_block(gsl_rng* r, BlockList_t* globalList) {
-    Block_t* temp = globalList -> head;
-    while (true) {
-        int blockNum = globalList -> numBlocks * (double) gsl_rng_uniform(r);
-        for (int i = 0; i < blockNum; i++)
-            temp = temp -> next;
-        if (!temp -> isDropped)
-            break;
-    }
-    return temp;
-}
-
-void* procrustes_bootstrap(void* arg) {
+void* procrustes_worker(void* arg) {
     BlockProcrustes_t* blockProcrustes = (BlockProcrustes_t*) arg;
 
     // Allocate all required memory.
     double* asdBlock = calloc(PACKED_SIZE(blockProcrustes -> globalList -> numSamples), sizeof(double));
     IBS_t* ibsBlock = calloc(PACKED_SIZE(blockProcrustes -> globalList -> numSamples), sizeof(IBS_t));
-    double** bootX = init_matrix(blockProcrustes -> globalList -> numSamples, blockProcrustes -> k);
     RealSymEigen_t* eigen = init_real_sym_eigen(blockProcrustes -> globalList -> numSamples);
 
     // The current block to operate on.
@@ -329,7 +313,7 @@ void* procrustes_bootstrap(void* arg) {
         else
             fprintf(stderr, "Performing MDS and Procrustes for block number %d on %s from %d to %d.\n", current -> blockNum, current -> chrom, current -> startCoordinate, current -> endCoordinate);
         // If we reached the end of the list.
-        if (current -> next == NULL && blockProcrustes -> numReps == 0)
+        if (current -> next == NULL)
             fprintf(stderr, "\nProcrustes finished ...\n\n");
         else if (current -> next == NULL)
             fprintf(stderr, "\nProcrustes finished. Starting bootstrap ...\n\n");
@@ -339,13 +323,13 @@ void* procrustes_bootstrap(void* arg) {
             // Convert to ASD first.
             for (int i = 0; i < blockProcrustes -> globalList -> numSamples; i++)
                 for (int j = i + 1; j < blockProcrustes -> globalList -> numSamples; j++)
-                    asdBlock[PACKED_INDEX(i, j)] = ibs_to_asd(current -> alleleCounts[PACKED_INDEX(i, j)]);
+                    asdBlock[PACKED_INDEX(i, j)] = ibs_to_asd(current -> alleleCounts[PACKED_INDEX(i, j)], current -> numHaps);
 
             // Perform MDS and Procrustes.
             double** X = init_matrix(eigen -> N, blockProcrustes -> k);
             current -> varCapt = compute_classical_mds(eigen, asdBlock, blockProcrustes -> k, X);
             // I am doing this to be safe. Results of cMDS are already centered.
-            normalize_matrix(X, blockProcrustes -> globalList -> numSamples, blockProcrustes -> k);
+            // normalize_matrix(X, blockProcrustes -> globalList -> numSamples, blockProcrustes -> k);
 
             // In case MDS did not converge, treat the block as having no effect.
             if (current -> varCapt == -1) {
@@ -364,79 +348,20 @@ void* procrustes_bootstrap(void* arg) {
         }
     }
 
-    // Create RNG.
-    gsl_rng_env_setup();
-    const gsl_rng_type* T = gsl_rng_default;
-    gsl_rng* r = gsl_rng_alloc(T);
-    // Seed each thread differently.
-    gsl_rng_set(r, time(NULL) + (long) arg);
-
-    // Start the bootstrap.
-    // Only execute 
-    while (blockProcrustes -> numReps != 0) {
-        double bootStrappedT;
-
-        // Create our random replicate.
-        for (int s = 0; s < blockProcrustes -> sampleSize; s++) {
-            Block_t* temp = get_random_block(r, blockProcrustes -> globalList);
-            for (int i = 0; i < blockProcrustes -> globalList -> numSamples; i++) {
-                for (int j = i + 1; j < blockProcrustes -> globalList -> numSamples; j++) {
-                    if (s == 0)
-                        ibsBlock[PACKED_INDEX(i, j)] = temp -> alleleCounts[PACKED_INDEX(i, j)];
-                    else
-                        add_ibs(&(ibsBlock[PACKED_INDEX(i, j)]), &(temp -> alleleCounts[PACKED_INDEX(i, j)]));
-                    if (s == blockProcrustes -> sampleSize - 1)
-                        asdBlock[PACKED_INDEX(i, j)] = ibs_to_asd(temp -> alleleCounts[PACKED_INDEX(i, j)]);
-                }
-            }
-        }
-
-        // Perfrom MDS.
-        double effectiveRank = compute_classical_mds(eigen, asdBlock, blockProcrustes -> k, bootX);
-
-        // If MDS does not converge, then we do not count the sample.
-        if (effectiveRank == -1)
-            continue;
-
-        normalize_matrix(bootX, blockProcrustes -> globalList -> numSamples, blockProcrustes -> k);
-
-        // Calculate our Procrustes statistic.
-        if (blockProcrustes -> y == NULL) 
-            bootStrappedT = procrustes_statistic(bootX, NULL, blockProcrustes -> globalList -> X, NULL, eigen, eigen -> N, blockProcrustes -> k, false);
-        else 
-            bootStrappedT = procrustes_statistic(bootX, NULL, blockProcrustes -> y, blockProcrustes -> y0, eigen, eigen -> N, blockProcrustes -> k, false);
-        
-
-        pthread_mutex_lock(&genomeLock);
-        if (*(blockProcrustes -> currentReplicate) == blockProcrustes -> numReps) {
-            pthread_mutex_unlock(&genomeLock);
-            break;
-        }
-        blockProcrustes -> globalList -> samplingDistribution[*(blockProcrustes -> currentReplicate)] = bootStrappedT;
-        *(blockProcrustes -> currentReplicate) += 1;
-        fprintf(stderr, "Completed Replicate %d of the Bootstrap.\n", *(blockProcrustes -> currentReplicate));
-        pthread_mutex_unlock(&genomeLock);
-    }
-
     destroy_real_sym_eigen(eigen);
-    destroy_matrix(bootX, eigen -> N);
     free(asdBlock);
     free(ibsBlock);
     free(blockProcrustes);
-    gsl_rng_free(r);
 
     return NULL;
 }
 
-void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_THREADS, int numReps, int sampleSize) {
+void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_THREADS) {
     
-    int* currentReplicate = calloc(1, sizeof(int));
-    *currentReplicate = 0;
-    globalList -> samplingDistribution = calloc(numReps, sizeof(double));
     Block_t* current = calloc(1, sizeof(Block_t*));
     current = globalList -> head;
 
-    // Compute Procrustes statistic for each block and bootstrap.
+    // Compute Procrustes statistic for each block.
     if (NUM_THREADS == 1) {
         BlockProcrustes_t* blockProcrustes = calloc(1, sizeof(BlockProcrustes_t));
         blockProcrustes -> globalList = globalList;
@@ -444,10 +369,7 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
         blockProcrustes -> y0 = y0;
         blockProcrustes -> k = k;
         blockProcrustes -> current = &current;
-        blockProcrustes -> numReps = numReps;
-        blockProcrustes -> sampleSize = sampleSize;
-        blockProcrustes -> currentReplicate = currentReplicate;
-        procrustes_bootstrap((void*) blockProcrustes);
+        procrustes_worker((void*) blockProcrustes);
     } else {
         pthread_t* threads = (pthread_t*) calloc(NUM_THREADS - 1, sizeof(pthread_t));
         for (int i = 0; i < NUM_THREADS - 1; i++) {
@@ -457,10 +379,7 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
             blockProcrustes -> y0 = y0;
             blockProcrustes -> k = k;
             blockProcrustes -> current = &current;
-            blockProcrustes -> numReps = numReps;
-            blockProcrustes -> sampleSize = sampleSize;
-            blockProcrustes -> currentReplicate = currentReplicate;
-            pthread_create(&threads[i], NULL, procrustes_bootstrap, (void*) blockProcrustes);
+            pthread_create(&threads[i], NULL, procrustes_worker, (void*) blockProcrustes);
         }
         BlockProcrustes_t* blockProcrustes = calloc(1, sizeof(BlockProcrustes_t));
         blockProcrustes -> globalList = globalList;
@@ -468,39 +387,10 @@ void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_
         blockProcrustes -> y0 = y0;
         blockProcrustes -> k = k;
         blockProcrustes -> current = &current;
-        blockProcrustes -> numReps = numReps;
-        blockProcrustes -> sampleSize = sampleSize;
-        blockProcrustes -> currentReplicate = currentReplicate;
-        procrustes_bootstrap((void*) blockProcrustes);
         // Wait for all threads to finish.
         for (int i = 0; i < NUM_THREADS - 1; i++)
             pthread_join(threads[i], NULL);
         free(threads);
     }
-    free(currentReplicate);
     free(current);
-
-    // Compute p-values. We are doing this the lazy way.
-    if (numReps > 0) {
-        for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
-            // Skip if window dropped.
-            if (temp -> isDropped || temp -> X == NULL)
-                continue;
-            int numGreater = 1;
-            for (int j = 0; j < numReps; j++) {
-                if (temp -> procrustesT <= globalList -> samplingDistribution[j])
-                    numGreater++;
-            }
-            temp -> pvalue = numGreater / (double) (numReps + 1);
-        }
-        // Global p-value.
-        if (y != NULL) {
-            int numGreater = 1;
-            for (int j = 0; j < numReps; j++) {
-                if (globalList -> procrustesT <= globalList -> samplingDistribution[j])
-                    numGreater++;
-            }
-            globalList -> pvalue = numGreater / (double) (numReps + 1);
-        }
-    }
 }

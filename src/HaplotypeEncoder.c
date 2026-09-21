@@ -50,8 +50,8 @@ void relabel_haplotypes(HaplotypeEncoder_t* encoder) {
     // For each of the samples ...
     for (int i = 0; i < encoder -> numSamples; i++) {
         // If the sample has missing genotypes, we skip relabeling.
-        if (encoder -> genotypes[i].left == MISSING)
-            continue;
+        // if (encoder -> genotypes[i].left == MISSING)
+        //    continue;
         
         // Label left haplotype.
         k = kh_get(haplotype, encoder -> labelMap, encoder -> genotypes[i].left);

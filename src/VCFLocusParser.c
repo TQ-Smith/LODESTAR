@@ -16,12 +16,9 @@ bool seek(VCFLocusParser_t* parser) {
     // We break out of the infinite loop until EOF is encountered or a 
     //  record that satisfies all the filters is encountered.
     while (true) {
-        
-        // Get next line.
-        ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret);
 
         // If EOF or nothing was read in (for safety), set EOF flag and return.
-        if (isEOF(parser))
+        if (ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret) < 0 || isEOF(parser))
             return true;
 
         // This is alittle clunky, but I think it is faster than splitting on '\t'.

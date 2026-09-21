@@ -34,7 +34,6 @@ printUsage <- function() {
     cat("                           the global relatedness plot.\n");
     cat("axis i                 Plot the i'th component along the genome for each sample.\n");
     cat("tvals                  Plot the t-statistic along the genome. Ignores <pops.txt>.\n");
-    cat("pvals                  Plot the p-values along the genome. Ignores <pops.txt>.\n");
     cat("var                    Plot captured variance along the genome. Ignores <pops.txt>.\n");
     cat("print b                Prints the coordinates of the b'th block. Ignores <pops.txt>.\n");
     cat("\n");
@@ -200,54 +199,6 @@ var <- function(JSON) {
     ggsave(filename, plot, width = 10, height = 6, dpi = 300);
 }
 
-# Plot the pvals along the genome.
-pvals <- function(JSON) {
-    # Drop invalid blocks.
-    filename = "pvalues.png";
-    data <- data.frame(
-        CHR = JSON$Blocks["Chromosome"],  
-        BP = as.numeric(JSON$Blocks["StartCoordinate"][,1]),  
-        P = -log10(as.numeric(JSON$Blocks["ProcrustesPValue"][,1])),
-        SNP = "."
-    );
-    colnames(data) <- c("CHR", "BP", "P", "SNP");
-    data <- data %>%
-        mutate(CHR = as.numeric(gsub("chr", "", CHR)));
-    # https://r-graph-gallery.com/101_Manhattan_plot.html
-    don <- data %>% 
-        group_by(CHR) %>% 
-        summarise(chr_len=max(BP)) %>% 
-        mutate(tot=cumsum(chr_len)-chr_len) %>%
-        select(-chr_len) %>%
-        left_join(data, ., by=c("CHR"="CHR")) %>%
-        arrange(CHR, BP) %>%
-        mutate( BPcum=BP+tot);
-    axisdf = don %>%
-        group_by(CHR) %>%
-        summarize(center=( max(BPcum) + min(BPcum) ) / 2 );
-    if (length(unique(data$CHR)) > 1) {
-        geopoint = geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3);
-        xlab = scale_x_continuous("Chromosome", label = axisdf$CHR, breaks= axisdf$center);
-    } else {
-        geopoint = geom_point();
-        xlab = scale_x_continuous("Chromosome Position");
-    }
-    plot <- ggplot(don, aes(x=BPcum, y=P)) +
-        geom_point( aes(color=as.factor(CHR)), alpha=0.8, size=1.3) +
-        scale_color_manual(values = rep(c("red", "blue"), 22 )) +
-        scale_y_continuous("-log(p)", expand = c(0, 0)) + 
-        xlab + geopoint +
-        theme_bw() +
-        theme( 
-            text = element_text(size = 12),
-            legend.position="none",
-            panel.border = element_blank(),
-            panel.grid.major.x = element_blank(),
-            panel.grid.minor.x = element_blank()
-        ) + ggtitle("P Values");
-    ggsave(filename, plot, width = 10, height = 6, dpi = 300);
-}
-
 # Plot the t-statistic along the genome.
 tvals <- function(JSON) {
     # Drop invalid blocks.
@@ -331,9 +282,6 @@ cmd <- function(cmd, blocksFile, popsFile, args) {
         },
         tvals={
             tvals(JSON);
-        },
-        pvals={
-            pvals(JSON);
         },
         axis={
             axis(JSON, popsFile, args[1]);

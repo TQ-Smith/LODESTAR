@@ -16,15 +16,6 @@
 //  LodestarConfig_t* lodestarConfig -> The configured parameters.
 // Returns: int, 0 if all parameters are valid. -1 if user supplied an invalid value.
 int check_configuration(LodestarConfig_t* lodestarConfig) {
-    // Check num reps and sample size for bootstrap.
-    if (lodestarConfig -> numReps < 0) {
-        fprintf(stderr, "-r %d must be an integer greater than 0.\n", lodestarConfig -> numReps); 
-        return -1;
-    }
-    if (lodestarConfig -> sampleSize < 0) {
-        fprintf(stderr, "-s %d must be an integer greater than 0.\n", lodestarConfig -> sampleSize); 
-        return -1;
-    }
     // Check maf.
     if (lodestarConfig -> maf < 0 || lodestarConfig -> maf > 1) { 
         fprintf(stderr, "--maf %lf must be in [0, 1].\n", lodestarConfig -> maf); 
@@ -91,7 +82,7 @@ void print_help() {
     fprintf(stderr, "                               The set of points to use in Procrustes analysis\n");
     fprintf(stderr, "   --geo                   If -y was used, then assume coordinates are (long, lat) in degrees and\n");
     fprintf(stderr, "                               convert to rectangular coordinates, where R = 6371000, using\n");
-    fprintf(stderr, "                               (R * pi * sqrt(2) * long / 360, R * sqrt(2) * sin(lat))\n");
+    fprintf(stderr, "                               (R * pi * sqrt(2) * long / 360, R * sqrt(2) * sin(lat / 360))\n");
     fprintf(stderr, "   -t INT                  Number of threads to use in computation.\n");
     fprintf(stderr, "                               Default 1.\n");
     fprintf(stderr, "   -d INT                  Block is dropped if less than INT number of haplotypes are within block.\n");
@@ -100,10 +91,6 @@ void print_help() {
     fprintf(stderr, "                               Default 0.05.\n");
     fprintf(stderr, "   --afMissing DOUBLE      Drops VCF records with fraction of genotypes missing greater than threshold.\n");
     fprintf(stderr, "                               Default 0.1\n");
-    fprintf(stderr, "   -r INT                  Number of replicates for bootstrap. 0 for no bootstrap.\n");
-    fprintf(stderr, "                               Default 1000.\n");
-    fprintf(stderr, "   -s INT                  Number of blocks per replicate for bootstrap.\n");
-    fprintf(stderr, "                               Default number of blocks in input.\n");
     fprintf(stderr, "\n");
 }
 
@@ -118,8 +105,6 @@ static ko_longopt_t long_options[] = {
     {"haplotypeSize",   ko_required_argument,   'h'},
     {"blockSize",       ko_required_argument,   'b'},
     {"drop",            ko_required_argument,   'd'},
-    {"replicates",      ko_required_argument,   'r'},
-    {"samples",         ko_required_argument,   's'},
     {0, 0, 0}
 };
 
@@ -132,7 +117,7 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     } 
 
     // Parse user options.
-    const char *opt_str = "h:b:k:t:y:d:o:b:s:r:";
+    const char *opt_str = "h:b:k:t:y:d:o:b:";
     ketopt_t options = KETOPT_INIT;
     int c;
 
@@ -158,8 +143,6 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
     lodestarConfig -> dropThreshold = 1;
     lodestarConfig -> maf = 0.05;
     lodestarConfig -> afMissing = 0.1;
-    lodestarConfig -> numReps = 1000;
-    lodestarConfig -> sampleSize = 0;
     lodestarConfig -> geo = false;
 
     // Parse command line arguments.
@@ -173,8 +156,6 @@ LodestarConfig_t* init_lodestar_config(int argc, char *argv[]) {
             case 't': lodestarConfig -> threads = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 'y': lodestarConfig -> targetFileName = strdup(options.arg); break;
             case 'd': lodestarConfig -> dropThreshold = (int) strtol(options.arg, (char**) NULL, 10); break;
-            case 'r': lodestarConfig -> numReps = (int) strtol(options.arg, (char**) NULL, 10); break;
-            case 's': lodestarConfig -> sampleSize = (int) strtol(options.arg, (char**) NULL, 10); break;
             case 309: lodestarConfig -> maf = strtod(options.arg, (char**) NULL); break;
             case 310: lodestarConfig -> afMissing = strtod(options.arg, (char**) NULL); break;
             case 311: lodestarConfig -> geo = true; break;

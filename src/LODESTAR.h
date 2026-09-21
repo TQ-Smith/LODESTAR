@@ -63,9 +63,9 @@ static inline int num_shared_alleles(Genotype_t s1, Genotype_t s2) {
 // Accepts:
 //  IBS_t ibs -> The IBS counts.
 // Returns: double, the transformed distance.
-static inline double ibs_to_asd(IBS_t ibs) {
-    double L = (ibs.ibs0 + ibs.ibs1 + ibs.ibs2);
-    return sqrt(4 * L - 2 * (ibs.ibs1 + 2 * ibs.ibs2));
+static inline double ibs_to_asd(IBS_t ibs, int numHaps) {
+    // double L = (ibs.ibs0 + ibs.ibs1 + ibs.ibs2);
+    return sqrt(4 * numHaps - 2 * (ibs.ibs1 + 2 * ibs.ibs2));
 }
 
 // Adds counts from right to left.
@@ -110,9 +110,7 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
 //  double* y0 -> Centroid of user defined points.
 //  int k -> The dimension to reduce to.
 //  int NUM_THREADS -> The number of threads to use in the computation.
-//  int numReps -> The number of replicates for the bootstrap.
-//  int sampleSize -> The number of blocks to sample for the bootstrap.
 // Returns: void.
-void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_THREADS, int numReps, int sampleSize);
+void procrustes(BlockList_t* globalList, double** y, double* y0, int k, int NUM_THREADS);
 
 #endif
