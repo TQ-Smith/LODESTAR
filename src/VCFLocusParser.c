@@ -18,7 +18,7 @@ bool seek(VCFLocusParser_t* parser) {
     while (true) {
 
         // If EOF or nothing was read in (for safety), set EOF flag and return.
-        if (ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret) < 0 || isEOF(parser))
+        if (ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret) < 0 || parser -> buffer -> l == 0)
             return true;
 
         // This is alittle clunky, but I think it is faster than splitting on '\t'.

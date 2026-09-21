@@ -261,7 +261,7 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
     // Assign blockNumOnChrom and count global number of haps.
     int blockNumOnChrom = 1;
     globalList -> numHaps = 0;
-    for (Block_t* temp = globalList -> head; temp -> next != NULL; temp = temp -> next) {
+    for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
         temp -> blockNumOnChrom = blockNumOnChrom;
         if (strcmp(temp -> chrom, temp -> next -> chrom) != 0)
             blockNumOnChrom = 1;
