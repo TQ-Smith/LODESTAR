@@ -53,6 +53,9 @@ typedef struct {
     int nextNumAlleles;
     // Array that holds the genotypes for each of the samples.
     Locus* nextLocus;
+
+    // EOF flag.
+    bool endOfFile;
 } VCFLocusParser_t;
 
 // Creates a VCFLocusParser_t structure.

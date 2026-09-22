@@ -130,8 +130,8 @@ void add_locus(HaplotypeEncoder_t* encoder, int numAlleles) {
 bool get_next_haplotype(VCFLocusParser_t* parser, HaplotypeEncoder_t* encoder, int HAP_SIZE) {
 
     // If the end of the VCF file has been reached, we cannot get another haplotype.
-    // if (isEOF(parser))
-    //    return false;
+    if (isEOF(parser))
+        return false;
 
     encoder -> startCoord = parser -> nextCoord;
 

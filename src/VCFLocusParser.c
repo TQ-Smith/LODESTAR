@@ -18,8 +18,11 @@ bool seek(VCFLocusParser_t* parser) {
     while (true) {
 
         // If EOF or nothing was read in (for safety), set EOF flag and return.
-        if (isEOF(parser))
+        if (ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret) < 0
+        || parser -> buffer -> l == 0) {
+            parser -> endOfFile = true;
             return true;
+        }
 
         // This is alittle clunky, but I think it is faster than splitting on '\t'.
         numTabs = 0, prevIndex = 0, numAlleles = 2;
@@ -152,6 +155,7 @@ VCFLocusParser_t* init_vcf_locus_parser(char* fileName, double maf, double afMis
     parser -> afMissing = afMissing;
     parser -> dropMonomorphicSites = dropMonomorphicSites;
     parser -> alleleCounts = calloc(MAX_NUM_ALLELES, sizeof(int));
+    parser -> endOfFile = false;
     for (int i = 0; i < MAX_NUM_ALLELES; i++)
         parser -> alleleCounts[i] = 0;
 
@@ -180,8 +184,7 @@ bool get_next_locus(VCFLocusParser_t* parser, char** chrom, int* coord, int* num
 }
 
 bool isEOF(VCFLocusParser_t* parser) {
-    int dret;
-    return ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret) < 0 || parser -> buffer -> l == 0;
+    return parser -> endOfFile;
 }
 
 void destroy_vcf_locus_parser(VCFLocusParser_t* parser) {
