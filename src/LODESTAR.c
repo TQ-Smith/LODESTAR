@@ -263,7 +263,7 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
     globalList -> numHaps = 0;
     for (Block_t* temp = globalList -> head; temp != NULL; temp = temp -> next) {
         temp -> blockNumOnChrom = blockNumOnChrom;
-        if (strcmp(temp -> chrom, temp -> next -> chrom) != 0)
+        if (temp -> next != NULL && strcmp(temp -> chrom, temp -> next -> chrom) != 0)
             blockNumOnChrom = 1;
         else 
             blockNumOnChrom++;
@@ -272,7 +272,6 @@ BlockList_t* block_allele_sharing(VCFLocusParser_t* vcfFile, HaplotypeEncoder_t*
             globalList -> numLoci += temp -> numLoci;
         }
     }
-    globalList -> tail -> blockNumOnChrom = blockNumOnChrom;
 
     return globalList;
 }

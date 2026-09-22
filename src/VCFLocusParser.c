@@ -18,7 +18,7 @@ bool seek(VCFLocusParser_t* parser) {
     while (true) {
 
         // If EOF or nothing was read in (for safety), set EOF flag and return.
-        if (ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret) < 0 || parser -> buffer -> l == 0)
+        if (isEOF(parser))
             return true;
 
         // This is alittle clunky, but I think it is faster than splitting on '\t'.
@@ -180,7 +180,8 @@ bool get_next_locus(VCFLocusParser_t* parser, char** chrom, int* coord, int* num
 }
 
 bool isEOF(VCFLocusParser_t* parser) {
-    return ks_eof(parser -> stream) || parser -> buffer -> l == 0;
+    int dret;
+    return ks_getuntil(parser -> stream, '\n', parser -> buffer, &dret) < 0 || parser -> buffer -> l == 0;
 }
 
 void destroy_vcf_locus_parser(VCFLocusParser_t* parser) {
